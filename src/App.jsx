@@ -1592,11 +1592,15 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
   const isAdmin = currentUser.role === "admin";
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, "conversations"), snap => {
-      const all = snap.docs.map(d => ({ ...d.data(), id: d.id }))
-        .sort((a, b) => new Date(b.lastDate) - new Date(a.lastDate));
-      setConversations(all);
-    });
+    const unsub = onSnapshot(
+      collection(db, "conversations"),
+      snap => {
+        const all = snap.docs.map(d => ({ ...d.data(), id: d.id }))
+          .sort((a, b) => new Date(b.lastDate) - new Date(a.lastDate));
+        setConversations(all);
+      },
+      err => console.error("Conversations error:", err)
+    );
     return () => unsub();
   }, []);
 
