@@ -275,7 +275,7 @@ export default function App() {
   const toastRef = useRef();
 
   const isAdmin = currentUser?.role === "admin";
-  const unread = messages.filter(m => !m.read).length;
+  const unread = messages.filter(m => !m.read && String(m.from) !== String(currentUser?.id)).length;
   const pendingRequests = requests.filter(r => r.status === "pending").length;
 
   // ── SESSION PERSISTANTE ──────────────────────────────────────────────────────
@@ -858,61 +858,14 @@ export default function App() {
 
           {/* ── MESSAGES ── */}
           {page === "messages" && (
-            <>
-              <div className="topbar"><h2>Messages</h2></div>
-              <div className="content">
-                {/* Write box for viewers */}
-                <div className="write-box">
-                  <h4>📨 {isAdmin ? "Envoyer un message à l'équipe" : "Envoyer un message aux admins"}</h4>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    <select className="form-input" value={writeMsg.toolId} onChange={e => setWriteMsg(p => ({ ...p, toolId: e.target.value }))}>
-                      <option value="">— Outil concerné (optionnel) —</option>
-                      {(isAdmin ? tools : myTools).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                    <select className="form-input" value={writeMsg.type} onChange={e => setWriteMsg(p => ({ ...p, type: e.target.value }))}>
-                      <option value="info">ℹ️ Info générale</option>
-                      <option value="push">✅ Outil disponible / à récupérer</option>
-                    </select>
-                    <textarea className="form-input" rows={3} placeholder="Votre message..." value={writeMsg.text} onChange={e => setWriteMsg(p => ({ ...p, text: e.target.value }))} />
-                    <button className="btn btn-primary btn-sm" style={{ alignSelf: "flex-end" }} onClick={sendMessage}>Envoyer</button>
-                  </div>
-                </div>
-
-                <div className="messages-list">
-                  {messages.length === 0 && (
-                    <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
-                      <div style={{ fontSize: 40, marginBottom: 8 }}>💬</div>
-                      <div style={{ fontSize: 13 }}>Aucun message pour le moment</div>
-                    </div>
-                  )}
-                  {messages.map(m => {
-                    const sender = users.find(u => u.id === m.from);
-                    const tool = tools.find(t => t.id === m.toolId);
-                    return (
-                      <div key={m.id} className={`msg-card ${m.read ? "" : "unread"} ${m.type === "push" ? "push" : ""}`}>
-                        <div className="msg-header">
-                          <div className="msg-from">
-                            {!m.read && <span className="unread-dot" />}
-                            <div className={`avatar ${sender?.role}`} style={{ width: 24, height: 24, fontSize: 10, background: sender?.role === "admin" ? "var(--accent)" : "var(--blue)", color: sender?.role === "admin" ? "#000" : "#fff" }}>{sender?.avatar}</div>
-                            {sender?.name}
-                            {m.type === "push" && <span style={{ background: "rgba(39,201,122,.2)", color: "var(--green)", fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10 }}>PUSH</span>}
-                          </div>
-                          <span className="msg-time">{fmtTime(m.date)}</span>
-                        </div>
-                        <div className="msg-text">{m.text}</div>
-                        {tool && <div className="msg-tool">🔧 {tool.name} — {tool.location}</div>}
-                        {isAdmin && !m.read && (
-                          <div className="msg-actions">
-                            <button className="btn btn-green btn-sm" onClick={() => { setDoc(doc(db, "messages", String(m.id)), {...m, read: true}); showToast("Message marqué comme lu"); }}>✓ Lu</button>
-                            {m.type === "push" && tool && <button className="btn btn-blue btn-sm" onClick={() => { openTool(tool); setDoc(doc(db, "messages", String(m.id)), {...m, read: true}); }}>Traiter → Récupérer l'outil</button>}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
+            <MessagesPage
+              currentUser={currentUser}
+              users={users}
+              tools={tools}
+              myTools={myTools}
+              db={db}
+              showToast={showToast}
+            />
           )}
 
           {/* ── USERS (ADMIN ONLY) ── */}
@@ -1344,11 +1297,11 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             </div>
           )}
 
-          {/* HISTORY */}
+          {/* HISTORY — visible par tous */}
           <div>
             <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 700, marginBottom: 8 }}>📋 Historique</div>
             <div className="history-list">
-              {[...tool.history].reverse().map((h, i) => (
+              {[...(tool.history || [])].reverse().map((h, i) => (
                 <div key={i} className="history-item">
                   <div className="history-dot" />
                   <div>
@@ -1616,6 +1569,228 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
                       ))}
                     </div>
                   )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── MESSAGES PAGE ────────────────────────────────────────────────────────────
+function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
+  const [tab, setTab] = useState("annonces"); // "annonces" | "admins"
+  const [conversations, setConversations] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [newConvOpen, setNewConvOpen] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [newSubject, setNewSubject] = useState("");
+  const [newText, setNewText] = useState("");
+  const threadRef = useRef();
+  const isAdmin = currentUser.role === "admin";
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "conversations"), snap => {
+      const all = snap.docs.map(d => ({ ...d.data(), id: d.id }))
+        .sort((a, b) => new Date(b.lastDate) - new Date(a.lastDate));
+      setConversations(all);
+    });
+    return () => unsub();
+  }, []);
+
+  // Filter by tab
+  const tabConvs = conversations.filter(c => tab === "annonces" ? c.type === "annonce" : c.type === "admin");
+
+  const selectedConv = conversations.find(c => c.id === selected);
+
+  const unreadAnnonces = conversations.filter(c => c.type === "annonce" && c.messages?.some(m => !m.readBy?.includes(String(currentUser.id)) && String(m.from) !== String(currentUser.id))).length;
+  const unreadAdmins = conversations.filter(c => c.type === "admin" && c.messages?.some(m => !m.readBy?.includes(String(currentUser.id)) && String(m.from) !== String(currentUser.id))).length;
+
+  const createConversation = async () => {
+    if (!newText.trim() || !newSubject.trim()) return;
+    const id = String(Date.now());
+    const msg = {
+      id: String(Date.now() + 1), from: currentUser.id, fromName: currentUser.name,
+      fromAvatar: currentUser.avatar, fromRole: currentUser.role,
+      text: newText, date: new Date().toISOString(), readBy: [String(currentUser.id)],
+    };
+    await setDoc(doc(db, "conversations", id), {
+      id, subject: newSubject, type: tab,
+      createdBy: currentUser.id, createdByName: currentUser.name,
+      messages: [msg], lastDate: new Date().toISOString(), lastText: newText,
+    });
+    setNewSubject(""); setNewText(""); setNewConvOpen(false);
+    setSelected(id);
+    showToast("📨 Message envoyé !");
+  };
+
+  const sendReply = async () => {
+    if (!replyText.trim() || !selectedConv) return;
+    // Annonces : seuls les admins peuvent répondre
+    if (selectedConv.type === "annonce" && !isAdmin) return;
+    const msg = {
+      id: String(Date.now()), from: currentUser.id, fromName: currentUser.name,
+      fromAvatar: currentUser.avatar, fromRole: currentUser.role,
+      text: replyText, date: new Date().toISOString(), readBy: [String(currentUser.id)],
+    };
+    const updatedMsgs = [...(selectedConv.messages || []), msg];
+    await setDoc(doc(db, "conversations", selectedConv.id), {
+      ...selectedConv, messages: updatedMsgs,
+      lastDate: new Date().toISOString(), lastText: replyText,
+    });
+    setReplyText("");
+    setTimeout(() => threadRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 100);
+  };
+
+  // Mark as read on open
+  useEffect(() => {
+    if (!selectedConv) return;
+    const needsUpdate = selectedConv.messages?.some(
+      m => !m.readBy?.includes(String(currentUser.id)) && String(m.from) !== String(currentUser.id)
+    );
+    if (needsUpdate) {
+      const updated = selectedConv.messages.map(m => ({
+        ...m, readBy: m.readBy?.includes(String(currentUser.id)) ? m.readBy : [...(m.readBy || []), String(currentUser.id)]
+      }));
+      setDoc(doc(db, "conversations", selectedConv.id), { ...selectedConv, messages: updated });
+    }
+  }, [selected, selectedConv]);
+
+  const fmtT = (d) => new Date(d).toLocaleString("fr-MU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+  // ── THREAD VIEW ──
+  if (selected && selectedConv) {
+    const canReply = isAdmin; // Seuls les admins peuvent répondre dans les annonces ; dans admin-to-admin aussi
+    return (
+      <>
+        <div className="topbar">
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setSelected(null)}>← Retour</button>
+            <div>
+              <h2 style={{ fontSize: 17 }}>{selectedConv.subject}</h2>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                {selectedConv.type === "annonce" ? "📢 Annonce — peintres en lecture seule" : "🔑 Conversation admins"}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="content" style={{ display: "flex", flexDirection: "column", height: "calc(100% - 70px)" }}>
+          <div ref={threadRef} style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 12, paddingBottom: 16 }}>
+            {(selectedConv.messages || []).map((m, i) => {
+              const isMe = String(m.from) === String(currentUser.id);
+              return (
+                <div key={m.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
+                  <div style={{ maxWidth: "80%", background: isMe ? "rgba(58,142,246,.15)" : "var(--surface)", border: `1px solid ${isMe ? "rgba(58,142,246,.3)" : "var(--border)"}`, borderRadius: isMe ? "14px 14px 2px 14px" : "14px 14px 14px 2px", padding: "10px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                      <div style={{ width: 22, height: 22, borderRadius: 6, background: m.fromRole === "admin" ? "var(--accent)" : "var(--blue)", color: m.fromRole === "admin" ? "#000" : "#fff", fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{m.fromAvatar}</div>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: isMe ? "var(--blue)" : "var(--accent)" }}>{m.fromName}</span>
+                      {m.fromRole === "admin" && <span style={{ fontSize: 9, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "1px 5px", borderRadius: 6, fontWeight: 700 }}>ADMIN</span>}
+                    </div>
+                    <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text)", whiteSpace: "pre-wrap" }}>{m.text}</div>
+                    <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 6, textAlign: isMe ? "right" : "left" }}>{fmtT(m.date)}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* REPLY — admins only */}
+          {canReply ? (
+            <>
+              <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", gap: 8, alignItems: "flex-end" }}>
+                <textarea className="form-input" style={{ flex: 1, resize: "none" }} rows={2}
+                  placeholder="Répondre... (Entrée pour envoyer)"
+                  value={replyText} onChange={e => setReplyText(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
+                />
+                <button className="btn btn-primary btn-sm" style={{ flexShrink: 0 }} onClick={sendReply} disabled={!replyText.trim()}>Envoyer</button>
+              </div>
+              <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>Entrée pour envoyer · Shift+Entrée pour saut de ligne</div>
+            </>
+          ) : (
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, textAlign: "center", fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>
+              👁 Lecture seule — seuls les admins peuvent répondre aux annonces
+            </div>
+          )}
+        </div>
+      </>
+    );
+  }
+
+  // ── LIST VIEW ──
+  return (
+    <>
+      <div className="topbar">
+        <h2>💬 Messages</h2>
+        {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setNewConvOpen(true)}>+ Nouveau</button>}
+      </div>
+      <div className="content">
+
+        {/* TABS */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+          <button className={`filter-btn ${tab === "annonces" ? "active" : ""}`} onClick={() => { setTab("annonces"); setSelected(null); setNewConvOpen(false); }}>
+            📢 Annonces {unreadAnnonces > 0 && <span style={{ background: "var(--red)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, marginLeft: 4 }}>{unreadAnnonces}</span>}
+          </button>
+          {isAdmin && (
+            <button className={`filter-btn ${tab === "admins" ? "active" : ""}`} onClick={() => { setTab("admins"); setSelected(null); setNewConvOpen(false); }}>
+              🔑 Admins {unreadAdmins > 0 && <span style={{ background: "var(--red)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, marginLeft: 4 }}>{unreadAdmins}</span>}
+            </button>
+          )}
+        </div>
+
+        {/* NEW CONVERSATION FORM */}
+        {newConvOpen && isAdmin && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800, color: "var(--accent)", marginBottom: 10 }}>
+              {tab === "annonces" ? "📢 Nouvelle annonce" : "🔑 Message entre admins"}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <input className="form-input" placeholder="Sujet *" value={newSubject} onChange={e => setNewSubject(e.target.value)} />
+              <textarea className="form-input" rows={3} placeholder="Votre message..." value={newText} onChange={e => setNewText(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); createConversation(); } }} />
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                {tab === "annonces" ? "📢 Visible par tous — les peintres pourront lire mais pas répondre" : "🔑 Visible uniquement par les admins"}
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setNewConvOpen(false)}>Annuler</button>
+                <button className="btn btn-primary btn-sm" disabled={!newSubject.trim() || !newText.trim()} onClick={createConversation}>Envoyer</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LIST */}
+        {tabConvs.length === 0 && !newConvOpen && (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>{tab === "annonces" ? "📢" : "🔑"}</div>
+            <div>{tab === "annonces" ? "Aucune annonce pour le moment" : "Aucun message entre admins"}</div>
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {tabConvs.map(c => {
+            const hasUnread = c.messages?.some(m => !m.readBy?.includes(String(currentUser.id)) && String(m.from) !== String(currentUser.id));
+            const lastMsg = c.messages?.[c.messages.length - 1];
+            return (
+              <div key={c.id} onClick={() => setSelected(c.id)} style={{
+                background: "var(--surface)", border: `1px solid ${hasUnread ? "var(--accent)" : "var(--border)"}`,
+                borderRadius: 12, padding: 14, cursor: "pointer", transition: "all .15s",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {hasUnread && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />}
+                      <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: hasUnread ? 800 : 600 }}>{c.subject}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                      De {c.createdByName} · {c.messages?.length || 0} message{(c.messages?.length || 0) > 1 ? "s" : ""}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <strong>{lastMsg?.fromName}</strong> : {lastMsg?.text}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--muted)", flexShrink: 0 }}>{fmtT(c.lastDate)}</div>
                 </div>
               </div>
             );
