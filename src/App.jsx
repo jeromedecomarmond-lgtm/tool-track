@@ -1632,21 +1632,35 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
     showToast("📨 Message envoyé !");
   };
 
+  const [replyTo, setReplyTo] = useState(null); // message being replied to
+  const [photoData, setPhotoData] = useState(null); // base64 photo
+  const photoRef = useRef();
+
+  const handlePhoto = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setPhotoData(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
   const sendReply = async () => {
-    if (!replyText.trim() || !selectedConv) return;
-    // Annonces : seuls les admins peuvent répondre
+    if (!replyText.trim() && !photoData) return;
+    if (!selectedConv) return;
     if (selectedConv.type === "annonce" && !isAdmin) return;
     const msg = {
       id: String(Date.now()), from: currentUser.id, fromName: currentUser.name,
       fromAvatar: currentUser.avatar, fromRole: currentUser.role,
-      text: replyText, date: new Date().toISOString(), readBy: [String(currentUser.id)],
+      text: replyText, photo: photoData || null,
+      replyTo: replyTo ? { id: replyTo.id, fromName: replyTo.fromName, text: replyTo.text?.slice(0, 60) } : null,
+      date: new Date().toISOString(), readBy: [String(currentUser.id)],
     };
     const updatedMsgs = [...(selectedConv.messages || []), msg];
     await setDoc(doc(db, "conversations", selectedConv.id), {
       ...selectedConv, messages: updatedMsgs,
-      lastDate: new Date().toISOString(), lastText: replyText,
+      lastDate: new Date().toISOString(), lastText: replyText || "📷 Photo",
     });
-    setReplyText("");
+    setReplyText(""); setPhotoData(null); setReplyTo(null);
     setTimeout(() => threadRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 100);
   };
 
@@ -1688,33 +1702,73 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
               const isMe = String(m.from) === String(currentUser.id);
               return (
                 <div key={m.id || i} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
-                  <div style={{ maxWidth: "80%", background: isMe ? "rgba(58,142,246,.15)" : "var(--surface)", border: `1px solid ${isMe ? "rgba(58,142,246,.3)" : "var(--border)"}`, borderRadius: isMe ? "14px 14px 2px 14px" : "14px 14px 14px 2px", padding: "10px 14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-                      <div style={{ width: 22, height: 22, borderRadius: 6, background: m.fromRole === "admin" ? "var(--accent)" : "var(--blue)", color: m.fromRole === "admin" ? "#000" : "#fff", fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{m.fromAvatar}</div>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: isMe ? "var(--blue)" : "var(--accent)" }}>{m.fromName}</span>
-                      {m.fromRole === "admin" && <span style={{ fontSize: 9, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "1px 5px", borderRadius: 6, fontWeight: 700 }}>ADMIN</span>}
+                  <div style={{ maxWidth: "82%", background: isMe ? "rgba(58,142,246,.15)" : "var(--surface)", border: `1px solid ${isMe ? "rgba(58,142,246,.3)" : "var(--border)"}`, borderRadius: isMe ? "14px 14px 2px 14px" : "14px 14px 14px 2px", overflow: "hidden" }}>
+                    {/* REPLY-TO PREVIEW */}
+                    {m.replyTo && (
+                      <div style={{ background: isMe ? "rgba(58,142,246,.2)" : "var(--surface2)", borderLeft: "3px solid var(--accent)", padding: "6px 10px", margin: "8px 10px 0", borderRadius: 6 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)" }}>{m.replyTo.fromName}</div>
+                        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{m.replyTo.text}{m.replyTo.text?.length >= 60 ? "..." : ""}</div>
+                      </div>
+                    )}
+                    <div style={{ padding: "8px 12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                        <div style={{ width: 20, height: 20, borderRadius: 5, background: m.fromRole === "admin" ? "var(--accent)" : "var(--blue)", color: m.fromRole === "admin" ? "#000" : "#fff", fontSize: 8, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{m.fromAvatar}</div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isMe ? "var(--blue)" : "var(--accent)" }}>{m.fromName}</span>
+                        {m.fromRole === "admin" && <span style={{ fontSize: 9, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "1px 5px", borderRadius: 6, fontWeight: 700 }}>ADMIN</span>}
+                      </div>
+                      {/* PHOTO */}
+                      {m.photo && <img src={m.photo} alt="photo" style={{ width: "100%", maxWidth: 280, borderRadius: 8, marginBottom: 6, display: "block" }} onClick={() => window.open(m.photo, "_blank")} />}
+                      {/* TEXT */}
+                      {m.text && <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text)", whiteSpace: "pre-wrap" }}>{m.text}</div>}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4, gap: 8 }}>
+                        <div style={{ fontSize: 10, color: "var(--muted)" }}>{fmtT(m.date)}</div>
+                        {/* REPLY BUTTON */}
+                        {canReply && (
+                          <button onClick={() => setReplyTo(m)} style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 11, cursor: "pointer", padding: "2px 6px", borderRadius: 6 }}>
+                            ↩ Répondre
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 13, lineHeight: 1.6, color: "var(--text)", whiteSpace: "pre-wrap" }}>{m.text}</div>
-                    <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 6, textAlign: isMe ? "right" : "left" }}>{fmtT(m.date)}</div>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* REPLY — admins only */}
+          {/* REPLY BOX */}
           {canReply ? (
-            <>
-              <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, display: "flex", gap: 8, alignItems: "flex-end" }}>
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+              {/* REPLY-TO PREVIEW */}
+              {replyTo && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--surface2)", borderRadius: 8, padding: "6px 10px", marginBottom: 8, borderLeft: "3px solid var(--accent)" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)" }}>↩ {replyTo.fromName}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)" }}>{replyTo.text?.slice(0, 60)}{replyTo.photo && !replyTo.text ? "📷 Photo" : ""}</div>
+                  </div>
+                  <button onClick={() => setReplyTo(null)} style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 16, cursor: "pointer" }}>×</button>
+                </div>
+              )}
+              {/* PHOTO PREVIEW */}
+              {photoData && (
+                <div style={{ position: "relative", display: "inline-block", marginBottom: 8 }}>
+                  <img src={photoData} alt="preview" style={{ height: 80, borderRadius: 8, objectFit: "cover" }} />
+                  <button onClick={() => setPhotoData(null)} style={{ position: "absolute", top: -6, right: -6, background: "var(--red)", border: "none", borderRadius: "50%", width: 20, height: 20, color: "#fff", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                {/* PHOTO BUTTON */}
+                <button onClick={() => photoRef.current.click()} style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10, width: 38, height: 38, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, cursor: "pointer", flexShrink: 0 }}>📷</button>
+                <input ref={photoRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handlePhoto} />
                 <textarea className="form-input" style={{ flex: 1, resize: "none" }} rows={2}
-                  placeholder="Répondre... (Entrée pour envoyer)"
+                  placeholder="Écrire un message... (Entrée pour envoyer)"
                   value={replyText} onChange={e => setReplyText(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendReply(); } }}
                 />
-                <button className="btn btn-primary btn-sm" style={{ flexShrink: 0 }} onClick={sendReply} disabled={!replyText.trim()}>Envoyer</button>
+                <button className="btn btn-primary btn-sm" style={{ flexShrink: 0, alignSelf: "flex-end" }} onClick={sendReply} disabled={!replyText.trim() && !photoData}>➤</button>
               </div>
               <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>Entrée pour envoyer · Shift+Entrée pour saut de ligne</div>
-            </>
+            </div>
           ) : (
             <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, textAlign: "center", fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>
               👁 Lecture seule — seuls les admins peuvent répondre aux annonces
