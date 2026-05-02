@@ -262,6 +262,7 @@ export default function App() {
   const [tools, setTools] = useState(INITIAL_TOOLS);
   const [chantiers, setChantiers] = useState(INITIAL_CHANTIERS);
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState("tools");
   const [toast, setToast] = useState(null);
@@ -275,6 +276,7 @@ export default function App() {
 
   const isAdmin = currentUser?.role === "admin";
   const unread = messages.filter(m => !m.read).length;
+  const pendingRequests = requests.filter(r => r.status === "pending").length;
 
   // ── SESSION PERSISTANTE ──────────────────────────────────────────────────────
   // Sauvegarde l'utilisateur connecté dans le navigateur
@@ -321,6 +323,9 @@ export default function App() {
     unsubs.push(onSnapshot(collection(db, "messages"), snap => {
       setMessages(snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => new Date(b.date) - new Date(a.date)));
       checkLoaded();
+    }));
+    unsubs.push(onSnapshot(collection(db, "requests"), snap => {
+      setRequests(snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => new Date(b.date) - new Date(a.date)));
     }));
 
     return () => unsubs.forEach(u => u());
@@ -497,7 +502,51 @@ export default function App() {
     showToast("🗑 Chantier supprimé");
   };
 
-  // ── FILTERED TOOLS ──────────────────────────────────────────────────────────
+  // ── SEND REQUEST ─────────────────────────────────────────────────────────────
+  const sendRequest = async ({ type, toolId, toolName, toolLocation, targetViewerId, targetViewerName, targetChantier, note }) => {
+    const id = String(Date.now());
+    const today = new Date().toLocaleString("fr-MU", { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+
+    // For non-functional — apply immediately + notify
+    if (type === "nonfunctional") {
+      const tool = tools.find(t => String(t.id) === String(toolId));
+      if (tool) {
+        const firstEntry = { id: Date.now(), type: "thread", status: "suivi-cours", note: note || "Signalé non fonctionnel.", by: currentUser.name, datetime: today, timestamp: Date.now() };
+        const updatedTool = {
+          ...tool, status: "nonfunctional", obsolete: false,
+          obsoleteDate: new Date().toISOString().slice(0,10),
+          obsoleteType: "suivi-cours", obsoleteThread: [firstEntry],
+          history: [...tool.history, { date: new Date().toLocaleDateString("fr-MU"), action: `🔴 Signalé non fonctionnel par ${currentUser.name}${note ? ` — "${note}"` : ""}`, by: currentUser.name }],
+        };
+        await setDoc(doc(db, "tools", String(toolId)), updatedTool);
+      }
+      // Auto message to admins
+      await setDoc(doc(db, "messages", id), {
+        id, from: currentUser.id, to: null, type: "push",
+        text: `⚠️ ${currentUser.name} a signalé "${toolName}" NON FONCTIONNEL.${note ? ` — "${note}"` : ""} Merci de prendre en charge.`,
+        toolId: String(toolId), date: new Date().toISOString(), read: false,
+      });
+      showToast("⚠️ Signalement envoyé aux admins");
+      return;
+    }
+
+    // For transfer / return — create pending request
+    const reqText = type === "transfer"
+      ? `🔄 ${currentUser.name} demande de transférer "${toolName}" (${toolLocation}) → ${targetViewerName} — ${targetChantier}${note ? ` — "${note}"` : ""}`
+      : `🏠 ${currentUser.name} demande le retour au store de "${toolName}" (${toolLocation})${note ? ` — "${note}"` : ""}`;
+
+    await setDoc(doc(db, "requests", id), {
+      id, type, status: "pending",
+      from: currentUser.id, fromName: currentUser.name,
+      toolId: String(toolId), toolName, toolLocation,
+      targetViewerId: targetViewerId ? String(targetViewerId) : null,
+      targetViewerName: targetViewerName || null,
+      targetChantier: targetChantier || null,
+      note: note || "", text: reqText,
+      date: new Date().toISOString(),
+    });
+    showToast("📨 Demande envoyée aux admins !");
+  };
   const filteredTools = tools.filter(t => {
     const matchStatus = filterStatus === "all" ? true : t.status === filterStatus;
     // Peintre ET chantier sont mutuellement exclusifs — un seul actif à la fois
@@ -530,6 +579,10 @@ export default function App() {
             <button className={`nav-item ${page === "messages" ? "active" : ""}`} onClick={() => setPage("messages")}>
               <span className="icon">💬</span><span>Messages</span>
               {unread > 0 && <span className="badge">{unread}</span>}
+            </button>
+            <button className={`nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
+              <span className="icon">🔔</span><span>Demandes</span>
+              {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
             </button>
             {isAdmin && <button className={`nav-item ${page === "users" ? "active" : ""}`} onClick={() => setPage("users")}><span className="icon">👷</span><span>Équipe</span></button>}
           </nav>
@@ -698,36 +751,7 @@ export default function App() {
                       viewers={viewers}
                       chantiers={chantiers}
                       onOpen={() => openTool(t)}
-                      onTransfer={async (targetViewerId, targetChantier) => {
-                        assignTool(t.id, targetViewerId, targetChantier, "out");
-                      }}
-                      onReturnStore={async () => {
-                        assignTool(t.id, null, null, "in");
-                      }}
-                      onNonFunctional={async (note) => {
-                        const today = new Date().toLocaleDateString("fr-MU", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
-                        const firstEntry = {
-                          id: Date.now(), type: "thread", status: "suivi-cours",
-                          note: note || "Signalé non fonctionnel par le peintre.",
-                          by: currentUser.name, datetime: new Date().toLocaleString("fr-MU"), timestamp: Date.now(),
-                        };
-                        const updatedTool = {
-                          ...t, status: "nonfunctional", obsolete: false,
-                          obsoleteDate: new Date().toISOString().slice(0,10),
-                          obsoleteType: "suivi-cours",
-                          obsoleteThread: [firstEntry],
-                          history: [...t.history, { date: today, action: `🔴 Signalé non fonctionnel par ${currentUser.name}${note ? ` — "${note}"` : ""}`, by: currentUser.name }],
-                        };
-                        await setDoc(doc(db, "tools", String(t.id)), updatedTool);
-                        // Message automatique aux admins
-                        const msgId = String(Date.now());
-                        await setDoc(doc(db, "messages", msgId), {
-                          id: msgId, from: currentUser.id, to: null, type: "push",
-                          text: `⚠️ ${currentUser.name} a signalé l'outil "${t.name}" comme NON FONCTIONNEL.${note ? ` Note : "${note}"` : ""} Merci de prendre en charge.`,
-                          toolId: String(t.id), date: new Date().toISOString(), read: false,
-                        });
-                        showToast("⚠️ Outil signalé — les admins ont été notifiés");
-                      }}
+                      onRequest={sendRequest}
                     />
                   ))}
                 </div>
@@ -738,6 +762,98 @@ export default function App() {
           {/* ── CHANTIERS ── */}
           {page === "chantiers" && isAdmin && (
             <ChantierPage chantiers={chantiers} tools={tools} users={users} addChantier={addChantier} deleteChantier={deleteChantier} />
+          )}
+
+          {/* ── DEMANDES ── */}
+          {page === "requests" && (
+            <>
+              <div className="topbar">
+                <h2>🔔 Demandes</h2>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>{pendingRequests} en attente</span>
+              </div>
+              <div className="content">
+                {requests.length === 0 && (
+                  <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+                    <div style={{ fontSize: 40, marginBottom: 8 }}>🔔</div>
+                    <div>Aucune demande pour le moment</div>
+                  </div>
+                )}
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {requests.map(r => {
+                    const tool = tools.find(t => String(t.id) === String(r.toolId));
+                    const isPending = r.status === "pending";
+                    return (
+                      <div key={r.id} style={{
+                        background: "var(--surface)", borderRadius: 12, padding: 16,
+                        border: `1px solid ${isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)"}`,
+                        opacity: isPending ? 1 : 0.7,
+                      }}>
+                        {/* HEADER */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                          <div>
+                            <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: isPending ? "rgba(245,166,35,.2)" : r.status === "approved" ? "rgba(39,201,122,.2)" : "rgba(232,82,10,.2)", color: isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)" }}>
+                              {isPending ? "⏳ En attente" : r.status === "approved" ? "✅ Approuvé" : "❌ Refusé"}
+                            </span>
+                            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{new Date(r.date).toLocaleString("fr-MU")}</div>
+                          </div>
+                          {tool && <span style={{ fontSize: 20 }}>{tool.photo}</span>}
+                        </div>
+
+                        {/* MESSAGE */}
+                        <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginBottom: 10 }}>{r.text}</div>
+
+                        {/* ADMIN NOTE */}
+                        {r.adminNote && (
+                          <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", background: "var(--surface2)", borderRadius: 8, padding: "6px 10px", marginBottom: 10 }}>
+                            💬 Admin : "{r.adminNote}"
+                          </div>
+                        )}
+
+                        {/* ADMIN ACTIONS */}
+                        {isAdmin && isPending && (
+                          <RequestActions
+                            request={r}
+                            tool={tool}
+                            onApprove={async (adminNote) => {
+                              // Appliquer le mouvement
+                              if (r.type === "transfer" && tool) {
+                                await setDoc(doc(db, "tools", String(tool.id)), {
+                                  ...tool,
+                                  status: "assigned",
+                                  assignedTo: String(r.targetViewerId),
+                                  location: r.targetChantier,
+                                  history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Transfert approuvé → ${r.targetViewerName} (${r.targetChantier}) — par ${currentUser.name}`, by: currentUser.name }],
+                                  lastReminder: new Date().toISOString(),
+                                });
+                              } else if (r.type === "return" && tool) {
+                                await setDoc(doc(db, "tools", String(tool.id)), {
+                                  ...tool, status: "store", assignedTo: null, location: "Store",
+                                  history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Retour store approuvé — par ${currentUser.name}`, by: currentUser.name }],
+                                  lastReminder: null,
+                                });
+                              }
+                              await setDoc(doc(db, "requests", r.id), { ...r, status: "approved", adminNote: adminNote || "", approvedBy: currentUser.name, approvedAt: new Date().toISOString() });
+                              showToast("✅ Demande approuvée !");
+                            }}
+                            onRefuse={async (adminNote) => {
+                              await setDoc(doc(db, "requests", r.id), { ...r, status: "refused", adminNote: adminNote || "", refusedBy: currentUser.name, refusedAt: new Date().toISOString() });
+                              showToast("❌ Demande refusée");
+                            }}
+                          />
+                        )}
+
+                        {/* PEINTRE VIEW */}
+                        {!isAdmin && (
+                          <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                            {isPending ? "⏳ En attente d'approbation par un admin" : r.status === "approved" ? `✅ Approuvé par ${r.approvedBy}` : `❌ Refusé par ${r.refusedBy}`}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           )}
 
           {/* ── MESSAGES ── */}
@@ -899,6 +1015,10 @@ export default function App() {
         <button className={`bottom-nav-item ${page === "messages" ? "active" : ""}`} onClick={() => setPage("messages")}>
           <span className="bn-icon">💬</span>Messages
           {unread > 0 && <span className="badge">{unread}</span>}
+        </button>
+        <button className={`bottom-nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
+          <span className="bn-icon">🔔</span>Demandes
+          {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
         </button>
         {isAdmin && (
           <button className={`bottom-nav-item ${page === "users" ? "active" : ""}`} onClick={() => setPage("users")}>
@@ -1112,13 +1232,16 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                   <option value="">— Choisir un chantier —</option>
                   {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
-                <button className="btn btn-primary btn-sm" disabled={!assignForm.viewerId || !assignForm.chantier} onClick={() => assignTool(tool.id, Number(assignForm.viewerId), assignForm.chantier, "out")}>Sortir & Confier</button>
+                <button className="btn btn-primary btn-sm" disabled={!assignForm.viewerId || !assignForm.chantier} onClick={() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out")}>Sortir & Confier</button>
               </div>
             </div>
           )}
+
+          {/* PEINTRE — voir seulement depuis Mes outils */}
+
           {isAdmin && tool.status === "assigned" && (
             <div className="assign-section">
-              <h4>🔄 Mouvement de l'outil</h4>
+              <h4>🔄 Mouvement de l'outil (Admin)</h4>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <select className="form-input" value={moveForm.destination} onChange={e => setMoveForm(p => ({ ...p, destination: e.target.value }))}>
                   <option value="">— Destination —</option>
@@ -1129,7 +1252,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                   <option value="">— Retour store (ou choisir nouveau peintre) —</option>
                   {viewers.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                 </select>
-                <button className="btn btn-green btn-sm" disabled={!moveForm.destination} onClick={() => assignTool(tool.id, moveForm.newViewerId ? Number(moveForm.newViewerId) : null, moveForm.destination === "Store" ? null : moveForm.destination, moveForm.newViewerId ? "out" : "in")}>
+                <button className="btn btn-green btn-sm" disabled={!moveForm.destination} onClick={() => assignTool(tool.id, moveForm.newViewerId || null, moveForm.destination === "Store" ? null : moveForm.destination, moveForm.newViewerId ? "out" : "in")}>
                   {moveForm.newViewerId ? "Transférer à un autre peintre" : "Récupérer → Store"}
                 </button>
               </div>
@@ -1503,18 +1626,47 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
   );
 }
 
+// ─── REQUEST ACTIONS ─────────────────────────────────────────────────────────
+function RequestActions({ request: r, tool, onApprove, onRefuse }) {
+  const [note, setNote] = useState("");
+  const [mode, setMode] = useState(null); // null | "refuse"
+
+  if (mode === "refuse") return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <textarea className="form-input" rows={2} placeholder="Motif du refus..." value={note} onChange={e => setNote(e.target.value)} />
+      <div style={{ display: "flex", gap: 6 }}>
+        <button className="btn btn-ghost btn-sm" onClick={() => setMode(null)}>Annuler</button>
+        <button className="btn btn-danger btn-sm" onClick={() => onRefuse(note)}>Confirmer le refus</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <input className="form-input" style={{ flex: 1, fontSize: 12 }} placeholder="Note optionnelle pour l'approbation..." value={note} onChange={e => setNote(e.target.value)} />
+      <button className="btn btn-green btn-sm" onClick={() => onApprove(note)}>✅ Approuver</button>
+      <button className="btn btn-danger btn-sm" onClick={() => setMode("refuse")}>❌ Refuser</button>
+    </div>
+  );
+}
+
 // ─── VIEWER TOOL CARD ─────────────────────────────────────────────────────────
-function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpen, onTransfer, onReturnStore, onNonFunctional }) {
-  const [action, setAction] = useState(null); // null | "transfer" | "nonfunctional"
+function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpen, onRequest }) {
+  const [action, setAction] = useState(null);
   const [targetViewer, setTargetViewer] = useState("");
   const [targetChantier, setTargetChantier] = useState("");
   const [note, setNote] = useState("");
 
   const otherPainters = viewers.filter(v => String(v.id) !== String(currentUser.id));
 
+  const submit = (type) => {
+    const targetName = targetViewer ? users.find(u => String(u.id) === String(targetViewer))?.name : null;
+    onRequest({ type, toolId: t.id, toolName: t.name, toolLocation: t.location, targetViewerId: targetViewer || null, targetViewerName: targetName, targetChantier: targetChantier || null, note });
+    setAction(null); setNote(""); setTargetViewer(""); setTargetChantier("");
+  };
+
   return (
     <div className={`tool-card${t.status === "nonfunctional" ? " nonfunctional" : ""}`}>
-      {/* PHOTO */}
       {t.photoUrl
         ? <img src={t.photoUrl} alt={t.name} className="tool-photo-card" onClick={onOpen} style={{ cursor: "pointer" }} />
         : <div className="tool-photo-placeholder" onClick={onOpen} style={{ cursor: "pointer" }}><span className="big-emoji">{t.photo}</span><span style={{ fontSize: 11 }}>Aucune photo</span></div>
@@ -1534,46 +1686,55 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
       {/* ACTION BUTTONS */}
       {!action && (
         <div style={{ padding: "10px 12px", display: "flex", gap: 6, flexWrap: "wrap", borderTop: "1px solid var(--border)" }}>
-          <button className="btn btn-blue btn-sm" onClick={() => setAction("transfer")}>🔄 Transférer</button>
-          <button className="btn btn-green btn-sm" onClick={() => { onReturnStore(); }}>🏠 Retour store</button>
+          <button className="btn btn-blue btn-sm" onClick={() => setAction("transfer")}>🔄 Demander transfert</button>
+          <button className="btn btn-green btn-sm" onClick={() => setAction("return")}>🏠 Retour store</button>
           <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "#f07030" }} onClick={() => setAction("nonfunctional")}>🔴 Non fonctionnel</button>
         </div>
       )}
 
-      {/* TRANSFER FORM */}
+      {/* TRANSFER REQUEST */}
       {action === "transfer" && (
         <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue)" }}>🔄 Transférer à</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue)" }}>🔄 Demande de transfert</div>
           <select className="form-input" value={targetViewer} onChange={e => setTargetViewer(e.target.value)}>
-            <option value="">— Choisir un peintre —</option>
+            <option value="">— Vers quel peintre ? —</option>
             {otherPainters.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
           <select className="form-input" value={targetChantier} onChange={e => setTargetChantier(e.target.value)}>
-            <option value="">— Choisir un chantier —</option>
+            <option value="">— Vers quel chantier ? —</option>
             {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
+          <textarea className="form-input" rows={2} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
           <div style={{ display: "flex", gap: 6 }}>
             <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button>
-            <button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier}
-              onClick={() => { onTransfer(targetViewer, targetChantier); setAction(null); }}>
-              Confirmer
-            </button>
+            <button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier} onClick={() => submit("transfer")}>Envoyer la demande</button>
           </div>
         </div>
       )}
 
-      {/* NON FUNCTIONAL FORM */}
+      {/* RETURN REQUEST */}
+      {action === "return" && (
+        <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)" }}>🏠 Demande de retour au store</div>
+          <textarea className="form-input" rows={2} placeholder="Note optionnelle... ex: travaux terminés" value={note} onChange={e => setNote(e.target.value)} />
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button>
+            <button className="btn btn-green btn-sm" onClick={() => submit("return")}>Envoyer la demande</button>
+          </div>
+        </div>
+      )}
+
+      {/* NON FUNCTIONAL */}
       {action === "nonfunctional" && (
         <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "#f07030" }}>🔴 Signaler non fonctionnel</div>
-          <textarea className="form-input" rows={2} placeholder="Décrivez le problème... ex: câble coupé, moteur grillé" value={note} onChange={e => setNote(e.target.value)} />
-          <div style={{ fontSize: 11, color: "var(--muted)" }}>⚠️ Un message automatique sera envoyé aux admins</div>
+          <textarea className="form-input" rows={2} placeholder="Décrivez le problème... ex: câble coupé" value={note} onChange={e => setNote(e.target.value)} />
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>⚠️ L'outil sera marqué non fonctionnel et les admins notifiés immédiatement</div>
           <div style={{ display: "flex", gap: 6 }}>
             <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button>
-            <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.3)", color: "#f07030" }}
-              onClick={() => { onNonFunctional(note); setAction(null); }}>
-              Confirmer
-            </button>
+            <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.3)", color: "#f07030" }} onClick={() => submit("nonfunctional")}>Confirmer</button>
           </div>
         </div>
       )}
