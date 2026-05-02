@@ -576,10 +576,6 @@ export default function App() {
             {isAdmin && <button className={`nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}><span className="icon">🔧</span><span>Outils</span></button>}
             {isAdmin && <button className={`nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}><span className="icon">🏗</span><span>Chantiers</span></button>}
             {!isAdmin && <button className={`nav-item ${page === "mytools" ? "active" : ""}`} onClick={() => setPage("mytools")}><span className="icon">📦</span><span>Mes outils</span></button>}
-            <button className={`nav-item ${page === "messages" ? "active" : ""}`} onClick={() => setPage("messages")}>
-              <span className="icon">💬</span><span>Messages</span>
-              {unread > 0 && <span className="badge">{unread}</span>}
-            </button>
             <button className={`nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
               <span className="icon">🔔</span><span>Demandes</span>
               {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
@@ -965,10 +961,6 @@ export default function App() {
             <span className="bn-icon">📦</span>Mes outils
           </button>
         )}
-        <button className={`bottom-nav-item ${page === "messages" ? "active" : ""}`} onClick={() => setPage("messages")}>
-          <span className="bn-icon">💬</span>Messages
-          {unread > 0 && <span className="badge">{unread}</span>}
-        </button>
         <button className={`bottom-nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
           <span className="bn-icon">🔔</span>Demandes
           {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
