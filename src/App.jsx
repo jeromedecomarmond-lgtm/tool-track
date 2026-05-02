@@ -358,14 +358,7 @@ export default function App() {
                 <div className="login-sub">Choisissez votre profil</div>
                 <div className="user-select-list">
                   {users.map(u => (
-                    <div key={u.id} className="user-select-item" onClick={() => { setCurrentUser(u); setPage(u.role === "admin" ? "tools" : "mytools"); }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: u.role === "admin" ? "var(--accent)" : "var(--blue)", color: u.role === "admin" ? "#000" : "#fff" }}>{u.avatar}</div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div>
-                        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{u.role === "admin" ? "🔑 Administrateur" : "🖌 Peintre"}</div>
-                      </div>
-                      <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
-                    </div>
+                    <PinLogin key={u.id} user={u} onSuccess={(u) => { setCurrentUser(u); setPage(u.role === "admin" ? "tools" : "mytools"); }} />
                   ))}
                 </div>
               </>
@@ -459,9 +452,10 @@ export default function App() {
   const addUser = async (form) => {
     const id = String(Date.now());
     const initials = form.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-    await setDoc(doc(db, "users", id), { id, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email || "" });
+    const newUser = { id, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email || "", pin: form.pin };
+    await setDoc(doc(db, "users", id), newUser);
     showToast("✅ Profil créé");
-    setModal(null);
+    return newUser;
   };
 
   // ── CHANTIERS CRUD ───────────────────────────────────────────────────────────
@@ -1272,27 +1266,102 @@ function AddToolModal({ onClose, onSave }) {
 
 // ─── ADD USER MODAL ───────────────────────────────────────────────────────────
 function AddUserModal({ onClose, onSave }) {
-  const [form, setForm] = useState({ name: "", role: "viewer", phone: "", email: "" });
+  const APP_URL = "tool-track-rosy.vercel.app";
+  const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
+  const [form, setForm] = useState({ name: "", role: "viewer", phone: "", email: "", pin: generatePin() });
+  const [saved, setSaved] = useState(false);
+  const [savedUser, setSavedUser] = useState(null);
+
+  const handleSave = async () => {
+    const user = await onSave(form);
+    setSavedUser({ ...form });
+    setSaved(true);
+  };
+
+  const sendWhatsApp = () => {
+    const msg = encodeURIComponent(
+      `Bonjour ${savedUser.name} 👋\n\nTu es invité(e) sur *Tool Track* — l'app de gestion des outils.\n\n` +
+      `📱 Installe l'app : https://${APP_URL}\n` +
+      `👤 Ton profil : *${savedUser.name}*\n` +
+      `🔑 Ton code PIN : *${savedUser.pin}*\n\n` +
+      `_Sur ton téléphone, ouvre le lien dans Safari (iPhone) ou Chrome (Android) et ajoute-le à ton écran d'accueil pour l'avoir comme une vraie app !_`
+    );
+    const phone = savedUser.phone.replace(/\s/g, "").replace(/^\+/, "");
+    const url = phone
+      ? `https://wa.me/${phone}?text=${msg}`
+      : `https://wa.me/?text=${msg}`;
+    window.open(url, "_blank");
+  };
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-        <div className="modal-header"><h3>Nouveau profil</h3><button className="close-btn" onClick={onClose}>×</button></div>
+        <div className="modal-header">
+          <h3>{saved ? "✅ Profil créé !" : "Nouveau profil"}</h3>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
         <div className="modal-body">
-          <div className="form-group"><label className="form-label">Nom complet *</label><input className="form-input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
-          <div className="form-group"><label className="form-label">Rôle *</label>
-            <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
-              <option value="viewer">Peintre / Spectateur</option>
-              <option value="admin">Admin / Responsable</option>
-            </select>
-          </div>
-          <div className="form-row">
-            <div className="form-group"><label className="form-label">Téléphone</label><input className="form-input" value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
-            <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
-          </div>
+          {!saved ? (
+            <>
+              <div className="form-group"><label className="form-label">Nom complet *</label><input className="form-input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
+              <div className="form-group"><label className="form-label">Rôle *</label>
+                <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
+                  <option value="viewer">Peintre / Spectateur</option>
+                  <option value="admin">Admin / Responsable</option>
+                </select>
+              </div>
+              <div className="form-row">
+                <div className="form-group"><label className="form-label">Téléphone WhatsApp</label><input className="form-input" placeholder="+230 ..." value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
+                <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">🔑 Code PIN (4 chiffres)</label>
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input className="form-input" style={{ flex: 1, fontSize: 22, fontWeight: 800, letterSpacing: 8, textAlign: "center" }}
+                    maxLength={4} value={form.pin}
+                    onChange={e => setForm(p => ({ ...p, pin: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
+                  />
+                  <button className="btn btn-ghost btn-sm" onClick={() => setForm(p => ({ ...p, pin: generatePin() }))}>🔄 Nouveau</button>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Ce PIN sera envoyé à la personne via WhatsApp</div>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "center", textAlign: "center", padding: "10px 0" }}>
+              <div style={{ width: 60, height: 60, borderRadius: 14, background: savedUser.role === "admin" ? "var(--accent)" : "var(--blue)", color: savedUser.role === "admin" ? "#000" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800 }}>
+                {savedUser.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase()}
+              </div>
+              <div>
+                <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800 }}>{savedUser.name}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{savedUser.role === "admin" ? "🔑 Admin" : "🖌 Peintre"}</div>
+              </div>
+              <div style={{ background: "var(--surface2)", borderRadius: 12, padding: "14px 24px", width: "100%" }}>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Code PIN</div>
+                <div style={{ fontFamily: "var(--font-head)", fontSize: 36, fontWeight: 800, color: "var(--accent)", letterSpacing: 8 }}>{savedUser.pin}</div>
+              </div>
+              {savedUser.phone && (
+                <button className="btn btn-green" style={{ width: "100%", justifyContent: "center", fontSize: 15 }} onClick={sendWhatsApp}>
+                  📲 Envoyer l'invitation via WhatsApp
+                </button>
+              )}
+              {!savedUser.phone && (
+                <div style={{ fontSize: 12, color: "var(--muted)" }}>
+                  Aucun téléphone renseigné — communiquez le PIN manuellement :<br/>
+                  <strong style={{ color: "var(--accent)", fontSize: 18, letterSpacing: 4 }}>{savedUser.pin}</strong>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-          <button className="btn btn-primary" disabled={!form.name} onClick={() => onSave(form)}>Créer le profil</button>
+          {!saved ? (
+            <>
+              <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
+              <button className="btn btn-primary" disabled={!form.name || form.pin.length !== 4} onClick={handleSave}>Créer le profil</button>
+            </>
+          ) : (
+            <button className="btn btn-ghost" onClick={onClose}>Fermer</button>
+          )}
         </div>
       </div>
     </div>
@@ -1385,17 +1454,83 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
   );
 }
 
+// ─── PIN LOGIN ────────────────────────────────────────────────────────────────
+function PinLogin({ user, onSuccess }) {
+  const [open, setOpen] = useState(false);
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState(false);
+
+  const handlePin = (digit) => {
+    const newPin = pin + digit;
+    setPin(newPin);
+    setError(false);
+    if (newPin.length === 4) {
+      if (!user.pin || newPin === user.pin) {
+        setTimeout(() => onSuccess(user), 200);
+      } else {
+        setError(true);
+        setTimeout(() => { setPin(""); setError(false); }, 1000);
+      }
+    }
+  };
+
+  if (!open) {
+    return (
+      <div className="user-select-item" onClick={() => setOpen(true)}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: user.role === "admin" ? "var(--accent)" : "var(--blue)", color: user.role === "admin" ? "#000" : "#fff" }}>{user.avatar}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{user.name}</div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{user.role === "admin" ? "🔑 Administrateur" : "🖌 Peintre"}</div>
+        </div>
+        <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: "var(--surface2)", borderRadius: 12, padding: 16, border: `1px solid ${error ? "var(--red)" : "var(--border)"}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, background: user.role === "admin" ? "var(--accent)" : "var(--blue)", color: user.role === "admin" ? "#000" : "#fff" }}>{user.avatar}</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{user.name}</div>
+          <div style={{ fontSize: 11, color: error ? "var(--red)" : "var(--muted)" }}>{error ? "❌ Code incorrect" : "Entrez votre PIN"}</div>
+        </div>
+        <button onClick={() => { setOpen(false); setPin(""); }} style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 20, cursor: "pointer" }}>×</button>
+      </div>
+      {/* PIN DOTS */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 16 }}>
+        {[0,1,2,3].map(i => (
+          <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: i < pin.length ? (error ? "var(--red)" : "var(--accent)") : "var(--border)", transition: "all .15s" }} />
+        ))}
+      </div>
+      {/* KEYPAD */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+        {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((d, i) => (
+          <button key={i} onClick={() => {
+            if (d === "⌫") { setPin(p => p.slice(0,-1)); setError(false); }
+            else if (d !== "") handlePin(String(d));
+          }}
+          style={{ padding: "14px 0", borderRadius: 10, border: "1px solid var(--border)", background: d === "⌫" ? "rgba(232,82,10,.1)" : "var(--surface)", color: d === "⌫" ? "var(--red)" : "var(--text)", fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, cursor: d === "" ? "default" : "pointer", opacity: d === "" ? 0 : 1 }}>
+            {d}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── FIRST ADMIN FORM ─────────────────────────────────────────────────────────
 function FirstAdminForm({ onSave }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [pin, setPin] = useState(String(Math.floor(1000 + Math.random() * 9000)));
 
   const handleCreate = () => {
     if (!name.trim()) return;
     const initials = name.trim().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
     const id = String(Date.now());
-    onSave({ id, name: name.trim(), role: "admin", avatar: initials, phone, email });
+    onSave({ id, name: name.trim(), role: "admin", avatar: initials, phone, email, pin });
   };
 
   return (
@@ -1412,7 +1547,15 @@ function FirstAdminForm({ onSave }) {
         <label className="form-label">Email</label>
         <input className="form-input" type="email" placeholder="vous@email.com" value={email} onChange={e => setEmail(e.target.value)} />
       </div>
-      <button className="btn btn-primary" disabled={!name.trim()} onClick={handleCreate} style={{ justifyContent: "center", marginTop: 4 }}>
+      <div className="form-group">
+        <label className="form-label">🔑 Votre code PIN *</label>
+        <input className="form-input" style={{ fontSize: 22, fontWeight: 800, letterSpacing: 8, textAlign: "center" }}
+          maxLength={4} placeholder="4 chiffres" value={pin}
+          onChange={e => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+        />
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Retenez bien ce PIN — il vous servira à vous connecter</div>
+      </div>
+      <button className="btn btn-primary" disabled={!name.trim() || pin.length !== 4} onClick={handleCreate} style={{ justifyContent: "center", marginTop: 4 }}>
         🚀 Créer et démarrer
       </button>
     </div>
