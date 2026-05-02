@@ -276,6 +276,18 @@ export default function App() {
   const isAdmin = currentUser?.role === "admin";
   const unread = messages.filter(m => !m.read).length;
 
+  // ── SESSION PERSISTANTE ──────────────────────────────────────────────────────
+  // Sauvegarde l'utilisateur connecté dans le navigateur
+  const loginUser = (u) => {
+    setCurrentUser(u);
+    setPage(u.role === "admin" ? "tools" : "mytools");
+    try { localStorage.setItem("tooltrack_user_id", u.id); } catch(e) {}
+  };
+  const logoutUser = () => {
+    setCurrentUser(null);
+    try { localStorage.removeItem("tooltrack_user_id"); } catch(e) {}
+  };
+
   // ── FIREBASE REAL-TIME SYNC ──────────────────────────────────────────────────
   useEffect(() => {
     const unsubs = [];
@@ -283,7 +295,19 @@ export default function App() {
     const checkLoaded = () => { loaded++; if (loaded >= 4) setLoading(false); };
 
     unsubs.push(onSnapshot(collection(db, "users"), snap => {
-      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const loadedUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setUsers(loadedUsers);
+      // Auto-login si session sauvegardée
+      try {
+        const savedId = localStorage.getItem("tooltrack_user_id");
+        if (savedId) {
+          const savedUser = loadedUsers.find(u => u.id === savedId);
+          if (savedUser) {
+            setCurrentUser(savedUser);
+            setPage(savedUser.role === "admin" ? "tools" : "mytools");
+          }
+        }
+      } catch(e) {}
       checkLoaded();
     }));
     unsubs.push(onSnapshot(collection(db, "tools"), snap => {
@@ -351,14 +375,14 @@ export default function App() {
             {users.length === 0 ? (
               <>
                 <div className="login-sub">Bienvenue ! Créez le premier administrateur pour démarrer.</div>
-                <FirstAdminForm onSave={async (u) => { await setDoc(doc(db, "users", String(u.id)), u); setCurrentUser(u); setPage("tools"); }} />
+                <FirstAdminForm onSave={async (u) => { await setDoc(doc(db, "users", String(u.id)), u); loginUser(u); }} />
               </>
             ) : (
               <>
                 <div className="login-sub">Choisissez votre profil</div>
                 <div className="user-select-list">
                   {users.map(u => (
-                    <PinLogin key={u.id} user={u} onSuccess={(u) => { setCurrentUser(u); setPage(u.role === "admin" ? "tools" : "mytools"); }} />
+                    <PinLogin key={u.id} user={u} onSuccess={(u) => loginUser(u)} />
                   ))}
                 </div>
               </>
@@ -517,7 +541,7 @@ export default function App() {
                 <div className="role">{currentUser.role}</div>
               </div>
             </div>
-            <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={() => setCurrentUser(null)}>⇄ Changer</button>
+            <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={logoutUser}>⇄ Changer</button>
           </div>
         </aside>
 
@@ -856,7 +880,7 @@ export default function App() {
             <span className="bn-icon">👷</span>Équipe
           </button>
         )}
-        <button className="bottom-nav-item" onClick={() => setCurrentUser(null)}>
+        <button className="bottom-nav-item" onClick={logoutUser}>
           <span className="bn-icon">⇄</span>Profil
         </button>
       </nav>
