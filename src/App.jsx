@@ -1133,11 +1133,17 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h3>{tool.photo} {editing ? "Modifier l'outil" : tool.name}</h3>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 24 }}>{tool.photo}</span>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ fontSize: 17, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tool.name}</h3>
+              {tool.ref && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>🏭 {tool.ref}</div>}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
             {isAdmin && !editing && (
               <>
-                <button className="btn btn-ghost btn-sm" onClick={() => setEditing(true)}>✏️ Modifier</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditing(true)}>✏️</button>
                 <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "var(--red)" }}
                   onClick={() => setConfirmDelete(true)}>🗑</button>
               </>
