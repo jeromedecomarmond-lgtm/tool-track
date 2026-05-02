@@ -679,31 +679,56 @@ export default function App() {
                 {myTools.length > 0 && (
                   <div className="reminder-banner">
                     <span>⏰</span>
-                    <p>Vous avez <strong>{myTools.length} outil(s)</strong> sous votre responsabilité. Signalez leur disponibilité dès que le chantier est terminé via la section Messages.</p>
+                    <p>Vous avez <strong>{myTools.length} outil(s)</strong> sous votre responsabilité. Utilisez les boutons sur chaque carte pour les transférer ou les signaler.</p>
                   </div>
                 )}
-                {myTools.length === 0 && <div style={{ color: "var(--muted)", textAlign: "center", padding: "40px 0" }}>Aucun outil ne vous est actuellement confié.</div>}
+                {myTools.length === 0 && (
+                  <div style={{ color: "var(--muted)", textAlign: "center", padding: "40px 0" }}>
+                    <div style={{ fontSize: 40, marginBottom: 8 }}>📦</div>
+                    <div>Aucun outil ne vous est actuellement confié.</div>
+                  </div>
+                )}
                 <div className="cards-grid">
                   {myTools.map(t => (
-                    <div key={t.id} className="tool-card" onClick={() => openTool(t)} style={{ cursor: "pointer" }}>
-                      {t.photoUrl
-                        ? <img src={t.photoUrl} alt={t.name} className="tool-photo-card" />
-                        : <div className="tool-photo-placeholder"><span className="big-emoji">{t.photo}</span><span style={{ fontSize: 11 }}>Aucune photo</span></div>
-                      }
-                      <div className="tool-card-top">
-                        <div className="tool-meta" style={{ width: "100%" }}>
-                          <div className="tool-name">{t.name}</div>
-                          {t.ref && <div className="tool-ref">🏭 {t.ref}</div>}
-                        </div>
-                      </div>
-                      <div className="tool-card-body">
-                        <div className="tool-desc">{t.description}</div>
-                        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>📍 {t.location} · Depuis le {fmt(t.history.at(-1)?.date)}</div>
-                      </div>
-                      <div className="tool-card-footer">
-                        <span className="status-badge status-assigned">Sous ma responsabilité</span>
-                      </div>
-                    </div>
+                    <ViewerToolCard
+                      key={t.id}
+                      tool={t}
+                      currentUser={currentUser}
+                      users={users}
+                      viewers={viewers}
+                      chantiers={chantiers}
+                      onOpen={() => openTool(t)}
+                      onTransfer={async (targetViewerId, targetChantier) => {
+                        assignTool(t.id, targetViewerId, targetChantier, "out");
+                      }}
+                      onReturnStore={async () => {
+                        assignTool(t.id, null, null, "in");
+                      }}
+                      onNonFunctional={async (note) => {
+                        const today = new Date().toLocaleDateString("fr-MU", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+                        const firstEntry = {
+                          id: Date.now(), type: "thread", status: "suivi-cours",
+                          note: note || "Signalé non fonctionnel par le peintre.",
+                          by: currentUser.name, datetime: new Date().toLocaleString("fr-MU"), timestamp: Date.now(),
+                        };
+                        const updatedTool = {
+                          ...t, status: "nonfunctional", obsolete: false,
+                          obsoleteDate: new Date().toISOString().slice(0,10),
+                          obsoleteType: "suivi-cours",
+                          obsoleteThread: [firstEntry],
+                          history: [...t.history, { date: today, action: `🔴 Signalé non fonctionnel par ${currentUser.name}${note ? ` — "${note}"` : ""}`, by: currentUser.name }],
+                        };
+                        await setDoc(doc(db, "tools", String(t.id)), updatedTool);
+                        // Message automatique aux admins
+                        const msgId = String(Date.now());
+                        await setDoc(doc(db, "messages", msgId), {
+                          id: msgId, from: currentUser.id, to: null, type: "push",
+                          text: `⚠️ ${currentUser.name} a signalé l'outil "${t.name}" comme NON FONCTIONNEL.${note ? ` Note : "${note}"` : ""} Merci de prendre en charge.`,
+                          toolId: String(t.id), date: new Date().toISOString(), read: false,
+                        });
+                        showToast("⚠️ Outil signalé — les admins ont été notifiés");
+                      }}
+                    />
                   ))}
                 </div>
               </div>
@@ -1475,6 +1500,84 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
         </div>
       </div>
     </>
+  );
+}
+
+// ─── VIEWER TOOL CARD ─────────────────────────────────────────────────────────
+function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpen, onTransfer, onReturnStore, onNonFunctional }) {
+  const [action, setAction] = useState(null); // null | "transfer" | "nonfunctional"
+  const [targetViewer, setTargetViewer] = useState("");
+  const [targetChantier, setTargetChantier] = useState("");
+  const [note, setNote] = useState("");
+
+  const otherPainters = viewers.filter(v => String(v.id) !== String(currentUser.id));
+
+  return (
+    <div className={`tool-card${t.status === "nonfunctional" ? " nonfunctional" : ""}`}>
+      {/* PHOTO */}
+      {t.photoUrl
+        ? <img src={t.photoUrl} alt={t.name} className="tool-photo-card" onClick={onOpen} style={{ cursor: "pointer" }} />
+        : <div className="tool-photo-placeholder" onClick={onOpen} style={{ cursor: "pointer" }}><span className="big-emoji">{t.photo}</span><span style={{ fontSize: 11 }}>Aucune photo</span></div>
+      }
+      <div className="tool-card-top" onClick={onOpen} style={{ cursor: "pointer" }}>
+        <div className="tool-meta" style={{ width: "100%" }}>
+          <div className="tool-name">{t.name}</div>
+          {t.ref && <div className="tool-ref">🏭 {t.ref}</div>}
+        </div>
+      </div>
+      <div className="tool-card-body" onClick={onOpen} style={{ cursor: "pointer" }}>
+        <div className="tool-desc">{t.description}</div>
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>📍 {t.location}</div>
+        {t.price && <div style={{ marginTop: 4 }}><span className="price-tag">🇲🇺 Rs {t.price.toLocaleString("fr-MU")}</span></div>}
+      </div>
+
+      {/* ACTION BUTTONS */}
+      {!action && (
+        <div style={{ padding: "10px 12px", display: "flex", gap: 6, flexWrap: "wrap", borderTop: "1px solid var(--border)" }}>
+          <button className="btn btn-blue btn-sm" onClick={() => setAction("transfer")}>🔄 Transférer</button>
+          <button className="btn btn-green btn-sm" onClick={() => { onReturnStore(); }}>🏠 Retour store</button>
+          <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "#f07030" }} onClick={() => setAction("nonfunctional")}>🔴 Non fonctionnel</button>
+        </div>
+      )}
+
+      {/* TRANSFER FORM */}
+      {action === "transfer" && (
+        <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue)" }}>🔄 Transférer à</div>
+          <select className="form-input" value={targetViewer} onChange={e => setTargetViewer(e.target.value)}>
+            <option value="">— Choisir un peintre —</option>
+            {otherPainters.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+          </select>
+          <select className="form-input" value={targetChantier} onChange={e => setTargetChantier(e.target.value)}>
+            <option value="">— Choisir un chantier —</option>
+            {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+          </select>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button>
+            <button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier}
+              onClick={() => { onTransfer(targetViewer, targetChantier); setAction(null); }}>
+              Confirmer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* NON FUNCTIONAL FORM */}
+      {action === "nonfunctional" && (
+        <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#f07030" }}>🔴 Signaler non fonctionnel</div>
+          <textarea className="form-input" rows={2} placeholder="Décrivez le problème... ex: câble coupé, moteur grillé" value={note} onChange={e => setNote(e.target.value)} />
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>⚠️ Un message automatique sera envoyé aux admins</div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button>
+            <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.3)", color: "#f07030" }}
+              onClick={() => { onNonFunctional(note); setAction(null); }}>
+              Confirmer
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
