@@ -1600,8 +1600,17 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
     return () => unsub();
   }, []);
 
-  // Filter by tab
-  const tabConvs = conversations.filter(c => tab === "annonces" ? c.type === "annonce" : c.type === "admin");
+  // Filter by tab — peintres voient seulement les annonces, admins voient les deux
+  const tabConvs = conversations.filter(c => {
+    if (tab === "annonces") return c.type === "annonce";
+    if (tab === "admins") return c.type === "admin" && isAdmin;
+    return false;
+  });
+
+  // For viewers — force tab to annonces only
+  useEffect(() => {
+    if (!isAdmin) setTab("annonces");
+  }, [isAdmin]);
 
   const selectedConv = conversations.find(c => c.id === selected);
 
