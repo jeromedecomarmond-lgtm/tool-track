@@ -134,9 +134,9 @@ const css = `
   .price-warning { font-size: 11px; color: var(--muted); font-style: italic; margin-top: 3px; }
 
   /* PHOTO */
-  .tool-photo-card { width: 100%; height: 160px; object-fit: cover; border-radius: 0; display: block; }
-  .tool-photo-placeholder { width: 100%; height: 160px; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 13px; }
-  .tool-photo-placeholder .big-emoji { font-size: 48px; }
+  .tool-photo-card { width: 100%; height: 80px; object-fit: cover; border-radius: 0; display: block; }
+  .tool-photo-placeholder { width: 100%; height: 80px; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); font-size: 13px; }
+  .tool-photo-placeholder .big-emoji { font-size: 30px; }
   .tool-photo-detail { width: 100%; height: 220px; object-fit: cover; border-radius: 10px; }
   .tool-photo-detail-placeholder { width: 100%; height: 220px; background: var(--surface2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 72px; }
   .photo-upload-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all .2s; color: var(--muted); font-size: 13px; }
