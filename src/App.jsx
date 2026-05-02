@@ -1604,17 +1604,10 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
     return () => unsub();
   }, []);
 
-  // Filter by tab — peintres voient seulement les annonces, admins voient les deux
-  const tabConvs = conversations.filter(c => {
-    if (tab === "annonces") return c.type === "annonce";
-    if (tab === "admins") return c.type === "admin" && isAdmin;
-    return false;
-  });
-
-  // For viewers — force tab to annonces only
-  useEffect(() => {
-    if (!isAdmin) setTab("annonces");
-  }, [isAdmin]);
+  // Filter by tab — simple et direct
+  const tabConvs = tab === "annonces"
+    ? conversations.filter(c => c.type === "annonce")
+    : conversations.filter(c => c.type === "admin");
 
   const selectedConv = conversations.find(c => c.id === selected);
 
@@ -1744,11 +1737,11 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
         {/* TABS */}
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           <button className={`filter-btn ${tab === "annonces" ? "active" : ""}`} onClick={() => { setTab("annonces"); setSelected(null); setNewConvOpen(false); }}>
-            📢 Annonces {unreadAnnonces > 0 && <span style={{ background: "var(--red)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, marginLeft: 4 }}>{unreadAnnonces}</span>}
+            📢 Annonces {conversations.filter(c => c.type === "annonce").length > 0 && `(${conversations.filter(c => c.type === "annonce").length})`} {unreadAnnonces > 0 && <span style={{ background: "var(--red)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, marginLeft: 4 }}>{unreadAnnonces}</span>}
           </button>
           {isAdmin && (
             <button className={`filter-btn ${tab === "admins" ? "active" : ""}`} onClick={() => { setTab("admins"); setSelected(null); setNewConvOpen(false); }}>
-              🔑 Admins {unreadAdmins > 0 && <span style={{ background: "var(--red)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, marginLeft: 4 }}>{unreadAdmins}</span>}
+              🔑 Admins {conversations.filter(c => c.type === "admin").length > 0 && `(${conversations.filter(c => c.type === "admin").length})`} {unreadAdmins > 0 && <span style={{ background: "var(--red)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, marginLeft: 4 }}>{unreadAdmins}</span>}
             </button>
           )}
         </div>
@@ -1779,6 +1772,11 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
           <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>{tab === "annonces" ? "📢" : "🔑"}</div>
             <div>{tab === "annonces" ? "Aucune annonce pour le moment" : "Aucun message entre admins"}</div>
+            {conversations.length > 0 && tab === "annonces" && (
+              <div style={{ fontSize: 11, marginTop: 8, color: "var(--red)" }}>
+                ⚠️ {conversations.length} conversation(s) chargée(s) mais sans type "annonce" — recréez une annonce depuis l'app
+              </div>
+            )}
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
