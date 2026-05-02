@@ -1623,7 +1623,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
       text: newText, date: new Date().toISOString(), readBy: [String(currentUser.id)],
     };
     await setDoc(doc(db, "conversations", id), {
-      id, subject: newSubject, type: tab,
+      id, subject: newSubject, type: tab === "annonces" ? "annonce" : "admin",
       createdBy: currentUser.id, createdByName: currentUser.name,
       messages: [msg], lastDate: new Date().toISOString(), lastText: newText,
     });
