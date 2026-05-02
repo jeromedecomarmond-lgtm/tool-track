@@ -401,6 +401,22 @@ export default function App() {
   // ── TOOL DETAIL MODAL ───────────────────────────────────────────────────────
   const openTool = (tool) => setModal({ type: "tool", data: tool });
 
+  // ── DELETE TOOL ─────────────────────────────────────────────────────────────
+  const deleteTool = async (toolId) => {
+    await deleteDoc(doc(db, "tools", String(toolId)));
+    showToast("🗑 Outil supprimé");
+    setModal(null);
+  };
+
+  // ── UPDATE TOOL ─────────────────────────────────────────────────────────────
+  const updateTool = async (toolId, updates) => {
+    const tool = tools.find(t => String(t.id) === String(toolId));
+    if (!tool) return;
+    await setDoc(doc(db, "tools", String(toolId)), { ...tool, ...updates });
+    showToast("✅ Outil mis à jour");
+    setModal(null);
+  };
+
   // ── ASSIGN TOOL ─────────────────────────────────────────────────────────────
   const assignTool = async (toolId, viewerId, chantier, direction) => {
     const newViewer = viewerId ? users.find(u => String(u.id) === String(viewerId)) : null;
@@ -977,7 +993,7 @@ export default function App() {
 
       {/* ── MODALS ── */}
       {modal && (
-        <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} addTool={addTool} addUser={addUser} assignTool={assignTool} />
+        <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} addTool={addTool} addUser={addUser} assignTool={assignTool} deleteTool={deleteTool} updateTool={updateTool} />
       )}
 
       {/* ── TOAST ── */}
@@ -991,18 +1007,29 @@ export default function App() {
 }
 
 // ─── MODAL ROUTER ─────────────────────────────────────────────────────────────
-function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool }) {
+function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool }) {
   const isAdmin = currentUser.role === "admin";
   if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
   if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} />;
-  if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} />;
+  if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} />;
   return null;
 }
 
 // ─── TOOL DETAIL MODAL ────────────────────────────────────────────────────────
-function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, setTools, currentUser }) {
+function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, setTools, currentUser, deleteTool, updateTool }) {
   const [assignForm, setAssignForm] = useState({ viewerId: "", chantier: "" });
   const [moveForm, setMoveForm] = useState({ destination: "", newViewerId: "" });
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: tool.name || "",
+    ref: tool.ref || "",
+    description: tool.description || "",
+    price: tool.price ? tool.price.toLocaleString("fr-MU") : "",
+    purchaseDate: tool.purchaseDate || "",
+  });
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const fileRef = useRef();
+  const [newPhoto, setNewPhoto] = useState(null);
   const assignee = users.find(u => String(u.id) === String(tool.assignedTo));
 
   // ── FIL DE SUIVI OBSOLESCENCE ──
@@ -1106,10 +1133,85 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h3>{tool.photo} {tool.name}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <h3>{tool.photo} {editing ? "Modifier l'outil" : tool.name}</h3>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {isAdmin && !editing && (
+              <>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditing(true)}>✏️ Modifier</button>
+                <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "var(--red)" }}
+                  onClick={() => setConfirmDelete(true)}>🗑</button>
+              </>
+            )}
+            <button className="close-btn" onClick={onClose}>×</button>
+          </div>
         </div>
-        <div className="modal-body">
+
+        {/* CONFIRM DELETE */}
+        {confirmDelete && (
+          <div style={{ background: "rgba(232,82,10,.1)", border: "1px solid var(--red)", borderRadius: 10, margin: "12px 24px", padding: 14 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8, color: "var(--red)" }}>⚠️ Supprimer "{tool.name}" ?</div>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Cette action est irréversible. L'outil sera définitivement supprimé.</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)}>Annuler</button>
+              <button className="btn btn-danger btn-sm" onClick={() => deleteTool(tool.id)}>Confirmer la suppression</button>
+            </div>
+          </div>
+        )}
+
+        {/* EDIT FORM */}
+        {editing && (
+          <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="form-group"><label className="form-label">Nom *</label>
+              <input className="form-input" value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div className="form-row">
+              <div className="form-group"><label className="form-label">Fournisseur</label>
+                <input className="form-input" value={editForm.ref} onChange={e => setEditForm(p => ({ ...p, ref: e.target.value }))} />
+              </div>
+              <div className="form-group"><label className="form-label">Date d'achat</label>
+                <input className="form-input" type="date" value={editForm.purchaseDate} onChange={e => setEditForm(p => ({ ...p, purchaseDate: e.target.value }))} />
+              </div>
+            </div>
+            <div className="form-group"><label className="form-label">🇲🇺 Prix (Rs)</label>
+              <input className="form-input" type="text" inputMode="numeric" placeholder="ex: 18 000" value={editForm.price}
+                onChange={e => {
+                  const raw = e.target.value.replace(/\s/g,"").replace(/[^0-9]/g,"");
+                  setEditForm(p => ({ ...p, price: raw.replace(/\B(?=(\d{3})+(?!\d))/g," ") }));
+                }} />
+            </div>
+            <div className="form-group"><label className="form-label">Description</label>
+              <textarea className="form-input" rows={2} value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} />
+            </div>
+            <div className="form-group"><label className="form-label">📷 Changer la photo</label>
+              <div className="photo-upload-zone" onClick={() => fileRef.current.click()}>
+                <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
+                  onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setNewPhoto(ev.target.result); r.readAsDataURL(f); }} />
+                {newPhoto
+                  ? <img src={newPhoto} alt="aperçu" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
+                  : <div style={{ padding: "10px 0", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
+                      {tool.photoUrl ? "📷 Cliquez pour changer la photo" : "📷 Ajouter une photo"}
+                    </div>
+                }
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setNewPhoto(null); }}>Annuler</button>
+              <button className="btn btn-primary btn-sm" disabled={!editForm.name.trim()}
+                onClick={() => updateTool(tool.id, {
+                  name: editForm.name,
+                  ref: editForm.ref,
+                  description: editForm.description,
+                  purchaseDate: editForm.purchaseDate,
+                  price: editForm.price ? Number(String(editForm.price).replace(/\s/g,"")) : null,
+                  photoUrl: newPhoto || tool.photoUrl,
+                })}>
+                ✅ Sauvegarder
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="modal-body" style={{ display: editing ? "none" : "flex" }}>
           {/* PHOTO */}
           {tool.photoUrl
             ? <img src={tool.photoUrl} alt={tool.name} className="tool-photo-detail" />

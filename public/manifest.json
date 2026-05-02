@@ -1,13 +1,18 @@
 {
   "name": "Tool Track",
   "short_name": "Tool Track",
-  "description": "Gestion et suivi des outils",
+  "description": "Gestion et suivi des outils de chantier",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f1117",
-  "theme_color": "#0f1117",
+  "theme_color": "#f5a623",
   "orientation": "portrait",
   "icons": [
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
     {
       "src": "/icon-192.png",
       "sizes": "192x192",
