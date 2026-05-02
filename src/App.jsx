@@ -134,7 +134,7 @@ const css = `
   .price-warning { font-size: 11px; color: var(--muted); font-style: italic; margin-top: 3px; }
 
   /* PHOTO */
-  .tool-photo-card { width: 100%; height: 80px; object-fit: cover; border-radius: 0; display: block; }
+  .tool-photo-card { width: 100%; height: auto; max-height: 120px; object-fit: contain; background: var(--surface2); display: block; }
   .tool-photo-placeholder { width: 100%; height: 80px; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); font-size: 13px; }
   .tool-photo-placeholder .big-emoji { font-size: 30px; }
   .tool-photo-detail { width: 100%; height: 220px; object-fit: cover; border-radius: 10px; }
