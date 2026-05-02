@@ -331,7 +331,7 @@ export default function App() {
     if (!currentUser) return;
     const interval = setInterval(() => {
       tools.forEach(t => {
-        if (t.status === "assigned" && t.assignedTo === currentUser?.id) {
+        if (t.status === "assigned" && String(t.assignedTo) === String(currentUser?.id)) {
           const days = daysSince(t.lastReminder);
           if (days === null || days >= 3) {
             showToast(`⏰ Rappel: "${t.name}" vous est confié sur ${t.location}. Avez-vous terminé ?`, "warn");
@@ -398,9 +398,9 @@ export default function App() {
 
   // ── ASSIGN TOOL ─────────────────────────────────────────────────────────────
   const assignTool = async (toolId, viewerId, chantier, direction) => {
-    const newViewer = viewerId ? users.find(u => u.id === viewerId) : null;
+    const newViewer = viewerId ? users.find(u => String(u.id) === String(viewerId)) : null;
     const tool = tools.find(t => t.id === toolId);
-    const prevOwner = tool.assignedTo ? users.find(u => u.id === tool.assignedTo) : null;
+    const prevOwner = tool.assignedTo ? users.find(u => String(u.id) === String(tool.assignedTo)) : null;
     const fromLocation = tool.location || "Store";
     const fromPerson = prevOwner ? prevOwner.name : "Store";
     const toLocation = chantier || "Store";
@@ -419,7 +419,7 @@ export default function App() {
     const updatedTool = {
       ...tool,
       status: (newViewer || chantier) && toLocation !== "Store" ? "assigned" : "store",
-      assignedTo: newViewer ? viewerId : null,
+      assignedTo: newViewer ? String(viewerId) : null,
       location: toLocation,
       history: [...tool.history, { date: today, action, by: currentUser.name }],
       lastReminder: newViewer ? new Date().toISOString() : null,
@@ -504,11 +504,11 @@ export default function App() {
     const matchPeintre = filterUser === "all" || String(t.assignedTo) === filterUser || (filterUser === "none" && !t.assignedTo);
     const matchChantier = filterChantier === "all" || t.location === filterChantier;
     const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.ref.toLowerCase().includes(search.toLowerCase());
-    if (!isAdmin) return t.assignedTo === currentUser.id || t.status === "store";
+    if (!isAdmin) return String(t.assignedTo) === String(currentUser.id) || t.status === "store";
     return matchStatus && matchPeintre && matchChantier && matchSearch;
   });
 
-  const myTools = tools.filter(t => t.assignedTo === currentUser.id);
+  const myTools = tools.filter(t => String(t.assignedTo) === String(currentUser.id));
   const viewers = users.filter(u => u.role === "viewer");
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
@@ -563,7 +563,7 @@ export default function App() {
                 <h3 style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Outils sur chantiers</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {tools.filter(t => t.status === "assigned").map(t => {
-                    const assignee = users.find(u => u.id === t.assignedTo);
+                    const assignee = users.find(u => String(u.id) === String(t.assignedTo));
                     const days = daysSince(t.lastReminder);
                     return (
                       <div key={t.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
@@ -626,7 +626,7 @@ export default function App() {
                     </div>
                   )}
                   {filteredTools.map(t => {
-                    const assignee = users.find(u => u.id === t.assignedTo);
+                    const assignee = users.find(u => String(u.id) === String(t.assignedTo));
                     return (
                       <div key={t.id} className={`tool-card${t.status === "nonfunctional" ? " nonfunctional" : t.status === "obsolete" ? " obsolete" : ""}`} onClick={() => openTool(t)} style={{ cursor: "pointer" }}>
                         {t.photoUrl
@@ -789,7 +789,7 @@ export default function App() {
                     </div>
                     <div className="cards-grid">
                       {users.filter(u => u.role === role).map(u => {
-                        const assignedTools = tools.filter(t => t.assignedTo === u.id);
+                        const assignedTools = tools.filter(t => String(t.assignedTo) === String(u.id));
                         const isSelf = u.id === currentUser.id;
                         return (
                           <div key={u.id} style={{ background: "var(--surface)", border: `1px solid ${isSelf ? "var(--accent)" : "var(--border)"}`, borderRadius: 12, overflow: "hidden", transition: "all .2s" }}>
@@ -913,7 +913,7 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
 function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, setTools, currentUser }) {
   const [assignForm, setAssignForm] = useState({ viewerId: "", chantier: "" });
   const [moveForm, setMoveForm] = useState({ destination: "", newViewerId: "" });
-  const assignee = users.find(u => u.id === tool.assignedTo);
+  const assignee = users.find(u => String(u.id) === String(tool.assignedTo));
 
   // ── FIL DE SUIVI OBSOLESCENCE ──
   const [newEntryNote, setNewEntryNote] = useState("");
