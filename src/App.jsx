@@ -916,7 +916,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
   const fmtCost = (v) => v ? `Rs ${Number(v).toLocaleString("fr-MU")}` : null;
 
   // Déclarer l'outil non fonctionnel (ouvrir le fil)
-  const declareNonFunctional = () => {
+  const declareNonFunctional = async () => {
     const costNum = newEntryCost ? Number(String(newEntryCost).replace(/\s/g, "")) : null;
     const firstEntry = {
       id: Date.now(), type: "thread",
