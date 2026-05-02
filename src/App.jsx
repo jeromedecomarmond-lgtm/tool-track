@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { db } from "./firebase";
+import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs } from "firebase/firestore";
 
 // ─── DONNÉES INITIALES VIDES ─────────────────────────────────────────────────
 const INITIAL_USERS     = [];
@@ -260,6 +262,7 @@ export default function App() {
   const [tools, setTools] = useState(INITIAL_TOOLS);
   const [chantiers, setChantiers] = useState(INITIAL_CHANTIERS);
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState("tools");
   const [toast, setToast] = useState(null);
   const [modal, setModal] = useState(null); // { type, data }
@@ -272,6 +275,32 @@ export default function App() {
 
   const isAdmin = currentUser?.role === "admin";
   const unread = messages.filter(m => !m.read).length;
+
+  // ── FIREBASE REAL-TIME SYNC ──────────────────────────────────────────────────
+  useEffect(() => {
+    const unsubs = [];
+    let loaded = 0;
+    const checkLoaded = () => { loaded++; if (loaded >= 4) setLoading(false); };
+
+    unsubs.push(onSnapshot(collection(db, "users"), snap => {
+      setUsers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      checkLoaded();
+    }));
+    unsubs.push(onSnapshot(collection(db, "tools"), snap => {
+      setTools(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      checkLoaded();
+    }));
+    unsubs.push(onSnapshot(collection(db, "chantiers"), snap => {
+      setChantiers(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+      checkLoaded();
+    }));
+    unsubs.push(onSnapshot(collection(db, "messages"), snap => {
+      setMessages(snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => new Date(b.date) - new Date(a.date)));
+      checkLoaded();
+    }));
+
+    return () => unsubs.forEach(u => u());
+  }, []);
 
   // Simulated reminders check
   useEffect(() => {
@@ -295,6 +324,22 @@ export default function App() {
     toastRef.current = setTimeout(() => setToast(null), 4000);
   };
 
+  // ── LOADING ─────────────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <>
+        <style>{css}</style>
+        <div className="login-screen">
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🔧</div>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 800, color: "var(--accent)" }}>TOOL TRACK</div>
+            <div style={{ color: "var(--muted)", marginTop: 8, fontSize: 13 }}>Connexion à la base de données...</div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   // ── LOGIN ───────────────────────────────────────────────────────────────────
   if (!currentUser) {
     return (
@@ -306,7 +351,7 @@ export default function App() {
             {users.length === 0 ? (
               <>
                 <div className="login-sub">Bienvenue ! Créez le premier administrateur pour démarrer.</div>
-                <FirstAdminForm onSave={(u) => { setUsers([u]); setCurrentUser(u); setPage("tools"); }} />
+                <FirstAdminForm onSave={async (u) => { await setDoc(doc(db, "users", String(u.id)), u); setCurrentUser(u); setPage("tools"); }} />
               </>
             ) : (
               <>
@@ -335,7 +380,7 @@ export default function App() {
   const openTool = (tool) => setModal({ type: "tool", data: tool });
 
   // ── ASSIGN TOOL ─────────────────────────────────────────────────────────────
-  const assignTool = (toolId, viewerId, chantier, direction) => {
+  const assignTool = async (toolId, viewerId, chantier, direction) => {
     const newViewer = viewerId ? users.find(u => u.id === viewerId) : null;
     const tool = tools.find(t => t.id === toolId);
     const prevOwner = tool.assignedTo ? users.find(u => u.id === tool.assignedTo) : null;
@@ -347,55 +392,42 @@ export default function App() {
 
     let action = "";
     if (direction === "out") {
-      // Sortie du store vers chantier
       action = `📤 ${fromLocation} → ${toLocation}${toPerson ? ` — Confié à ${toPerson}` : ""}`;
     } else if (newViewer && chantier) {
-      // Transfert peintre → peintre (avec ou sans changement de chantier)
       action = `🔄 Transféré de ${fromPerson} (${fromLocation}) → ${toPerson} (${toLocation})`;
     } else {
-      // Retour au store
       action = `🏠 Retour store — depuis ${fromLocation}${prevOwner ? ` (${prevOwner.name})` : ""}`;
     }
 
-    const newEntry = {
-      date: today,
-      action,
-      by: currentUser.name,
-    };
-
-    setTools(prev => prev.map(t => t.id === toolId ? {
-      ...t,
+    const updatedTool = {
+      ...tool,
       status: (newViewer || chantier) && toLocation !== "Store" ? "assigned" : "store",
       assignedTo: newViewer ? viewerId : null,
       location: toLocation,
-      history: [...t.history, newEntry],
+      history: [...tool.history, { date: today, action, by: currentUser.name }],
       lastReminder: newViewer ? new Date().toISOString() : null,
-    } : t));
+    };
+    await setDoc(doc(db, "tools", String(toolId)), updatedTool);
 
-    showToast(
-      direction === "out"
-        ? `✅ Confié à ${toPerson} — ${toLocation}`
-        : newViewer
-          ? `🔄 Transféré à ${toPerson} — ${toLocation}`
-          : `🏠 Outil retourné au store`
-    );
+    showToast(direction === "out" ? `✅ Confié à ${toPerson} — ${toLocation}` : newViewer ? `🔄 Transféré à ${toPerson} — ${toLocation}` : `🏠 Outil retourné au store`);
     setModal(null);
   };
 
   // ── SEND MESSAGE ────────────────────────────────────────────────────────────
-  const sendMessage = () => {
+  const sendMessage = async () => {
     if (!writeMsg.text.trim()) return;
+    const id = String(Date.now());
     const newMsg = {
-      id: Date.now(),
+      id,
       from: currentUser.id,
       to: null,
       type: writeMsg.type,
       text: writeMsg.text,
-      toolId: writeMsg.toolId ? Number(writeMsg.toolId) : null,
+      toolId: writeMsg.toolId || null,
       date: new Date().toISOString(),
       read: false,
     };
-    setMessages(prev => [newMsg, ...prev]);
+    await setDoc(doc(db, "messages", id), newMsg);
     setWriteMsg({ toolId: "", text: "", type: "info" });
     showToast("📨 Message envoyé à tous les admins");
   };
@@ -403,41 +435,47 @@ export default function App() {
   // ── ADD TOOL ────────────────────────────────────────────────────────────────
   const fmtPrice = (p) => p ? `Rs ${p.toLocaleString("fr-MU")}` : null;
 
-  const addTool = (form) => {
-    setTools(prev => [...prev, {
-      id: Date.now(),
-      name: form.name, ref: form.ref,
-      purchaseDate: form.purchaseDate, price: form.price ? Number(String(form.price).replace(/\s/g, "")) : null,
+  const addTool = async (form) => {
+    const id = String(Date.now());
+    const newTool = {
+      id,
+      name: form.name, ref: form.ref || "",
+      purchaseDate: form.purchaseDate || "", price: form.price ? Number(String(form.price).replace(/\s/g, "")) : null,
       obsolete: false, obsoleteDate: null,
-      description: form.description,
+      description: form.description || "",
       photo: form.photo || "🔧",
+      photoUrl: form.photoUrl || null,
       status: "store", assignedTo: null, location: "Store",
       history: [{ date: new Date().toLocaleDateString("fr-MU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }), action: "📦 Ajouté au store", by: currentUser.name }],
       lastReminder: null,
-    }]);
+      totalRepairCost: 0,
+    };
+    await setDoc(doc(db, "tools", id), newTool);
     showToast("✅ Outil ajouté au store");
     setModal(null);
   };
 
   // ── ADD USER ────────────────────────────────────────────────────────────────
-  const addUser = (form) => {
+  const addUser = async (form) => {
+    const id = String(Date.now());
     const initials = form.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-    setUsers(prev => [...prev, { id: Date.now(), name: form.name, role: form.role, avatar: initials, phone: form.phone, email: form.email }]);
+    await setDoc(doc(db, "users", id), { id, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email || "" });
     showToast("✅ Profil créé");
     setModal(null);
   };
 
   // ── CHANTIERS CRUD ───────────────────────────────────────────────────────────
-  const addChantier = (name, color) => {
+  const addChantier = async (name, color) => {
     if (!name.trim()) return;
-    setChantiers(prev => [...prev, { id: Date.now(), name: name.trim(), color }]);
+    const id = String(Date.now());
+    await setDoc(doc(db, "chantiers", id), { id, name: name.trim(), color });
     showToast("✅ Chantier ajouté");
   };
-  const deleteChantier = (id) => {
+  const deleteChantier = async (id) => {
     const c = chantiers.find(c => c.id === id);
     const hasTools = tools.some(t => t.location === c?.name && t.status === "assigned");
     if (hasTools) { showToast("⚠️ Des outils sont encore sur ce chantier !", "warn"); return; }
-    setChantiers(prev => prev.filter(c => c.id !== id));
+    await deleteDoc(doc(db, "chantiers", String(id)));
     showToast("🗑 Chantier supprimé");
   };
 
@@ -706,8 +744,8 @@ export default function App() {
                         {tool && <div className="msg-tool">🔧 {tool.name} — {tool.location}</div>}
                         {isAdmin && !m.read && (
                           <div className="msg-actions">
-                            <button className="btn btn-green btn-sm" onClick={() => { setMessages(prev => prev.map(x => x.id === m.id ? { ...x, read: true } : x)); showToast("Message marqué comme lu"); }}>✓ Lu</button>
-                            {m.type === "push" && tool && <button className="btn btn-blue btn-sm" onClick={() => { openTool(tool); setMessages(prev => prev.map(x => x.id === m.id ? { ...x, read: true } : x)); }}>Traiter → Récupérer l'outil</button>}
+                            <button className="btn btn-green btn-sm" onClick={() => { setDoc(doc(db, "messages", String(m.id)), {...m, read: true}); showToast("Message marqué comme lu"); }}>✓ Lu</button>
+                            {m.type === "push" && tool && <button className="btn btn-blue btn-sm" onClick={() => { openTool(tool); setDoc(doc(db, "messages", String(m.id)), {...m, read: true}); }}>Traiter → Récupérer l'outil</button>}
                           </div>
                         )}
                       </div>
@@ -774,7 +812,7 @@ export default function App() {
                                 <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }}
                                   onClick={() => {
                                     if (assignedTools.length > 0) { showToast("⚠️ Ce peintre a encore des outils confiés !", "warn"); return; }
-                                    setUsers(prev => prev.filter(x => x.id !== u.id));
+                                    deleteDoc(doc(db, "users", String(u.id)));
                                     showToast("🗑 Profil supprimé");
                                   }}>
                                   🗑 Supprimer ce profil
@@ -890,24 +928,25 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
       timestamp: Date.now(),
     };
     const histAction = `🔴 Déclaré non fonctionnel${costNum ? ` — Coût réparation : Rs ${costNum.toLocaleString("fr-MU")}` : ""}`;
-    setTools(prev => prev.map(t => t.id === tool.id ? {
-      ...t,
+    const updatedTool = {
+      ...tool,
       status: "nonfunctional",
       obsolete: false,
       obsoleteDate: declareDate,
       obsoleteType: "suivi-cours",
-      repairCost: costNum ?? t.repairCost ?? null,
-      totalRepairCost: costNum ? (t.totalRepairCost || 0) + costNum : (t.totalRepairCost || 0),
+      repairCost: costNum ?? tool.repairCost ?? null,
+      totalRepairCost: costNum ? (tool.totalRepairCost || 0) + costNum : (tool.totalRepairCost || 0),
       obsoleteThread: [firstEntry],
-      history: [...t.history, { date: new Date().toLocaleDateString("fr-MU"), action: histAction, by: currentUser.name }],
-    } : t));
+      history: [...tool.history, { date: new Date().toLocaleDateString("fr-MU"), action: histAction, by: currentUser.name }],
+    };
+    await setDoc(doc(db, "tools", String(tool.id)), updatedTool);
     setNewEntryNote("");
     setNewEntryCost("");
     onClose();
   };
 
   // Ajouter une entrée au fil de suivi
-  const addThreadEntry = () => {
+  const addThreadEntry = async () => {
     if (!newEntryNote.trim() && newEntryStatus === tool.obsoleteType && !newEntryCost) return;
     const costNum = newEntryCost ? Number(String(newEntryCost).replace(/\s/g, "")) : null;
     const entry = {
@@ -925,37 +964,33 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
     else if (newEntryStatus === "obsolete-final") newToolStatus = "obsolete";
     else newToolStatus = "nonfunctional";
 
-    let histAction = statusChanged
-      ? `Statut changé → ${getStatus(newEntryStatus).label}`
-      : "Note ajoutée";
+    let histAction = statusChanged ? `Statut changé → ${getStatus(newEntryStatus).label}` : "Note ajoutée";
     if (newEntryNote) histAction += ` — "${newEntryNote}"`;
     if (costNum) histAction += ` — Coût : Rs ${costNum.toLocaleString("fr-MU")}`;
-    if (newEntryStatus === "remis" && (costNum ?? tool.repairCost)) {
-      const total = costNum ?? tool.repairCost;
-      histAction += ` — Coût total réparation : Rs ${total.toLocaleString("fr-MU")}`;
-    }
 
-    setTools(prev => prev.map(t => t.id === tool.id ? {
-      ...t,
+    const updatedTool = {
+      ...tool,
       status: newToolStatus,
       obsolete: newToolStatus === "obsolete",
       obsoleteType: newEntryStatus === "remis" ? null : newEntryStatus,
-      repairCost: costNum ?? t.repairCost ?? null,
-      totalRepairCost: costNum ? (t.totalRepairCost || 0) + costNum : (t.totalRepairCost || 0),
-      obsoleteThread: [...(t.obsoleteThread || []), entry],
-      history: [...t.history, { date: new Date().toLocaleDateString("fr-MU"), action: histAction, by: currentUser.name }],
-    } : t));
+      repairCost: costNum ?? tool.repairCost ?? null,
+      totalRepairCost: costNum ? (tool.totalRepairCost || 0) + costNum : (tool.totalRepairCost || 0),
+      obsoleteThread: [...(tool.obsoleteThread || []), entry],
+      history: [...tool.history, { date: new Date().toLocaleDateString("fr-MU"), action: histAction, by: currentUser.name }],
+    };
+    await setDoc(doc(db, "tools", String(tool.id)), updatedTool);
     setNewEntryNote("");
     setNewEntryCost("");
     setTimeout(() => threadRef.current?.scrollTo({ top: 9999, behavior: "smooth" }), 100);
   };
 
-  const toggleObsolete = () => {
-    setTools(prev => prev.map(t => t.id === tool.id ? {
-      ...t, obsolete: false, obsoleteDate: null, obsoleteType: null,
-      obsoleteThread: t.obsoleteThread || [],
-      history: [...t.history, { date: new Date().toLocaleDateString("fr-MU"), action: "↩ Remis en service manuellement", by: currentUser.name }],
-    } : t));
+  const toggleObsolete = async () => {
+    const updatedTool = {
+      ...tool, obsolete: false, obsoleteDate: null, obsoleteType: null,
+      obsoleteThread: tool.obsoleteThread || [],
+      history: [...tool.history, { date: new Date().toLocaleDateString("fr-MU"), action: "↩ Remis en service manuellement", by: currentUser.name }],
+    };
+    await setDoc(doc(db, "tools", String(tool.id)), updatedTool);
     onClose();
   };
 
@@ -1359,7 +1394,8 @@ function FirstAdminForm({ onSave }) {
   const handleCreate = () => {
     if (!name.trim()) return;
     const initials = name.trim().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-    onSave({ id: Date.now(), name: name.trim(), role: "admin", avatar: initials, phone, email });
+    const id = String(Date.now());
+    onSave({ id, name: name.trim(), role: "admin", avatar: initials, phone, email });
   };
 
   return (
