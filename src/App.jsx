@@ -322,6 +322,9 @@ export default function App() {
           if (savedUser) {
             setCurrentUser(savedUser);
             setPage(savedUser.role === "admin" || savedUser.role === "superadmin" ? "tools" : "mytools");
+          } else {
+            // User not found in Firebase — clear invalid session
+            localStorage.removeItem("tooltrack_user_id");
           }
         }
       } catch(e) {}
@@ -1050,15 +1053,17 @@ export default function App() {
                                   </div>
                                 )}
 
-                                {/* DELETE */}
-                                {!isSelf && currentUser.role === "superadmin" && (
+                                {/* DELETE — superadmin peut supprimer n'importe quel profil */}
+                                {currentUser.role === "superadmin" && (
                                   <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }}
                                     onClick={() => {
-                                      if (assignedTools.length > 0) { showToast("⚠️ Ce peintre a encore des outils confiés !", "warn"); return; }
+                                      if (assignedTools.length > 0) { showToast("⚠️ Ce profil a encore des outils confiés !", "warn"); return; }
+                                      if (isSelf && !window.confirm("Supprimer votre propre profil ? Vous serez déconnecté.")) return;
                                       deleteDoc(doc(db, "users", String(u.id)));
+                                      if (isSelf) logoutUser();
                                       showToast("🗑 Profil supprimé");
                                     }}>
-                                    🗑 Supprimer ce profil
+                                    🗑 Supprimer {isSelf ? "mon profil" : "ce profil"}
                                   </button>
                                 )}
                               </div>
