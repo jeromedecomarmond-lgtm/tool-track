@@ -1034,12 +1034,59 @@ export default function App() {
             <>
               <div className="topbar"><h2>Équipe</h2><button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ Ajouter un profil</button></div>
               <div className="content">
-                {["superadmin", "admin", "viewer"].map(role => {
-                  const roleUsers = users.filter(u => u.role === role);
+                {isSuperAdmin ? (
+                  // SUPERADMIN — voit tout par compagnie
+                  companies.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+                      <div style={{ fontSize: 40 }}>🏢</div>
+                      <div>Créez d'abord des compagnies dans l'onglet 🏢 Compagnies</div>
+                    </div>
+                  ) : (
+                    companies.map(company => {
+                      const companyUsers = users.filter(u => u.companyId === company.id);
+                      if (companyUsers.length === 0) return null;
+                      return (
+                        <div key={company.id} style={{ marginBottom: 28 }}>
+                          <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800, color: company.color || "var(--accent)", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                            🏢 {company.name}
+                            <span style={{ fontSize: 12, fontWeight: 600, background: (company.color || "var(--accent)") + "22", color: company.color || "var(--accent)", padding: "2px 8px", borderRadius: 10 }}>{companyUsers.length} membre{companyUsers.length > 1 ? "s" : ""}</span>
+                          </div>
+                          <div className="cards-grid">
+                            {companyUsers.map(u => {
+                              const assignedTools = tools.filter(t => String(t.assignedTo) === String(u.id));
+                              const isSelf = String(u.id) === String(currentUser.id);
+                              return (
+                                <div key={u.id} style={{ background: "var(--surface)", border: `1px solid ${u.role === "admin" ? "var(--accent)" : "var(--border)"}`, borderRadius: 12, overflow: "hidden" }}>
+                                  <div style={{ height: 5, background: u.role === "admin" ? "var(--accent)" : "var(--blue)" }} />
+                                  <div style={{ padding: 14 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                                      <div style={{ width: 44, height: 44, borderRadius: 10, background: u.role === "admin" ? "var(--accent)" : "var(--blue)", color: u.role === "admin" ? "#000" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>{u.avatar}</div>
+                                      <div>
+                                        <div style={{ fontWeight: 700, fontSize: 15 }}>{u.name}</div>
+                                        <div style={{ fontSize: 11, color: "var(--muted)" }}>{u.role === "admin" ? "🔑 Admin" : "🖌 Peintre"}</div>
+                                      </div>
+                                    </div>
+                                    <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}>
+                                      <div style={{ fontSize: 10, color: "var(--muted)" }}>🔑 PIN</div>
+                                      <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, color: "var(--accent)", letterSpacing: 6 }}>{u.pin}</div>
+                                    </div>
+                                    {u.phone && <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>📞 {u.phone}</div>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )
+                ) : (
+                  // ADMIN — voit uniquement sa compagnie
+                  ["admin", "viewer"].map(role => {
+                  const roleUsers = filteredUsers.filter(u => u.role === role);
                   if (roleUsers.length === 0) return null;
-                  const roleColor = role === "superadmin" ? "#e84040" : role === "admin" ? "var(--accent)" : "var(--blue)";
-                  const roleLabel = role === "superadmin" ? "👑 Administrateur Principal" : role === "admin" ? "🔑 Admins" : "🖌 Peintres";
-                  const isSuperAdmin = currentUser.role === "superadmin";
+                  const roleColor = role === "admin" ? "var(--accent)" : "var(--blue)";
+                  const roleLabel = role === "admin" ? "🔑 Admins" : "🖌 Peintres";
                   return (
                     <div key={role} style={{ marginBottom: 28 }}>
                       <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800, color: roleColor, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1057,7 +1104,6 @@ export default function App() {
                             <div key={u.id} style={{ background: "var(--surface)", border: `1px solid ${isSelf ? roleColor : "var(--border)"}`, borderRadius: 12, overflow: "hidden" }}>
                               <div style={{ height: 6, background: roleColor }} />
                               <div style={{ padding: 16 }}>
-                                {/* AVATAR + NAME */}
                                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                                   <div style={{ width: 52, height: 52, borderRadius: 12, background: roleColor, color: role === "viewer" ? "#fff" : "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, flexShrink: 0 }}>{u.avatar}</div>
                                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -1066,53 +1112,40 @@ export default function App() {
                                       {isSelf && <span style={{ fontSize: 10, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "1px 6px", borderRadius: 8, marginLeft: 6, fontFamily: "var(--font-body)" }}>Moi</span>}
                                     </div>
                                     <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: roleColor + "22", color: roleColor, marginTop: 3, display: "inline-block" }}>
-                                      {role === "superadmin" ? "Super Admin" : role === "admin" ? "Admin" : "Peintre"}
+                                      {role === "admin" ? "Admin" : "Peintre"}
                                     </span>
                                   </div>
                                 </div>
-
-                                {/* CONTACT */}
                                 <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
                                   {u.phone && <div style={{ fontSize: 12, color: "var(--muted)" }}>📞 {u.phone}</div>}
                                   {u.email && <div style={{ fontSize: 12, color: "var(--muted)" }}>✉️ {u.email}</div>}
                                 </div>
-
-                                {/* PIN — visible uniquement par le superadmin */}
                                 {canSeePins && u.pin && (
                                   <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                                     <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>🔑 Code PIN</div>
                                     <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, letterSpacing: 6, color: "var(--accent)" }}>{u.pin}</div>
                                   </div>
                                 )}
-
-                                {/* OUTILS (peintres) */}
                                 {role === "viewer" && (
                                   <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
                                     {assignedTools.length === 0
                                       ? <div style={{ fontSize: 11, color: "var(--muted)" }}>Aucun outil confié</div>
-                                      : <>
-                                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 4 }}>Outils confiés</div>
-                                          {assignedTools.map(t => (
-                                            <div key={t.id} style={{ fontSize: 12, color: "var(--blue)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
-                                              <span>{t.photo}</span> {t.name} <span style={{ color: "var(--muted)", fontSize: 10 }}>— {t.location}</span>
-                                            </div>
-                                          ))}
-                                        </>
+                                      : assignedTools.map(t => (
+                                          <div key={t.id} style={{ fontSize: 12, color: "var(--blue)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                                            <span>{t.photo}</span> {t.name}
+                                          </div>
+                                        ))
                                     }
                                   </div>
                                 )}
-
-                                {/* DELETE — superadmin peut supprimer n'importe quel profil */}
-                                {currentUser.role === "superadmin" && (
+                                {!isSelf && (
                                   <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }}
                                     onClick={() => {
                                       if (assignedTools.length > 0) { showToast("⚠️ Ce profil a encore des outils confiés !", "warn"); return; }
-                                      if (isSelf && !window.confirm("Supprimer votre propre profil ? Vous serez déconnecté.")) return;
                                       deleteDoc(doc(db, "users", String(u.id)));
-                                      if (isSelf) logoutUser();
                                       showToast("🗑 Profil supprimé");
                                     }}>
-                                    🗑 Supprimer {isSelf ? "mon profil" : "ce profil"}
+                                    🗑 Supprimer
                                   </button>
                                 )}
                               </div>
@@ -1122,7 +1155,8 @@ export default function App() {
                       </div>
                     </div>
                   );
-                })}
+                })
+                )}
               </div>
             </>
           )}
@@ -1189,7 +1223,7 @@ export default function App() {
 function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool }) {
   const isAdmin = currentUser.role === "admin";
   if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
-  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} />;
+  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} />;
   if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} />;
   return null;
 }
@@ -1689,7 +1723,7 @@ function AddToolModal({ onClose, onSave }) {
 }
 
 // ─── ADD USER MODAL ───────────────────────────────────────────────────────────
-function AddUserModal({ onClose, onSave }) {
+function AddUserModal({ onClose, onSave, currentUser }) {
   const APP_URL = "tool-track-rosy.vercel.app";
   const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
   const [form, setForm] = useState({ name: "", role: "viewer", phone: "", email: "", pin: generatePin() });
@@ -1732,7 +1766,7 @@ function AddUserModal({ onClose, onSave }) {
                 <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
                   <option value="viewer">🖌 Peintre</option>
                   <option value="admin">🔑 Admin</option>
-                  <option value="superadmin">👑 Administrateur Principal</option>
+                  {currentUser?.role === "superadmin" && <option value="superadmin">👑 Administrateur Principal</option>}
                 </select>
               </div>
               <div className="form-row">
