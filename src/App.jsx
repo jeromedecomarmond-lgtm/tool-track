@@ -310,12 +310,11 @@ export default function App() {
   useEffect(() => {
     const unsubs = [];
     let loaded = 0;
-    const checkLoaded = () => { loaded++; if (loaded >= 4) setLoading(false); };
+    const checkLoaded = () => { loaded++; if (loaded >= 2) setLoading(false); };
 
     unsubs.push(onSnapshot(collection(db, "users"), snap => {
       const loadedUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setUsers(loadedUsers);
-      // Auto-login si session sauvegardée
       try {
         const savedId = localStorage.getItem("tooltrack_user_id");
         if (savedId) {
@@ -334,11 +333,9 @@ export default function App() {
     }));
     unsubs.push(onSnapshot(collection(db, "chantiers"), snap => {
       setChantiers(snap.docs.map(d => ({ ...d.data(), id: d.id })));
-      checkLoaded();
     }));
     unsubs.push(onSnapshot(collection(db, "messages"), snap => {
       setMessages(snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => new Date(b.date) - new Date(a.date)));
-      checkLoaded();
     }));
     unsubs.push(onSnapshot(collection(db, "requests"), snap => {
       setRequests(snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => new Date(b.date) - new Date(a.date)));
@@ -608,6 +605,7 @@ export default function App() {
             {isAdmin && <button className={`nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}><span className="icon">🔧</span><span>Outils</span></button>}
             {isAdmin && <button className={`nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}><span className="icon">🏗</span><span>Chantiers</span></button>}
             {!isAdmin && <button className={`nav-item ${page === "mytools" ? "active" : ""}`} onClick={() => setPage("mytools")}><span className="icon">📦</span><span>Mes outils</span></button>}
+            {!isAdmin && <button className={`nav-item ${page === "parc" ? "active" : ""}`} onClick={() => setPage("parc")}><span className="icon">🔧</span><span>Parc outils</span></button>}
             <button className={`nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
               <span className="icon">🔔</span><span>Demandes</span>
               {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
@@ -755,34 +753,117 @@ export default function App() {
           {/* ── MY TOOLS (VIEWER) ── */}
           {page === "mytools" && !isAdmin && (
             <>
-              <div className="topbar"><h2>Mes outils</h2></div>
+              <div className="topbar">
+                <h2>📦 Mes outils</h2>
+                <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>
+                  {myTools.length === 0 ? "Aucun outil confié" : `${myTools.length} outil${myTools.length > 1 ? "s" : ""} sous ma responsabilité`}
+                </span>
+              </div>
               <div className="content">
-                {myTools.length > 0 && (
-                  <div className="reminder-banner">
-                    <span>⏰</span>
-                    <p>Vous avez <strong>{myTools.length} outil(s)</strong> sous votre responsabilité. Utilisez les boutons sur chaque carte pour les transférer ou les signaler.</p>
+                {myTools.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
+                    <div style={{ fontSize: 56, marginBottom: 12 }}>📦</div>
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Aucun outil confié</div>
+                    <div style={{ fontSize: 13 }}>Un admin vous assignera un outil bientôt.</div>
+                  </div>
+                ) : (
+                  <div className="cards-grid">
+                    {myTools.map(t => (
+                      <ViewerToolCard
+                        key={t.id}
+                        tool={t}
+                        currentUser={currentUser}
+                        users={users}
+                        viewers={viewers}
+                        chantiers={chantiers}
+                        onOpen={() => openTool(t)}
+                        onRequest={sendRequest}
+                      />
+                    ))}
                   </div>
                 )}
-                {myTools.length === 0 && (
-                  <div style={{ color: "var(--muted)", textAlign: "center", padding: "40px 0" }}>
-                    <div style={{ fontSize: 40, marginBottom: 8 }}>📦</div>
-                    <div>Aucun outil ne vous est actuellement confié.</div>
-                  </div>
-                )}
-                <div className="cards-grid">
-                  {myTools.map(t => (
-                    <ViewerToolCard
-                      key={t.id}
-                      tool={t}
-                      currentUser={currentUser}
-                      users={users}
-                      viewers={viewers}
-                      chantiers={chantiers}
-                      onOpen={() => openTool(t)}
-                      onRequest={sendRequest}
-                    />
+              </div>
+            </>
+          )}
+
+          {/* ── PARC OUTILS (VIEWER) ── */}
+          {page === "parc" && !isAdmin && (
+            <>
+              <div className="topbar"><h2>🔧 Parc outils</h2></div>
+              <div className="content">
+
+                {/* STATS RAPIDES */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
+                  {[
+                    { label: "🟢 En store", count: tools.filter(t => t.status === "store").length, color: "var(--green)" },
+                    { label: "🔵 Sur chantiers", count: tools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
+                    { label: "🔴 Non fonctionnel", count: tools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+                    { label: "📦 Mes outils", count: myTools.length, color: "var(--accent)" },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: "var(--surface)", border: `1px solid var(--border)`, borderRadius: 12, padding: "14px 16px" }}>
+                      <div style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 800, color: s.color }}>{s.count}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{s.label}</div>
+                    </div>
                   ))}
                 </div>
+
+                {/* OUTILS EN STORE */}
+                {tools.filter(t => t.status === "store").length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--green)", marginBottom: 10 }}>🟢 Disponibles au store</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {tools.filter(t => t.status === "store").map(t => (
+                        <div key={t.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                          <span style={{ fontSize: 24 }}>{t.photo}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</div>
+                            <div style={{ fontSize: 11, color: "var(--muted)" }}>📍 Store{t.price ? ` · Rs ${t.price.toLocaleString("fr-MU")}` : ""}</div>
+                          </div>
+                          <span style={{ fontSize: 11, background: "rgba(39,201,122,.15)", color: "var(--green)", padding: "3px 8px", borderRadius: 20, fontWeight: 700 }}>Dispo</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* OUTILS SUR CHANTIERS — avec option demande */}
+                {tools.filter(t => t.status === "assigned").length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--blue)", marginBottom: 10 }}>🔵 Sur chantiers</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {tools.filter(t => t.status === "assigned").map(t => {
+                        const assignee = users.find(u => String(u.id) === String(t.assignedTo));
+                        const isMyTool = String(t.assignedTo) === String(currentUser.id);
+                        return (
+                          <ParcToolRow
+                            key={t.id} tool={t} assignee={assignee}
+                            isMyTool={isMyTool} currentUser={currentUser}
+                            onAsk={sendRequest}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* OUTILS NON FONCTIONNELS */}
+                {tools.filter(t => t.status === "nonfunctional").length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "#f07030", marginBottom: 10 }}>🔴 Non fonctionnels</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {tools.filter(t => t.status === "nonfunctional").map(t => (
+                        <div key={t.id} style={{ background: "var(--surface)", border: "1px solid rgba(232,82,10,.3)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, opacity: 0.75 }}>
+                          <span style={{ fontSize: 24 }}>{t.photo}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</div>
+                            <div style={{ fontSize: 11, color: "#f07030" }}>🔎 Suivi en cours · {t.location}</div>
+                          </div>
+                          <span style={{ fontSize: 11, background: "rgba(232,82,10,.15)", color: "#f07030", padding: "3px 8px", borderRadius: 20, fontWeight: 700 }}>En répa.</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -1014,6 +1095,11 @@ export default function App() {
         {!isAdmin && (
           <button className={`bottom-nav-item ${page === "mytools" ? "active" : ""}`} onClick={() => setPage("mytools")}>
             <span className="bn-icon">📦</span>Mes outils
+          </button>
+        )}
+        {!isAdmin && (
+          <button className={`bottom-nav-item ${page === "parc" ? "active" : ""}`} onClick={() => setPage("parc")}>
+            <span className="bn-icon">🔧</span>Parc
           </button>
         )}
         <button className={`bottom-nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
@@ -2054,6 +2140,57 @@ function RequestActions({ request: r, tool, onApprove, onRefuse }) {
         {loadingApprove ? "⏳..." : "✅ Approuver"}
       </button>
       <button className="btn btn-danger btn-sm" onClick={() => setMode("refuse")}>❌ Refuser</button>
+    </div>
+  );
+}
+
+// ─── PARC TOOL ROW ────────────────────────────────────────────────────────────
+function ParcToolRow({ tool: t, assignee, isMyTool, currentUser, onAsk }) {
+  const [asking, setAsking] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const sendAsk = async () => {
+    if (!msg.trim()) return;
+    const id = String(Date.now());
+    // Crée une demande visible par tous
+    await setDoc(doc(db, "requests", id), {
+      id, type: "peintre-ask", status: "pending",
+      from: currentUser.id, fromName: currentUser.name,
+      toolId: String(t.id), toolName: t.name, toolLocation: t.location,
+      targetViewerId: String(t.assignedTo), targetViewerName: assignee?.name,
+      note: msg,
+      text: `💬 ${currentUser.name} demande à ${assignee?.name} : "${msg}" (outil : ${t.name})`,
+      date: new Date().toISOString(),
+    });
+    setMsg(""); setAsking(false);
+  };
+
+  return (
+    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ fontSize: 24 }}>{t.photo}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</div>
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>
+            📍 {t.location}
+            {assignee && <span style={{ color: "var(--blue)", marginLeft: 6 }}>👷 {assignee.name}</span>}
+          </div>
+        </div>
+        {isMyTool
+          ? <span style={{ fontSize: 11, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "3px 8px", borderRadius: 20, fontWeight: 700 }}>Le mien</span>
+          : <button className="btn btn-blue btn-sm" onClick={() => setAsking(!asking)}>💬 Demander</button>
+        }
+      </div>
+      {asking && !isMyTool && (
+        <div style={{ borderTop: "1px solid var(--border)", padding: "10px 14px", display: "flex", gap: 8 }}>
+          <input className="form-input" style={{ flex: 1, fontSize: 12 }}
+            placeholder={`Message à ${assignee?.name}... ex: tu en as encore besoin ?`}
+            value={msg} onChange={e => setMsg(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && sendAsk()} />
+          <button className="btn btn-primary btn-sm" onClick={sendAsk} disabled={!msg.trim()}>Envoyer</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setAsking(false)}>×</button>
+        </div>
+      )}
     </div>
   );
 }
