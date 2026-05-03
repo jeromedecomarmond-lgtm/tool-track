@@ -2313,12 +2313,15 @@ function PinLogin({ user, onSuccess }) {
   };
 
   if (!open) {
+    const bgColor = user.role === "superadmin" ? "#e84040" : user.role === "admin" ? "var(--accent)" : "var(--blue)";
+    const textColor = user.role === "viewer" ? "#fff" : "#000";
+    const roleLabel = user.role === "superadmin" ? "👑 Super Admin" : user.role === "admin" ? "🔑 Admin" : "🖌 Peintre";
     return (
       <div className="user-select-item" onClick={() => setOpen(true)}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: user.role === "admin" ? "var(--accent)" : "var(--blue)", color: user.role === "admin" ? "#000" : "#fff" }}>{user.avatar}</div>
+        <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: bgColor, color: textColor }}>{user.avatar}</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>{user.name}</div>
-          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{user.role === "admin" ? "🔑 Administrateur" : "🖌 Peintre"}</div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{roleLabel}</div>
         </div>
         <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
       </div>
@@ -2328,7 +2331,7 @@ function PinLogin({ user, onSuccess }) {
   return (
     <div style={{ background: "var(--surface2)", borderRadius: 12, padding: 16, border: `1px solid ${error ? "var(--red)" : "var(--border)"}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, background: user.role === "admin" ? "var(--accent)" : "var(--blue)", color: user.role === "admin" ? "#000" : "#fff" }}>{user.avatar}</div>
+        <div style={{ width: 36, height: 36, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12, background: user.role === "superadmin" ? "#e84040" : user.role === "admin" ? "var(--accent)" : "var(--blue)", color: user.role === "viewer" ? "#fff" : "#000" }}>{user.avatar}</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>{user.name}</div>
           <div style={{ fontSize: 11, color: error ? "var(--red)" : "var(--muted)" }}>{error ? "❌ Code incorrect" : "Entrez votre PIN"}</div>
