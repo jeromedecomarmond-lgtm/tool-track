@@ -1,6 +1,21 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { db } from "./firebase";
 import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs } from "firebase/firestore";
+
+// ─── HOOK LOADING BUTTON ──────────────────────────────────────────────────────
+// Rend un bouton temporairement inactif après confirmation pour éviter les doublons
+function useLoadingBtn() {
+  const [loading, setLoading] = useState(false);
+  const trigger = useCallback(async (fn) => {
+    if (loading) return;
+    setLoading(true);
+    try { await fn(); } finally {
+      // Redevient actif après 2 secondes ou quand le composant se remonte
+      setTimeout(() => setLoading(false), 2000);
+    }
+  }, [loading]);
+  return [loading, trigger];
+}
 
 // ─── DONNÉES INITIALES VIDES ─────────────────────────────────────────────────
 const INITIAL_USERS     = [];
@@ -101,6 +116,7 @@ const css = `
 
   /* BUTTONS */
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 700; letter-spacing: .4px; transition: all .15s; }
+  .btn:disabled, .btn.loading { opacity: .35; cursor: not-allowed; pointer-events: none; filter: grayscale(.4); }
   .btn-primary { background: var(--accent); color: #000; }
   .btn-primary:hover { background: #ffba42; }
   .btn-ghost { background: var(--surface2); color: var(--text); }
@@ -134,9 +150,9 @@ const css = `
   .price-warning { font-size: 11px; color: var(--muted); font-style: italic; margin-top: 3px; }
 
   /* PHOTO */
-  .tool-photo-card { width: 100%; height: 160px; object-fit: cover; border-radius: 0; display: block; }
-  .tool-photo-placeholder { width: 100%; height: 160px; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--muted); font-size: 13px; }
-  .tool-photo-placeholder .big-emoji { font-size: 48px; }
+  .tool-photo-card { width: 100%; height: auto; max-height: 120px; object-fit: contain; background: var(--surface2); display: block; }
+  .tool-photo-placeholder { width: 100%; height: 80px; background: var(--surface2); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--muted); font-size: 13px; }
+  .tool-photo-placeholder .big-emoji { font-size: 30px; }
   .tool-photo-detail { width: 100%; height: 220px; object-fit: cover; border-radius: 10px; }
   .tool-photo-detail-placeholder { width: 100%; height: 220px; background: var(--surface2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 72px; }
   .photo-upload-zone { border: 2px dashed var(--border); border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all .2s; color: var(--muted); font-size: 13px; }
@@ -274,7 +290,7 @@ export default function App() {
   const [writeMsg, setWriteMsg] = useState({ toolId: "", text: "", type: "info" });
   const toastRef = useRef();
 
-  const isAdmin = currentUser?.role === "admin";
+  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const unread = messages.filter(m => !m.read && String(m.from) !== String(currentUser?.id)).length;
   const pendingRequests = requests.filter(r => r.status === "pending").length;
 
@@ -282,7 +298,7 @@ export default function App() {
   // Sauvegarde l'utilisateur connecté dans le navigateur
   const loginUser = (u) => {
     setCurrentUser(u);
-    setPage(u.role === "admin" ? "tools" : "mytools");
+    setPage(u.role === "admin" || u.role === "superadmin" ? "tools" : "mytools");
     try { localStorage.setItem("tooltrack_user_id", u.id); } catch(e) {}
   };
   const logoutUser = () => {
@@ -306,7 +322,7 @@ export default function App() {
           const savedUser = loadedUsers.find(u => u.id === savedId);
           if (savedUser) {
             setCurrentUser(savedUser);
-            setPage(savedUser.role === "admin" ? "tools" : "mytools");
+            setPage(savedUser.role === "admin" || savedUser.role === "superadmin" ? "tools" : "mytools");
           }
         }
       } catch(e) {}
@@ -400,6 +416,22 @@ export default function App() {
 
   // ── TOOL DETAIL MODAL ───────────────────────────────────────────────────────
   const openTool = (tool) => setModal({ type: "tool", data: tool });
+
+  // ── DELETE TOOL ─────────────────────────────────────────────────────────────
+  const deleteTool = async (toolId) => {
+    await deleteDoc(doc(db, "tools", String(toolId)));
+    showToast("🗑 Outil supprimé");
+    setModal(null);
+  };
+
+  // ── UPDATE TOOL ─────────────────────────────────────────────────────────────
+  const updateTool = async (toolId, updates) => {
+    const tool = tools.find(t => String(t.id) === String(toolId));
+    if (!tool) return;
+    await setDoc(doc(db, "tools", String(toolId)), { ...tool, ...updates });
+    showToast("✅ Outil mis à jour");
+    setModal(null);
+  };
 
   // ── ASSIGN TOOL ─────────────────────────────────────────────────────────────
   const assignTool = async (toolId, viewerId, chantier, direction) => {
@@ -576,6 +608,7 @@ export default function App() {
             {isAdmin && <button className={`nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}><span className="icon">🔧</span><span>Outils</span></button>}
             {isAdmin && <button className={`nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}><span className="icon">🏗</span><span>Chantiers</span></button>}
             {!isAdmin && <button className={`nav-item ${page === "mytools" ? "active" : ""}`} onClick={() => setPage("mytools")}><span className="icon">📦</span><span>Mes outils</span></button>}
+            {!isAdmin && <button className={`nav-item ${page === "parc" ? "active" : ""}`} onClick={() => setPage("parc")}><span className="icon">🔧</span><span>Parc outils</span></button>}
             <button className={`nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
               <span className="icon">🔔</span><span>Demandes</span>
               {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
@@ -723,34 +756,117 @@ export default function App() {
           {/* ── MY TOOLS (VIEWER) ── */}
           {page === "mytools" && !isAdmin && (
             <>
-              <div className="topbar"><h2>Mes outils</h2></div>
+              <div className="topbar">
+                <h2>📦 Mes outils</h2>
+                <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>
+                  {myTools.length === 0 ? "Aucun outil confié" : `${myTools.length} outil${myTools.length > 1 ? "s" : ""} sous ma responsabilité`}
+                </span>
+              </div>
               <div className="content">
-                {myTools.length > 0 && (
-                  <div className="reminder-banner">
-                    <span>⏰</span>
-                    <p>Vous avez <strong>{myTools.length} outil(s)</strong> sous votre responsabilité. Utilisez les boutons sur chaque carte pour les transférer ou les signaler.</p>
+                {myTools.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
+                    <div style={{ fontSize: 56, marginBottom: 12 }}>📦</div>
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Aucun outil confié</div>
+                    <div style={{ fontSize: 13 }}>Un admin vous assignera un outil bientôt.</div>
+                  </div>
+                ) : (
+                  <div className="cards-grid">
+                    {myTools.map(t => (
+                      <ViewerToolCard
+                        key={t.id}
+                        tool={t}
+                        currentUser={currentUser}
+                        users={users}
+                        viewers={viewers}
+                        chantiers={chantiers}
+                        onOpen={() => openTool(t)}
+                        onRequest={sendRequest}
+                      />
+                    ))}
                   </div>
                 )}
-                {myTools.length === 0 && (
-                  <div style={{ color: "var(--muted)", textAlign: "center", padding: "40px 0" }}>
-                    <div style={{ fontSize: 40, marginBottom: 8 }}>📦</div>
-                    <div>Aucun outil ne vous est actuellement confié.</div>
-                  </div>
-                )}
-                <div className="cards-grid">
-                  {myTools.map(t => (
-                    <ViewerToolCard
-                      key={t.id}
-                      tool={t}
-                      currentUser={currentUser}
-                      users={users}
-                      viewers={viewers}
-                      chantiers={chantiers}
-                      onOpen={() => openTool(t)}
-                      onRequest={sendRequest}
-                    />
+              </div>
+            </>
+          )}
+
+          {/* ── PARC OUTILS (VIEWER) ── */}
+          {page === "parc" && !isAdmin && (
+            <>
+              <div className="topbar"><h2>🔧 Parc outils</h2></div>
+              <div className="content">
+
+                {/* STATS RAPIDES */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
+                  {[
+                    { label: "🟢 En store", count: tools.filter(t => t.status === "store").length, color: "var(--green)" },
+                    { label: "🔵 Sur chantiers", count: tools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
+                    { label: "🔴 Non fonctionnel", count: tools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+                    { label: "📦 Mes outils", count: myTools.length, color: "var(--accent)" },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: "var(--surface)", border: `1px solid var(--border)`, borderRadius: 12, padding: "14px 16px" }}>
+                      <div style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 800, color: s.color }}>{s.count}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{s.label}</div>
+                    </div>
                   ))}
                 </div>
+
+                {/* OUTILS EN STORE */}
+                {tools.filter(t => t.status === "store").length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--green)", marginBottom: 10 }}>🟢 Disponibles au store</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {tools.filter(t => t.status === "store").map(t => (
+                        <div key={t.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+                          <span style={{ fontSize: 24 }}>{t.photo}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</div>
+                            <div style={{ fontSize: 11, color: "var(--muted)" }}>📍 Store{t.price ? ` · Rs ${t.price.toLocaleString("fr-MU")}` : ""}</div>
+                          </div>
+                          <span style={{ fontSize: 11, background: "rgba(39,201,122,.15)", color: "var(--green)", padding: "3px 8px", borderRadius: 20, fontWeight: 700 }}>Dispo</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* OUTILS SUR CHANTIERS — avec option demande */}
+                {tools.filter(t => t.status === "assigned").length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--blue)", marginBottom: 10 }}>🔵 Sur chantiers</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {tools.filter(t => t.status === "assigned").map(t => {
+                        const assignee = users.find(u => String(u.id) === String(t.assignedTo));
+                        const isMyTool = String(t.assignedTo) === String(currentUser.id);
+                        return (
+                          <ParcToolRow
+                            key={t.id} tool={t} assignee={assignee}
+                            isMyTool={isMyTool} currentUser={currentUser}
+                            onAsk={sendRequest}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* OUTILS NON FONCTIONNELS */}
+                {tools.filter(t => t.status === "nonfunctional").length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "#f07030", marginBottom: 10 }}>🔴 Non fonctionnels</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {tools.filter(t => t.status === "nonfunctional").map(t => (
+                        <div key={t.id} style={{ background: "var(--surface)", border: "1px solid rgba(232,82,10,.3)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, opacity: 0.75 }}>
+                          <span style={{ fontSize: 24 }}>{t.photo}</span>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</div>
+                            <div style={{ fontSize: 11, color: "#f07030" }}>🔎 Suivi en cours · {t.location}</div>
+                          </div>
+                          <span style={{ fontSize: 11, background: "rgba(232,82,10,.15)", color: "#f07030", padding: "3px 8px", borderRadius: 20, fontWeight: 700 }}>En répa.</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -869,70 +985,93 @@ export default function App() {
             <>
               <div className="topbar"><h2>Équipe</h2><button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ Ajouter un profil</button></div>
               <div className="content">
-                {["admin", "viewer"].map(role => (
-                  <div key={role} style={{ marginBottom: 28 }}>
-                    <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800, color: role === "admin" ? "var(--accent)" : "var(--blue)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1, display: "flex", alignItems: "center", gap: 8 }}>
-                      {role === "admin" ? "🔑 Administrateurs" : "🖌 Peintres"}
-                      <span style={{ fontSize: 12, fontWeight: 600, background: role === "admin" ? "rgba(245,166,35,.15)" : "rgba(58,142,246,.15)", color: role === "admin" ? "var(--accent)" : "var(--blue)", padding: "2px 8px", borderRadius: 10 }}>
-                        {users.filter(u => u.role === role).length}
-                      </span>
-                    </div>
-                    <div className="cards-grid">
-                      {users.filter(u => u.role === role).map(u => {
-                        const assignedTools = tools.filter(t => String(t.assignedTo) === String(u.id));
-                        const isSelf = u.id === currentUser.id;
-                        return (
-                          <div key={u.id} style={{ background: "var(--surface)", border: `1px solid ${isSelf ? "var(--accent)" : "var(--border)"}`, borderRadius: 12, overflow: "hidden", transition: "all .2s" }}>
-                            {/* TOP COLOR BAND */}
-                            <div style={{ height: 6, background: role === "admin" ? "var(--accent)" : "var(--blue)" }} />
-                            <div style={{ padding: 16 }}>
-                              {/* AVATAR + NAME */}
-                              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                                <div style={{ width: 52, height: 52, borderRadius: 12, background: role === "admin" ? "var(--accent)" : "var(--blue)", color: role === "admin" ? "#000" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, flexShrink: 0 }}>{u.avatar}</div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                  <div style={{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800, lineHeight: 1.2 }}>{u.name}{isSelf && <span style={{ fontSize: 10, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "1px 6px", borderRadius: 8, marginLeft: 6, fontFamily: "var(--font-body)" }}>Moi</span>}</div>
-                                  <span className={`role-tag role-${u.role}`} style={{ marginTop: 3, display: "inline-block" }}>{role === "admin" ? "Admin" : "Peintre"}</span>
+                {["superadmin", "admin", "viewer"].map(role => {
+                  const roleUsers = users.filter(u => u.role === role);
+                  if (roleUsers.length === 0) return null;
+                  const roleColor = role === "superadmin" ? "#e84040" : role === "admin" ? "var(--accent)" : "var(--blue)";
+                  const roleLabel = role === "superadmin" ? "👑 Administrateur Principal" : role === "admin" ? "🔑 Admins" : "🖌 Peintres";
+                  const isSuperAdmin = currentUser.role === "superadmin";
+                  return (
+                    <div key={role} style={{ marginBottom: 28 }}>
+                      <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800, color: roleColor, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1, display: "flex", alignItems: "center", gap: 8 }}>
+                        {roleLabel}
+                        <span style={{ fontSize: 12, fontWeight: 600, background: roleColor + "22", color: roleColor, padding: "2px 8px", borderRadius: 10 }}>
+                          {roleUsers.length}
+                        </span>
+                      </div>
+                      <div className="cards-grid">
+                        {roleUsers.map(u => {
+                          const assignedTools = tools.filter(t => String(t.assignedTo) === String(u.id));
+                          const isSelf = String(u.id) === String(currentUser.id);
+                          const canSeePins = currentUser.role === "superadmin";
+                          return (
+                            <div key={u.id} style={{ background: "var(--surface)", border: `1px solid ${isSelf ? roleColor : "var(--border)"}`, borderRadius: 12, overflow: "hidden" }}>
+                              <div style={{ height: 6, background: roleColor }} />
+                              <div style={{ padding: 16 }}>
+                                {/* AVATAR + NAME */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                                  <div style={{ width: 52, height: 52, borderRadius: 12, background: roleColor, color: role === "viewer" ? "#fff" : "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, flexShrink: 0 }}>{u.avatar}</div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800, lineHeight: 1.2 }}>
+                                      {u.name}
+                                      {isSelf && <span style={{ fontSize: 10, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "1px 6px", borderRadius: 8, marginLeft: 6, fontFamily: "var(--font-body)" }}>Moi</span>}
+                                    </div>
+                                    <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: roleColor + "22", color: roleColor, marginTop: 3, display: "inline-block" }}>
+                                      {role === "superadmin" ? "Super Admin" : role === "admin" ? "Admin" : "Peintre"}
+                                    </span>
+                                  </div>
                                 </div>
-                              </div>
-                              {/* CONTACT */}
-                              <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
-                                {u.phone && <div style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6 }}>📞 {u.phone}</div>}
-                                {u.email && <div style={{ fontSize: 12, color: "var(--muted)", display: "flex", alignItems: "center", gap: 6 }}>✉️ {u.email}</div>}
-                              </div>
-                              {/* OUTILS ASSIGNÉS (peintres) */}
-                              {role === "viewer" && (
-                                <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 10px", marginBottom: 12 }}>
-                                  {assignedTools.length === 0
-                                    ? <div style={{ fontSize: 11, color: "var(--muted)" }}>Aucun outil confié actuellement</div>
-                                    : <>
-                                        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 4 }}>Outils confiés</div>
-                                        {assignedTools.map(t => (
-                                          <div key={t.id} style={{ fontSize: 12, color: "var(--blue)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
-                                            <span>{t.photo}</span> {t.name} <span style={{ color: "var(--muted)", fontSize: 10 }}>— {t.location}</span>
-                                          </div>
-                                        ))}
-                                      </>
-                                  }
+
+                                {/* CONTACT */}
+                                <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
+                                  {u.phone && <div style={{ fontSize: 12, color: "var(--muted)" }}>📞 {u.phone}</div>}
+                                  {u.email && <div style={{ fontSize: 12, color: "var(--muted)" }}>✉️ {u.email}</div>}
                                 </div>
-                              )}
-                              {/* DELETE */}
-                              {!isSelf && (
-                                <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }}
-                                  onClick={() => {
-                                    if (assignedTools.length > 0) { showToast("⚠️ Ce peintre a encore des outils confiés !", "warn"); return; }
-                                    deleteDoc(doc(db, "users", String(u.id)));
-                                    showToast("🗑 Profil supprimé");
-                                  }}>
-                                  🗑 Supprimer ce profil
-                                </button>
-                              )}
+
+                                {/* PIN — visible uniquement par le superadmin */}
+                                {canSeePins && u.pin && (
+                                  <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                    <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>🔑 Code PIN</div>
+                                    <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, letterSpacing: 6, color: "var(--accent)" }}>{u.pin}</div>
+                                  </div>
+                                )}
+
+                                {/* OUTILS (peintres) */}
+                                {role === "viewer" && (
+                                  <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
+                                    {assignedTools.length === 0
+                                      ? <div style={{ fontSize: 11, color: "var(--muted)" }}>Aucun outil confié</div>
+                                      : <>
+                                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 4 }}>Outils confiés</div>
+                                          {assignedTools.map(t => (
+                                            <div key={t.id} style={{ fontSize: 12, color: "var(--blue)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                                              <span>{t.photo}</span> {t.name} <span style={{ color: "var(--muted)", fontSize: 10 }}>— {t.location}</span>
+                                            </div>
+                                          ))}
+                                        </>
+                                    }
+                                  </div>
+                                )}
+
+                                {/* DELETE */}
+                                {!isSelf && currentUser.role === "superadmin" && (
+                                  <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }}
+                                    onClick={() => {
+                                      if (assignedTools.length > 0) { showToast("⚠️ Ce peintre a encore des outils confiés !", "warn"); return; }
+                                      deleteDoc(doc(db, "users", String(u.id)));
+                                      showToast("🗑 Profil supprimé");
+                                    }}>
+                                    🗑 Supprimer ce profil
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
@@ -961,6 +1100,11 @@ export default function App() {
             <span className="bn-icon">📦</span>Mes outils
           </button>
         )}
+        {!isAdmin && (
+          <button className={`bottom-nav-item ${page === "parc" ? "active" : ""}`} onClick={() => setPage("parc")}>
+            <span className="bn-icon">🔧</span>Parc
+          </button>
+        )}
         <button className={`bottom-nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
           <span className="bn-icon">🔔</span>Demandes
           {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
@@ -977,7 +1121,7 @@ export default function App() {
 
       {/* ── MODALS ── */}
       {modal && (
-        <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} addTool={addTool} addUser={addUser} assignTool={assignTool} />
+        <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} addTool={addTool} addUser={addUser} assignTool={assignTool} deleteTool={deleteTool} updateTool={updateTool} />
       )}
 
       {/* ── TOAST ── */}
@@ -991,18 +1135,36 @@ export default function App() {
 }
 
 // ─── MODAL ROUTER ─────────────────────────────────────────────────────────────
-function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool }) {
+function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool }) {
   const isAdmin = currentUser.role === "admin";
   if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
   if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} />;
-  if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} />;
+  if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} />;
   return null;
 }
 
 // ─── TOOL DETAIL MODAL ────────────────────────────────────────────────────────
-function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, setTools, currentUser }) {
+function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, setTools, currentUser, deleteTool, updateTool }) {
   const [assignForm, setAssignForm] = useState({ viewerId: "", chantier: "" });
   const [moveForm, setMoveForm] = useState({ destination: "", newViewerId: "" });
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: tool.name || "", ref: tool.ref || "",
+    description: tool.description || "",
+    price: tool.price ? tool.price.toLocaleString("fr-MU") : "",
+    purchaseDate: tool.purchaseDate || "",
+  });
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const fileRef = useRef();
+  const [newPhoto, setNewPhoto] = useState(null);
+
+  // Loading buttons — un par action
+  const [loadingAssign, triggerAssign]   = useLoadingBtn();
+  const [loadingMove,   triggerMove]     = useLoadingBtn();
+  const [loadingSave,   triggerSave]     = useLoadingBtn();
+  const [loadingDelete, triggerDelete]   = useLoadingBtn();
+  const [loadingDeclare, triggerDeclare] = useLoadingBtn();
+  const [loadingThread, triggerThread]   = useLoadingBtn();
   const assignee = users.find(u => String(u.id) === String(tool.assignedTo));
 
   // ── FIL DE SUIVI OBSOLESCENCE ──
@@ -1106,10 +1268,92 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <h3>{tool.photo} {tool.name}</h3>
-          <button className="close-btn" onClick={onClose}>×</button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 24 }}>{tool.photo}</span>
+            <div style={{ minWidth: 0 }}>
+              <h3 style={{ fontSize: 17, margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tool.name}</h3>
+              {tool.ref && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>🏭 {tool.ref}</div>}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+            {isAdmin && !editing && (
+              <>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditing(true)}>✏️</button>
+                <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "var(--red)" }}
+                  onClick={() => setConfirmDelete(true)}>🗑</button>
+              </>
+            )}
+            <button className="close-btn" onClick={onClose}>×</button>
+          </div>
         </div>
-        <div className="modal-body">
+
+        {/* CONFIRM DELETE */}
+        {confirmDelete && (
+          <div style={{ background: "rgba(232,82,10,.1)", border: "1px solid var(--red)", borderRadius: 10, margin: "12px 24px", padding: 14 }}>
+            <div style={{ fontWeight: 700, marginBottom: 8, color: "var(--red)" }}>⚠️ Supprimer "{tool.name}" ?</div>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Cette action est irréversible. L'outil sera définitivement supprimé.</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)}>Annuler</button>
+              <button className={`btn btn-danger btn-sm ${loadingDelete ? "loading" : ""}`} disabled={loadingDelete}
+                onClick={() => triggerDelete(() => deleteTool(tool.id))}>
+                {loadingDelete ? "⏳ Suppression..." : "Confirmer la suppression"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* EDIT FORM */}
+        {editing && (
+          <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+            <div className="form-group"><label className="form-label">Nom *</label>
+              <input className="form-input" value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div className="form-row">
+              <div className="form-group"><label className="form-label">Fournisseur</label>
+                <input className="form-input" value={editForm.ref} onChange={e => setEditForm(p => ({ ...p, ref: e.target.value }))} />
+              </div>
+              <div className="form-group"><label className="form-label">Date d'achat</label>
+                <input className="form-input" type="date" value={editForm.purchaseDate} onChange={e => setEditForm(p => ({ ...p, purchaseDate: e.target.value }))} />
+              </div>
+            </div>
+            <div className="form-group"><label className="form-label">🇲🇺 Prix (Rs)</label>
+              <input className="form-input" type="text" inputMode="numeric" placeholder="ex: 18 000" value={editForm.price}
+                onChange={e => {
+                  const raw = e.target.value.replace(/\s/g,"").replace(/[^0-9]/g,"");
+                  setEditForm(p => ({ ...p, price: raw.replace(/\B(?=(\d{3})+(?!\d))/g," ") }));
+                }} />
+            </div>
+            <div className="form-group"><label className="form-label">Description</label>
+              <textarea className="form-input" rows={2} value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} />
+            </div>
+            <div className="form-group"><label className="form-label">📷 Changer la photo</label>
+              <div className="photo-upload-zone" onClick={() => fileRef.current.click()}>
+                <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
+                  onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setNewPhoto(ev.target.result); r.readAsDataURL(f); }} />
+                {newPhoto
+                  ? <img src={newPhoto} alt="aperçu" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
+                  : <div style={{ padding: "10px 0", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
+                      {tool.photoUrl ? "📷 Cliquez pour changer la photo" : "📷 Ajouter une photo"}
+                    </div>
+                }
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setNewPhoto(null); }}>Annuler</button>
+              <button className={`btn btn-primary btn-sm ${loadingSave ? "loading" : ""}`} disabled={!editForm.name.trim() || loadingSave}
+                onClick={() => triggerSave(() => updateTool(tool.id, {
+                  name: editForm.name, ref: editForm.ref,
+                  description: editForm.description, purchaseDate: editForm.purchaseDate,
+                  price: editForm.price ? Number(String(editForm.price).replace(/\s/g,"")) : null,
+                  photoUrl: newPhoto || tool.photoUrl,
+                }))}>
+                {loadingSave ? "⏳ Sauvegarde..." : "✅ Sauvegarder"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="modal-body" style={{ display: editing ? "none" : "flex" }}>
           {/* PHOTO */}
           {tool.photoUrl
             ? <img src={tool.photoUrl} alt={tool.name} className="tool-photo-detail" />
@@ -1177,7 +1421,10 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                   <option value="">— Choisir un chantier —</option>
                   {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
-                <button className="btn btn-primary btn-sm" disabled={!assignForm.viewerId || !assignForm.chantier} onClick={() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out")}>Sortir & Confier</button>
+                <button className={`btn btn-primary btn-sm ${loadingAssign ? "loading" : ""}`} disabled={!assignForm.viewerId || !assignForm.chantier || loadingAssign}
+                  onClick={() => triggerAssign(() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out"))}>
+                  {loadingAssign ? "⏳ En cours..." : "Sortir & Confier"}
+                </button>
               </div>
             </div>
           )}
@@ -1197,8 +1444,9 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                   <option value="">— Retour store (ou choisir nouveau peintre) —</option>
                   {viewers.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                 </select>
-                <button className="btn btn-green btn-sm" disabled={!moveForm.destination} onClick={() => assignTool(tool.id, moveForm.newViewerId || null, moveForm.destination === "Store" ? null : moveForm.destination, moveForm.newViewerId ? "out" : "in")}>
-                  {moveForm.newViewerId ? "Transférer à un autre peintre" : "Récupérer → Store"}
+                <button className={`btn btn-green btn-sm ${loadingMove ? "loading" : ""}`} disabled={!moveForm.destination || loadingMove}
+                  onClick={() => triggerMove(() => assignTool(tool.id, moveForm.newViewerId || null, moveForm.destination === "Store" ? null : moveForm.destination, moveForm.newViewerId ? "out" : "in"))}>
+                  {loadingMove ? "⏳ En cours..." : moveForm.newViewerId ? "Transférer à un autre peintre" : "Récupérer → Store"}
                 </button>
               </div>
             </div>
@@ -1230,7 +1478,11 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                     />
                   </div>
                   <textarea className="form-input" rows={2} placeholder="Note : ex. câble coupé, moteur grillé, chute..." value={newEntryNote} onChange={e => setNewEntryNote(e.target.value)} />
-                  <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.25)", color: "#f07030", alignSelf: "flex-start", border: "1px solid rgba(232,82,10,.4)" }} onClick={declareNonFunctional}>🔴 Ouvrir le suivi</button>
+                  <button className={`btn btn-sm ${loadingDeclare ? "loading" : ""}`} disabled={loadingDeclare}
+                    style={{ background: "rgba(232,82,10,.25)", color: "#f07030", alignSelf: "flex-start", border: "1px solid rgba(232,82,10,.4)" }}
+                    onClick={() => triggerDeclare(declareNonFunctional)}>
+                    {loadingDeclare ? "⏳ En cours..." : "🔴 Ouvrir le suivi"}
+                  </button>
                 </div>
               )}
 
@@ -1280,7 +1532,11 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                         value={newEntryNote} onChange={e => setNewEntryNote(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addThreadEntry(); } }}
                       />
-                      <button className="btn btn-blue btn-sm" style={{ alignSelf: "flex-end", flexShrink: 0 }} onClick={addThreadEntry}>Envoyer</button>
+                      <button className={`btn btn-blue btn-sm ${loadingThread ? "loading" : ""}`} disabled={loadingThread}
+                        style={{ alignSelf: "flex-end", flexShrink: 0 }}
+                        onClick={() => triggerThread(addThreadEntry)}>
+                        {loadingThread ? "⏳" : "Envoyer"}
+                      </button>
                     </div>
                     <div style={{ fontSize: 10, color: "var(--muted)" }}>Entrée pour envoyer · Shift+Entrée pour nouvelle ligne</div>
                   </div>
@@ -1423,8 +1679,9 @@ function AddUserModal({ onClose, onSave }) {
               <div className="form-group"><label className="form-label">Nom complet *</label><input className="form-input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
               <div className="form-group"><label className="form-label">Rôle *</label>
                 <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
-                  <option value="viewer">Peintre / Spectateur</option>
-                  <option value="admin">Admin / Responsable</option>
+                  <option value="viewer">🖌 Peintre</option>
+                  <option value="admin">🔑 Admin</option>
+                  <option value="superadmin">👑 Administrateur Principal</option>
                 </select>
               </div>
               <div className="form-row">
@@ -1450,7 +1707,7 @@ function AddUserModal({ onClose, onSave }) {
               </div>
               <div>
                 <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800 }}>{savedUser.name}</div>
-                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{savedUser.role === "admin" ? "🔑 Admin" : "🖌 Peintre"}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{savedUser.role === "superadmin" ? "👑 Super Admin" : savedUser.role === "admin" ? "🔑 Admin" : "🖌 Peintre"}</div>
               </div>
               <div style={{ background: "var(--surface2)", borderRadius: 12, padding: "14px 24px", width: "100%" }}>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Code PIN</div>
@@ -1861,23 +2118,82 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
 // ─── REQUEST ACTIONS ─────────────────────────────────────────────────────────
 function RequestActions({ request: r, tool, onApprove, onRefuse }) {
   const [note, setNote] = useState("");
-  const [mode, setMode] = useState(null); // null | "refuse"
+  const [mode, setMode] = useState(null);
+  const [loadingApprove, triggerApprove] = useLoadingBtn();
+  const [loadingRefuse, triggerRefuse]   = useLoadingBtn();
 
   if (mode === "refuse") return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <textarea className="form-input" rows={2} placeholder="Motif du refus..." value={note} onChange={e => setNote(e.target.value)} />
       <div style={{ display: "flex", gap: 6 }}>
         <button className="btn btn-ghost btn-sm" onClick={() => setMode(null)}>Annuler</button>
-        <button className="btn btn-danger btn-sm" onClick={() => onRefuse(note)}>Confirmer le refus</button>
+        <button className={`btn btn-danger btn-sm ${loadingRefuse ? "loading" : ""}`} disabled={loadingRefuse}
+          onClick={() => triggerRefuse(() => onRefuse(note))}>
+          {loadingRefuse ? "⏳..." : "Confirmer le refus"}
+        </button>
       </div>
     </div>
   );
 
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      <input className="form-input" style={{ flex: 1, fontSize: 12 }} placeholder="Note optionnelle pour l'approbation..." value={note} onChange={e => setNote(e.target.value)} />
-      <button className="btn btn-green btn-sm" onClick={() => onApprove(note)}>✅ Approuver</button>
+      <input className="form-input" style={{ flex: 1, fontSize: 12 }} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
+      <button className={`btn btn-green btn-sm ${loadingApprove ? "loading" : ""}`} disabled={loadingApprove}
+        onClick={() => triggerApprove(() => onApprove(note))}>
+        {loadingApprove ? "⏳..." : "✅ Approuver"}
+      </button>
       <button className="btn btn-danger btn-sm" onClick={() => setMode("refuse")}>❌ Refuser</button>
+    </div>
+  );
+}
+
+// ─── PARC TOOL ROW ────────────────────────────────────────────────────────────
+function ParcToolRow({ tool: t, assignee, isMyTool, currentUser, onAsk }) {
+  const [asking, setAsking] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const sendAsk = async () => {
+    if (!msg.trim()) return;
+    const id = String(Date.now());
+    // Crée une demande visible par tous
+    await setDoc(doc(db, "requests", id), {
+      id, type: "peintre-ask", status: "pending",
+      from: currentUser.id, fromName: currentUser.name,
+      toolId: String(t.id), toolName: t.name, toolLocation: t.location,
+      targetViewerId: String(t.assignedTo), targetViewerName: assignee?.name,
+      note: msg,
+      text: `💬 ${currentUser.name} demande à ${assignee?.name} : "${msg}" (outil : ${t.name})`,
+      date: new Date().toISOString(),
+    });
+    setMsg(""); setAsking(false);
+  };
+
+  return (
+    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+      <div style={{ padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ fontSize: 24 }}>{t.photo}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>{t.name}</div>
+          <div style={{ fontSize: 11, color: "var(--muted)" }}>
+            📍 {t.location}
+            {assignee && <span style={{ color: "var(--blue)", marginLeft: 6 }}>👷 {assignee.name}</span>}
+          </div>
+        </div>
+        {isMyTool
+          ? <span style={{ fontSize: 11, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "3px 8px", borderRadius: 20, fontWeight: 700 }}>Le mien</span>
+          : <button className="btn btn-blue btn-sm" onClick={() => setAsking(!asking)}>💬 Demander</button>
+        }
+      </div>
+      {asking && !isMyTool && (
+        <div style={{ borderTop: "1px solid var(--border)", padding: "10px 14px", display: "flex", gap: 8 }}>
+          <input className="form-input" style={{ flex: 1, fontSize: 12 }}
+            placeholder={`Message à ${assignee?.name}... ex: tu en as encore besoin ?`}
+            value={msg} onChange={e => setMsg(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && sendAsk()} />
+          <button className="btn btn-primary btn-sm" onClick={sendAsk} disabled={!msg.trim()}>Envoyer</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setAsking(false)}>×</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -2050,7 +2366,7 @@ function FirstAdminForm({ onSave }) {
     if (!name.trim()) return;
     const initials = name.trim().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
     const id = String(Date.now());
-    onSave({ id, name: name.trim(), role: "admin", avatar: initials, phone, email, pin });
+    onSave({ id, name: name.trim(), role: "superadmin", avatar: initials, phone, email, pin });
   };
 
   return (
