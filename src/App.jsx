@@ -922,7 +922,7 @@ export default function App() {
 
           {/* ── CHANTIERS ── */}
           {page === "chantiers" && isAdmin && (
-            <ChantierPage chantiers={chantiers} tools={tools} users={users} addChantier={addChantier} deleteChantier={deleteChantier} />
+            <ChantierPage chantiers={filteredChantiers} tools={filteredTools} users={filteredUsers} addChantier={addChantier} deleteChantier={deleteChantier} />
           )}
 
           {/* ── DEMANDES ── */}
@@ -941,7 +941,7 @@ export default function App() {
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {requests.map(r => {
-                    const tool = filteredTools.find(t => String(t.id) === String(r.toolId));
+                    const tool = tools.find(t => String(t.id) === String(r.toolId));
                     const isPending = r.status === "pending";
                     return (
                       <div key={r.id} style={{
@@ -1823,8 +1823,8 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
         {/* CHANTIER CARDS */}
         {chantiers.length === 0 && <div style={{ color: "var(--muted)", textAlign: "center", padding: "40px 0" }}>Aucun chantier créé. Ajoutez-en un ci-dessus.</div>}
         <div className="cards-grid">
-          {filteredChantiers.map(c => {
-            const toolsOnSite = filteredTools.filter(t => t.location === c.name && t.status === "assigned");
+          {chantiers.map(c => {
+            const toolsOnSite = tools.filter(t => t.location === c.name && t.status === "assigned");
             const peintreIds = [...new Set(toolsOnSite.map(t => t.assignedTo))];
             const peintres = peintreIds.map(id => users.find(u => u.id === id)).filter(Boolean);
             const isActive = toolsOnSite.length > 0;
