@@ -294,14 +294,14 @@ export default function App() {
   const isSuperAdmin = currentUser?.role === "superadmin";
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const unread = messages.filter(m => !m.read && String(m.from) !== String(currentUser?.id)).length;
-  const pendingRequests = filteredRequests.filter(r => r.status === "pending").length;
 
   // ── FILTRAGE PAR COMPAGNIE ───────────────────────────────────────────────────
   const myCompanyId = currentUser?.companyId || null;
   const filteredUsers = isSuperAdmin ? users : users.filter(u => u.companyId === myCompanyId);
-  const filteredTools = isSuperAdmin ? tools : filteredTools.filter(t => t.companyId === myCompanyId);
+  const filteredTools = isSuperAdmin ? tools : tools.filter(t => t.companyId === myCompanyId);
   const filteredChantiers = isSuperAdmin ? chantiers : chantiers.filter(c => c.companyId === myCompanyId);
-  const filteredRequests = isSuperAdmin ? requests : filteredRequests.filter(r => r.companyId === myCompanyId);
+  const filteredRequests = isSuperAdmin ? requests : requests.filter(r => r.companyId === myCompanyId);
+  const pendingRequests = filteredRequests.filter(r => r.status === "pending").length;
   const viewers = filteredUsers.filter(u => u.role === "viewer");
   const myTools = filteredTools.filter(t => String(t.assignedTo) === String(currentUser?.id));
   const myCompany = companies.find(c => c.id === myCompanyId);
@@ -471,7 +471,7 @@ export default function App() {
   // ── ASSIGN TOOL ─────────────────────────────────────────────────────────────
   const assignTool = async (toolId, viewerId, chantier, direction) => {
     const newViewer = viewerId ? users.find(u => String(u.id) === String(viewerId)) : null;
-    const tool = filteredTools.find(t => t.id === toolId);
+    const tool = tools.find(t => t.id === toolId);
     const prevOwner = tool.assignedTo ? users.find(u => String(u.id) === String(tool.assignedTo)) : null;
     const fromLocation = tool.location || "Store";
     const fromPerson = prevOwner ? prevOwner.name : "Store";
@@ -563,8 +563,8 @@ export default function App() {
     showToast("✅ Chantier ajouté");
   };
   const deleteChantier = async (id) => {
-    const c = filteredChantiers.find(c => c.id === id);
-    const hasTools = filteredTools.some(t => t.location === c?.name && t.status === "assigned");
+    const c = chantiers.find(c => c.id === id);
+    const hasTools = tools.some(t => t.location === c?.name && t.status === "assigned");
     if (hasTools) { showToast("⚠️ Des outils sont encore sur ce chantier !", "warn"); return; }
     await deleteDoc(doc(db, "chantiers", String(id)));
     showToast("🗑 Chantier supprimé");
@@ -577,7 +577,7 @@ export default function App() {
 
     // For non-functional — apply immediately + notify
     if (type === "nonfunctional") {
-      const tool = filteredTools.find(t => String(t.id) === String(toolId));
+      const tool = tools.find(t => String(t.id) === String(toolId));
       if (tool) {
         const firstEntry = { id: Date.now(), type: "thread", status: "suivi-cours", note: note || "Signalé non fonctionnel.", by: currentUser.name, datetime: today, timestamp: Date.now() };
         const updatedTool = {
@@ -1470,7 +1470,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                 </select>
                 <select className="form-input" value={assignForm.chantier} onChange={e => setAssignForm(p => ({ ...p, chantier: e.target.value }))}>
                   <option value="">— Choisir un chantier —</option>
-                  {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
                 <button className={`btn btn-primary btn-sm ${loadingAssign ? "loading" : ""}`} disabled={!assignForm.viewerId || !assignForm.chantier || loadingAssign}
                   onClick={() => triggerAssign(() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out"))}>
@@ -1489,7 +1489,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                 <select className="form-input" value={moveForm.destination} onChange={e => setMoveForm(p => ({ ...p, destination: e.target.value }))}>
                   <option value="">— Destination —</option>
                   <option value="Store">🏠 Retour Store</option>
-                  {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
                 <select className="form-input" value={moveForm.newViewerId} onChange={e => setMoveForm(p => ({ ...p, newViewerId: e.target.value }))}>
                   <option value="">— Retour store (ou choisir nouveau peintre) —</option>
@@ -2481,7 +2481,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
           </select>
           <select className="form-input" value={targetChantier} onChange={e => setTargetChantier(e.target.value)}>
             <option value="">— Vers quel chantier ? —</option>
-            {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+            {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
           <textarea className="form-input" rows={2} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
