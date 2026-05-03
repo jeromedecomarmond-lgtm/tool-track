@@ -279,6 +279,7 @@ export default function App() {
   const [chantiers, setChantiers] = useState(INITIAL_CHANTIERS);
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [requests, setRequests] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState("tools");
   const [toast, setToast] = useState(null);
@@ -290,9 +291,20 @@ export default function App() {
   const [writeMsg, setWriteMsg] = useState({ toolId: "", text: "", type: "info" });
   const toastRef = useRef();
 
+  const isSuperAdmin = currentUser?.role === "superadmin";
   const isAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
   const unread = messages.filter(m => !m.read && String(m.from) !== String(currentUser?.id)).length;
-  const pendingRequests = requests.filter(r => r.status === "pending").length;
+  const pendingRequests = filteredRequests.filter(r => r.status === "pending").length;
+
+  // ── FILTRAGE PAR COMPAGNIE ───────────────────────────────────────────────────
+  const myCompanyId = currentUser?.companyId || null;
+  const filteredUsers = isSuperAdmin ? users : users.filter(u => u.companyId === myCompanyId);
+  const filteredTools = isSuperAdmin ? tools : filteredTools.filter(t => t.companyId === myCompanyId);
+  const filteredChantiers = isSuperAdmin ? chantiers : chantiers.filter(c => c.companyId === myCompanyId);
+  const filteredRequests = isSuperAdmin ? requests : filteredRequests.filter(r => r.companyId === myCompanyId);
+  const viewers = filteredUsers.filter(u => u.role === "viewer");
+  const myTools = filteredTools.filter(t => String(t.assignedTo) === String(currentUser?.id));
+  const myCompany = companies.find(c => c.id === myCompanyId);
 
   // ── SESSION PERSISTANTE ──────────────────────────────────────────────────────
   // Sauvegarde l'utilisateur connecté dans le navigateur
@@ -343,6 +355,9 @@ export default function App() {
     unsubs.push(onSnapshot(collection(db, "requests"), snap => {
       setRequests(snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => new Date(b.date) - new Date(a.date)));
     }));
+    unsubs.push(onSnapshot(collection(db, "companies"), snap => {
+      setCompanies(snap.docs.map(d => ({ ...d.data(), id: d.id })));
+    }));
 
     return () => unsubs.forEach(u => u());
   }, []);
@@ -368,6 +383,26 @@ export default function App() {
     setToast({ text, type });
     toastRef.current = setTimeout(() => setToast(null), 4000);
   };
+
+  // ── COMPANY BLOCKED SCREEN ──────────────────────────────────────────────────
+  if (currentUser && !isSuperAdmin && myCompany && myCompany.active === false) {
+    return (
+      <>
+        <style>{css}</style>
+        <div className="login-screen">
+          <div className="login-card" style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 56, marginBottom: 12 }}>⏸</div>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, color: "var(--red)", marginBottom: 8 }}>Compte suspendu</div>
+            <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20, lineHeight: 1.6 }}>
+              L'accès à <strong>{myCompany.name}</strong> a été suspendu.<br/>
+              Contactez votre administrateur principal.
+            </div>
+            <button className="btn btn-ghost btn-sm" onClick={logoutUser}>⇄ Changer de compte</button>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // ── LOADING ─────────────────────────────────────────────────────────────────
   if (loading) {
@@ -426,7 +461,7 @@ export default function App() {
 
   // ── UPDATE TOOL ─────────────────────────────────────────────────────────────
   const updateTool = async (toolId, updates) => {
-    const tool = tools.find(t => String(t.id) === String(toolId));
+    const tool = filteredTools.find(t => String(t.id) === String(toolId));
     if (!tool) return;
     await setDoc(doc(db, "tools", String(toolId)), { ...tool, ...updates });
     showToast("✅ Outil mis à jour");
@@ -436,7 +471,7 @@ export default function App() {
   // ── ASSIGN TOOL ─────────────────────────────────────────────────────────────
   const assignTool = async (toolId, viewerId, chantier, direction) => {
     const newViewer = viewerId ? users.find(u => String(u.id) === String(viewerId)) : null;
-    const tool = tools.find(t => t.id === toolId);
+    const tool = filteredTools.find(t => t.id === toolId);
     const prevOwner = tool.assignedTo ? users.find(u => String(u.id) === String(tool.assignedTo)) : null;
     const fromLocation = tool.location || "Store";
     const fromPerson = prevOwner ? prevOwner.name : "Store";
@@ -500,6 +535,7 @@ export default function App() {
       photo: form.photo || "🔧",
       photoUrl: form.photoUrl || null,
       status: "store", assignedTo: null, location: "Store",
+      companyId: myCompanyId || null,
       history: [{ date: new Date().toLocaleDateString("fr-MU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }), action: "📦 Ajouté au store", by: currentUser.name }],
       lastReminder: null,
       totalRepairCost: 0,
@@ -513,7 +549,7 @@ export default function App() {
   const addUser = async (form) => {
     const id = String(Date.now());
     const initials = form.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-    const newUser = { id, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email || "", pin: form.pin };
+    const newUser = { id, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email || "", pin: form.pin, companyId: myCompanyId || null };
     await setDoc(doc(db, "users", id), newUser);
     showToast("✅ Profil créé");
     return newUser;
@@ -523,12 +559,12 @@ export default function App() {
   const addChantier = async (name, color) => {
     if (!name.trim()) return;
     const id = String(Date.now());
-    await setDoc(doc(db, "chantiers", id), { id, name: name.trim(), color });
+    await setDoc(doc(db, "chantiers", id), { id, name: name.trim(), color, companyId: myCompanyId || null });
     showToast("✅ Chantier ajouté");
   };
   const deleteChantier = async (id) => {
-    const c = chantiers.find(c => c.id === id);
-    const hasTools = tools.some(t => t.location === c?.name && t.status === "assigned");
+    const c = filteredChantiers.find(c => c.id === id);
+    const hasTools = filteredTools.some(t => t.location === c?.name && t.status === "assigned");
     if (hasTools) { showToast("⚠️ Des outils sont encore sur ce chantier !", "warn"); return; }
     await deleteDoc(doc(db, "chantiers", String(id)));
     showToast("🗑 Chantier supprimé");
@@ -541,7 +577,7 @@ export default function App() {
 
     // For non-functional — apply immediately + notify
     if (type === "nonfunctional") {
-      const tool = tools.find(t => String(t.id) === String(toolId));
+      const tool = filteredTools.find(t => String(t.id) === String(toolId));
       if (tool) {
         const firstEntry = { id: Date.now(), type: "thread", status: "suivi-cours", note: note || "Signalé non fonctionnel.", by: currentUser.name, datetime: today, timestamp: Date.now() };
         const updatedTool = {
@@ -576,10 +612,11 @@ export default function App() {
       targetChantier: targetChantier || null,
       note: note || "", text: reqText,
       date: new Date().toISOString(),
+      companyId: myCompanyId || null,
     });
     showToast("📨 Demande envoyée aux admins !");
   };
-  const filteredTools = tools.filter(t => {
+  const filteredTools = filteredTools.filter(t => {
     const matchStatus = filterStatus === "all" ? true : t.status === filterStatus;
     // Peintre ET chantier sont mutuellement exclusifs — un seul actif à la fois
     const matchPeintre = filterUser === "all" || String(t.assignedTo) === filterUser || (filterUser === "none" && !t.assignedTo);
@@ -589,8 +626,7 @@ export default function App() {
     return matchStatus && matchPeintre && matchChantier && matchSearch;
   });
 
-  const myTools = tools.filter(t => String(t.assignedTo) === String(currentUser.id));
-  const viewers = users.filter(u => u.role === "viewer");
+  // filteredTools, filteredUsers, viewers, myTools — définis plus haut avec filtrage compagnie
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
   return (
@@ -605,6 +641,7 @@ export default function App() {
           </div>
           <nav className="sidebar-nav">
             {isAdmin && <button className={`nav-item ${page === "dashboard" ? "active" : ""}`} onClick={() => setPage("dashboard")}><span className="icon">📊</span><span>Dashboard</span></button>}
+            {isSuperAdmin && <button className={`nav-item ${page === "companies" ? "active" : ""}`} onClick={() => setPage("companies")}><span className="icon">🏢</span><span>Compagnies</span></button>}
             {isAdmin && <button className={`nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}><span className="icon">🔧</span><span>Outils</span></button>}
             {isAdmin && <button className={`nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}><span className="icon">🏗</span><span>Chantiers</span></button>}
             {!isAdmin && <button className={`nav-item ${page === "mytools" ? "active" : ""}`} onClick={() => setPage("mytools")}><span className="icon">📦</span><span>Mes outils</span></button>}
@@ -629,22 +666,34 @@ export default function App() {
 
         {/* MAIN CONTENT */}
         <main className="main">
+          {/* ── COMPANIES (SUPERADMIN ONLY) ── */}
+          {page === "companies" && isSuperAdmin && (
+            <CompaniesPage
+              companies={companies}
+              users={users}
+              tools={tools}
+              db={db}
+              currentUser={currentUser}
+              showToast={showToast}
+            />
+          )}
+
           {/* ── DASHBOARD ── */}
           {page === "dashboard" && isAdmin && (
             <>
               <div className="topbar"><h2>Dashboard</h2></div>
               <div className="content">
                 <div className="stats-grid">
-                  <div className="stat-card"><div className="stat-num stat-accent">{tools.length}</div><div className="stat-label">Outils total</div></div>
-                  <div className="stat-card"><div className="stat-num stat-green">{tools.filter(t => t.status === "store").length}</div><div className="stat-label">🟢 En store</div></div>
-                  <div className="stat-card"><div className="stat-num stat-blue">{tools.filter(t => t.status === "assigned").length}</div><div className="stat-label">🔵 Chantiers</div></div>
-                  <div className="stat-card"><div className="stat-num" style={{ color: "#f07030" }}>{tools.filter(t => t.status === "nonfunctional").length}</div><div className="stat-label">🔴 Non fonctionnels</div></div>
-                  <div className="stat-card"><div className="stat-num" style={{ color: "#aaa" }}>{tools.filter(t => t.status === "obsolete").length}</div><div className="stat-label">⚫ Obsolètes</div></div>
+                  <div className="stat-card"><div className="stat-num stat-accent">{filteredTools.length}</div><div className="stat-label">Outils total</div></div>
+                  <div className="stat-card"><div className="stat-num stat-green">{filteredTools.filter(t => t.status === "store").length}</div><div className="stat-label">🟢 En store</div></div>
+                  <div className="stat-card"><div className="stat-num stat-blue">{filteredTools.filter(t => t.status === "assigned").length}</div><div className="stat-label">🔵 Chantiers</div></div>
+                  <div className="stat-card"><div className="stat-num" style={{ color: "#f07030" }}>{filteredTools.filter(t => t.status === "nonfunctional").length}</div><div className="stat-label">🔴 Non fonctionnels</div></div>
+                  <div className="stat-card"><div className="stat-num" style={{ color: "#aaa" }}>{filteredTools.filter(t => t.status === "obsolete").length}</div><div className="stat-label">⚫ Obsolètes</div></div>
                   <div className="stat-card"><div className="stat-num stat-red">{messages.filter(m => !m.read).length}</div><div className="stat-label">Messages non lus</div></div>
                 </div>
                 <h3 style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Outils sur chantiers</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {tools.filter(t => t.status === "assigned").map(t => {
+                  {filteredTools.filter(t => t.status === "assigned").map(t => {
                     const assignee = users.find(u => String(u.id) === String(t.assignedTo));
                     const days = daysSince(t.lastReminder);
                     return (
@@ -696,7 +745,7 @@ export default function App() {
                   <select className="form-input" style={{ width: "auto", fontSize: 12 }} value={filterChantier} onChange={e => { setFilterChantier(e.target.value); setFilterUser("all"); }}>
                     <option value="all">Tous les chantiers</option>
                     <option value="Store">Store</option>
-                    {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="cards-grid">
@@ -798,9 +847,9 @@ export default function App() {
                 {/* STATS RAPIDES */}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
                   {[
-                    { label: "🟢 En store", count: tools.filter(t => t.status === "store").length, color: "var(--green)" },
-                    { label: "🔵 Sur chantiers", count: tools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
-                    { label: "🔴 Non fonctionnel", count: tools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+                    { label: "🟢 En store", count: filteredTools.filter(t => t.status === "store").length, color: "var(--green)" },
+                    { label: "🔵 Sur chantiers", count: filteredTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
+                    { label: "🔴 Non fonctionnel", count: filteredTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
                     { label: "📦 Mes outils", count: myTools.length, color: "var(--accent)" },
                   ].map(s => (
                     <div key={s.label} style={{ background: "var(--surface)", border: `1px solid var(--border)`, borderRadius: 12, padding: "14px 16px" }}>
@@ -811,11 +860,11 @@ export default function App() {
                 </div>
 
                 {/* OUTILS EN STORE */}
-                {tools.filter(t => t.status === "store").length > 0 && (
+                {filteredTools.filter(t => t.status === "store").length > 0 && (
                   <div style={{ marginBottom: 24 }}>
                     <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--green)", marginBottom: 10 }}>🟢 Disponibles au store</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {tools.filter(t => t.status === "store").map(t => (
+                      {filteredTools.filter(t => t.status === "store").map(t => (
                         <div key={t.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
                           <span style={{ fontSize: 24 }}>{t.photo}</span>
                           <div style={{ flex: 1 }}>
@@ -830,11 +879,11 @@ export default function App() {
                 )}
 
                 {/* OUTILS SUR CHANTIERS — avec option demande */}
-                {tools.filter(t => t.status === "assigned").length > 0 && (
+                {filteredTools.filter(t => t.status === "assigned").length > 0 && (
                   <div style={{ marginBottom: 24 }}>
                     <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--blue)", marginBottom: 10 }}>🔵 Sur chantiers</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {tools.filter(t => t.status === "assigned").map(t => {
+                      {filteredTools.filter(t => t.status === "assigned").map(t => {
                         const assignee = users.find(u => String(u.id) === String(t.assignedTo));
                         const isMyTool = String(t.assignedTo) === String(currentUser.id);
                         return (
@@ -850,11 +899,11 @@ export default function App() {
                 )}
 
                 {/* OUTILS NON FONCTIONNELS */}
-                {tools.filter(t => t.status === "nonfunctional").length > 0 && (
+                {filteredTools.filter(t => t.status === "nonfunctional").length > 0 && (
                   <div style={{ marginBottom: 24 }}>
                     <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "#f07030", marginBottom: 10 }}>🔴 Non fonctionnels</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                      {tools.filter(t => t.status === "nonfunctional").map(t => (
+                      {filteredTools.filter(t => t.status === "nonfunctional").map(t => (
                         <div key={t.id} style={{ background: "var(--surface)", border: "1px solid rgba(232,82,10,.3)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, opacity: 0.75 }}>
                           <span style={{ fontSize: 24 }}>{t.photo}</span>
                           <div style={{ flex: 1 }}>
@@ -892,7 +941,7 @@ export default function App() {
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {requests.map(r => {
-                    const tool = tools.find(t => String(t.id) === String(r.toolId));
+                    const tool = filteredTools.find(t => String(t.id) === String(r.toolId));
                     const isPending = r.status === "pending";
                     return (
                       <div key={r.id} style={{
@@ -1001,7 +1050,7 @@ export default function App() {
                       </div>
                       <div className="cards-grid">
                         {roleUsers.map(u => {
-                          const assignedTools = tools.filter(t => String(t.assignedTo) === String(u.id));
+                          const assignedTools = filteredTools.filter(t => String(t.assignedTo) === String(u.id));
                           const isSelf = String(u.id) === String(currentUser.id);
                           const canSeePins = currentUser.role === "superadmin";
                           return (
@@ -1421,7 +1470,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                 </select>
                 <select className="form-input" value={assignForm.chantier} onChange={e => setAssignForm(p => ({ ...p, chantier: e.target.value }))}>
                   <option value="">— Choisir un chantier —</option>
-                  {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
                 <button className={`btn btn-primary btn-sm ${loadingAssign ? "loading" : ""}`} disabled={!assignForm.viewerId || !assignForm.chantier || loadingAssign}
                   onClick={() => triggerAssign(() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out"))}>
@@ -1440,7 +1489,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                 <select className="form-input" value={moveForm.destination} onChange={e => setMoveForm(p => ({ ...p, destination: e.target.value }))}>
                   <option value="">— Destination —</option>
                   <option value="Store">🏠 Retour Store</option>
-                  {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
                 <select className="form-input" value={moveForm.newViewerId} onChange={e => setMoveForm(p => ({ ...p, newViewerId: e.target.value }))}>
                   <option value="">— Retour store (ou choisir nouveau peintre) —</option>
@@ -1774,8 +1823,8 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
         {/* CHANTIER CARDS */}
         {chantiers.length === 0 && <div style={{ color: "var(--muted)", textAlign: "center", padding: "40px 0" }}>Aucun chantier créé. Ajoutez-en un ci-dessus.</div>}
         <div className="cards-grid">
-          {chantiers.map(c => {
-            const toolsOnSite = tools.filter(t => t.location === c.name && t.status === "assigned");
+          {filteredChantiers.map(c => {
+            const toolsOnSite = filteredTools.filter(t => t.location === c.name && t.status === "assigned");
             const peintreIds = [...new Set(toolsOnSite.map(t => t.assignedTo))];
             const peintres = peintreIds.map(id => users.find(u => u.id === id)).filter(Boolean);
             const isActive = toolsOnSite.length > 0;
@@ -2117,6 +2166,186 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
   );
 }
 
+// ─── COMPANIES PAGE ───────────────────────────────────────────────────────────
+function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) {
+  const [showForm, setShowForm] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState("#f5a623");
+  const [expandedId, setExpandedId] = useState(null);
+  const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
+  const [creatingAdmin, setCreatingAdmin] = useState(null);
+  const [loadingCreate, triggerCreate] = useLoadingBtn();
+
+  const createCompany = async () => {
+    if (!newName.trim()) return;
+    const id = String(Date.now());
+    await setDoc(doc(db, "companies", id), {
+      id, name: newName.trim(), color: newColor,
+      active: true, createdAt: new Date().toISOString(),
+      createdBy: currentUser.id,
+    });
+    setNewName(""); setShowForm(false);
+    showToast("🏢 Compagnie créée !");
+  };
+
+  const toggleCompany = async (company) => {
+    await setDoc(doc(db, "companies", company.id), { ...company, active: !company.active });
+    showToast(company.active ? "⏸ Compagnie suspendue" : "✅ Compagnie réactivée");
+  };
+
+  const deleteCompany = async (company) => {
+    if (!window.confirm(`Supprimer "${company.name}" ? Toutes les données seront perdues.`)) return;
+    await deleteDoc(doc(db, "companies", company.id));
+    showToast("🗑 Compagnie supprimée");
+  };
+
+  const createFirstAdmin = async (company) => {
+    if (!adminForm.name.trim() || adminForm.pin.length !== 4) return;
+    const id = String(Date.now());
+    const initials = adminForm.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
+    await setDoc(doc(db, "users", id), {
+      id, name: adminForm.name, role: "admin", avatar: initials,
+      phone: adminForm.phone, email: adminForm.email, pin: adminForm.pin,
+      companyId: company.id, companyName: company.name,
+    });
+    showToast(`✅ Admin créé pour ${company.name} — PIN: ${adminForm.pin}`);
+    setCreatingAdmin(null);
+    setAdminForm({ name: "", phone: "", email: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
+  };
+
+  return (
+    <>
+      <div className="topbar">
+        <h2>🏢 Compagnies</h2>
+        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>+ Nouvelle</button>
+      </div>
+      <div className="content">
+
+        {/* STATS */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
+          {[
+            { label: "Total", count: companies.length, color: "var(--accent)" },
+            { label: "🟢 Actives", count: companies.filter(c => c.active !== false).length, color: "var(--green)" },
+            { label: "⏸ Suspendues", count: companies.filter(c => c.active === false).length, color: "var(--red)" },
+          ].map(s => (
+            <div key={s.label} style={{ background: "var(--surface)", borderRadius: 12, padding: "12px 14px", border: "1px solid var(--border)" }}>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 26, fontWeight: 800, color: s.color }}>{s.count}</div>
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* NEW COMPANY FORM */}
+        {showForm && (
+          <div style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800, color: "var(--accent)", marginBottom: 12 }}>🏢 Nouvelle compagnie</div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <input className="form-input" style={{ flex: 1 }} placeholder="Nom de la compagnie *" value={newName} onChange={e => setNewName(e.target.value)} />
+              <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid var(--border)", cursor: "pointer", padding: 2 }} />
+            </div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Annuler</button>
+              <button className="btn btn-primary btn-sm" disabled={!newName.trim()} onClick={createCompany}>Créer</button>
+            </div>
+          </div>
+        )}
+
+        {/* COMPANIES LIST */}
+        {companies.length === 0 && !showForm && (
+          <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>🏢</div>
+            <div>Aucune compagnie — créez-en une !</div>
+          </div>
+        )}
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {companies.map(company => {
+            const compUsers = users.filter(u => u.companyId === company.id);
+            const compTools = tools.filter(t => t.companyId === company.id);
+            const compAdmins = compUsers.filter(u => u.role === "admin");
+            const isExpanded = expandedId === company.id;
+            const isActive = company.active !== false;
+
+            return (
+              <div key={company.id} style={{ background: "var(--surface)", border: `1px solid ${isActive ? "var(--border)" : "rgba(232,82,10,.3)"}`, borderRadius: 12, overflow: "hidden", opacity: isActive ? 1 : 0.7 }}>
+                {/* COLOR BAR */}
+                <div style={{ height: 5, background: company.color || "var(--accent)" }} />
+                <div style={{ padding: "14px 16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 10, background: company.color || "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🏢</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800 }}>{company.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                        👷 {compUsers.length} membres · 🔧 {compTools.length} outils
+                        {!isActive && <span style={{ color: "var(--red)", marginLeft: 8, fontWeight: 700 }}>⏸ Suspendue</span>}
+                      </div>
+                    </div>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setExpandedId(isExpanded ? null : company.id)}>
+                      {isExpanded ? "▲" : "▼"}
+                    </button>
+                  </div>
+
+                  {isExpanded && (
+                    <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                      {/* ADMINS */}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5 }}>Administrateurs</div>
+                      {compAdmins.length === 0 ? (
+                        <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>Aucun admin — créez-en un !</div>
+                      ) : (
+                        compAdmins.map(u => (
+                          <div key={u.id} style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>{u.avatar}</div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div>
+                              <div style={{ fontSize: 11, color: "var(--muted)" }}>PIN: {u.pin} · {u.phone}</div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+
+                      {/* CREATE ADMIN FORM */}
+                      {creatingAdmin === company.id ? (
+                        <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>🔑 Créer un admin</div>
+                          <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <input className="form-input" placeholder="Téléphone" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} />
+                            <input className="form-input" placeholder="Email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} />
+                          </div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <input className="form-input" style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, letterSpacing: 8, textAlign: "center" }}
+                              maxLength={4} value={adminForm.pin}
+                              onChange={e => setAdminForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} />
+                            <button className="btn btn-ghost btn-sm" onClick={() => setAdminForm(p => ({ ...p, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>🔄</button>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>Annuler</button>
+                            <button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>Créer l'admin</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button className="btn btn-blue btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => setCreatingAdmin(company.id)}>+ Ajouter un admin</button>
+                      )}
+
+                      {/* ACTIONS */}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+                        <button className={`btn btn-sm ${isActive ? "btn-danger" : "btn-green"}`} onClick={() => toggleCompany(company)}>
+                          {isActive ? "⏸ Suspendre" : "✅ Réactiver"}
+                        </button>
+                        <button className="btn btn-danger btn-sm" onClick={() => deleteCompany(company)}>🗑 Supprimer</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── REQUEST ACTIONS ─────────────────────────────────────────────────────────
 function RequestActions({ request: r, tool, onApprove, onRefuse }) {
   const [note, setNote] = useState("");
@@ -2252,7 +2481,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
           </select>
           <select className="form-input" value={targetChantier} onChange={e => setTargetChantier(e.target.value)}>
             <option value="">— Vers quel chantier ? —</option>
-            {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+            {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
           <textarea className="form-input" rows={2} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
@@ -2371,7 +2600,7 @@ function FirstAdminForm({ onSave }) {
     if (!name.trim()) return;
     const initials = name.trim().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
     const id = String(Date.now());
-    onSave({ id, name: name.trim(), role: "superadmin", avatar: initials, phone, email, pin });
+    onSave({ id, name: name.trim(), role: "superadmin", avatar: initials, phone, email, pin, companyId: null });
   };
 
   return (
