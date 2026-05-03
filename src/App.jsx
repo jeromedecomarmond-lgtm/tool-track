@@ -616,7 +616,7 @@ export default function App() {
     });
     showToast("📨 Demande envoyée aux admins !");
   };
-  const filteredTools = filteredTools.filter(t => {
+  const displayedTools = filteredTools.filter(t => {
     const matchStatus = filterStatus === "all" ? true : t.status === filterStatus;
     // Peintre ET chantier sont mutuellement exclusifs — un seul actif à la fois
     const matchPeintre = filterUser === "all" || String(t.assignedTo) === filterUser || (filterUser === "none" && !t.assignedTo);
@@ -749,14 +749,14 @@ export default function App() {
                   </select>
                 </div>
                 <div className="cards-grid">
-                  {filteredTools.length === 0 && (
+                  {displayedTools.length === 0 && (
                     <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
                       <div style={{ fontSize: 48, marginBottom: 12 }}>🔧</div>
                       <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Aucun outil</div>
                       <div style={{ fontSize: 13 }}>Cliquez sur "+ Ajouter un outil" pour commencer</div>
                     </div>
                   )}
-                  {filteredTools.map(t => {
+                  {displayedTools.map(t => {
                     const assignee = users.find(u => String(u.id) === String(t.assignedTo));
                     return (
                       <div key={t.id} className={`tool-card${t.status === "nonfunctional" ? " nonfunctional" : t.status === "obsolete" ? " obsolete" : ""}`} onClick={() => openTool(t)} style={{ cursor: "pointer" }}>
