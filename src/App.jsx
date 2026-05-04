@@ -682,8 +682,8 @@ export default function App() {
               db={db}
               currentUser={currentUser}
               showToast={showToast}
-              onAdminCreated={(admin, companyName) => {
-                setModal({ type: "whatsappInvite", data: { ...admin, companyName } });
+              onAdminCreated={(admin) => {
+                setModal({ type: "whatsappInvite", data: admin });
               }}
             />
           )}
@@ -1251,6 +1251,7 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
       `Bonjour ${admin.name} 👋\n\n` +
       `Vous avez été nommé *Administrateur* de *${admin.companyName}* sur *Tool Track*.\n\n` +
       `📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n` +
+      `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n` +
       `👤 Votre profil : *${admin.name}*\n` +
       `🔑 Votre code PIN : *${admin.pin}*\n\n` +
       `Sur votre téléphone, ouvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n` +
@@ -2359,13 +2360,16 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
     if (!adminForm.name.trim() || adminForm.pin.length !== 4) return;
     const id = String(Date.now());
     const initials = adminForm.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
+    const companyName = company.name || companies.find(c => c.id === company.id)?.name || "votre compagnie";
+    const companyPin = company.companyPin || companies.find(c => c.id === company.id)?.companyPin || "";
     const newAdmin = {
       id, name: adminForm.name, role: "admin", avatar: initials,
       phone: adminForm.phone, email: adminForm.email, pin: adminForm.pin,
-      companyId: company.id, companyName: company.name,
+      companyId: company.id, companyName,
+      companyPin,
     };
     await setDoc(doc(db, "users", id), newAdmin);
-    onAdminCreated({ ...newAdmin, companyName: company.name });
+    onAdminCreated({ ...newAdmin, companyName, companyPin });
     showToast(`✅ Admin créé — PIN: ${adminForm.pin}`);
     setAdminForm({ name: "", phone: "", email: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
     setCreatingAdmin(null);
