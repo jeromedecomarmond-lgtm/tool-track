@@ -1053,7 +1053,7 @@ export default function App() {
           {/* ── USERS (ADMIN ONLY) ── */}
           {page === "users" && isAdmin && (
             <>
-              <div className="topbar"><h2>Équipe</h2><button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ Ajouter un profil</button></div>
+              <div className="topbar"><h2>Équipe</h2>{!isSuperAdmin && <button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ Ajouter un profil</button>}</div>
               <div className="content">
                 {isSuperAdmin ? (
                   // SUPERADMIN — voit tout par compagnie
