@@ -679,6 +679,8 @@ export default function App() {
               companies={companies}
               users={users}
               tools={tools}
+              chantiers={chantiers}
+              requests={requests}
               db={db}
               currentUser={currentUser}
               showToast={showToast}
@@ -2266,7 +2268,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
 }
 
 // ─── COMPANIES PAGE ───────────────────────────────────────────────────────────
-function CompaniesPage({ companies, users, tools, db, currentUser, showToast, onAdminCreated }) {
+function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated }) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#f5a623");
@@ -2350,9 +2352,27 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
   };
 
   const deleteCompany = async (company) => {
-    if (!window.confirm(`Supprimer "${company.name}" ? Toutes les données seront perdues.`)) return;
+    if (!window.confirm(`⚠️ Supprimer définitivement "${company.name}" ?\n\nTous les membres, outils, chantiers, demandes et messages seront supprimés.`)) return;
+    
+    // Delete all users of this company
+    const companyUsers = users.filter(u => u.companyId === company.id);
+    for (const u of companyUsers) await deleteDoc(doc(db, "users", String(u.id)));
+
+    // Delete all tools of this company
+    const companyTools = tools.filter(t => t.companyId === company.id);
+    for (const t of companyTools) await deleteDoc(doc(db, "tools", String(t.id)));
+
+    // Delete all chantiers of this company
+    const companyChantiers = chantiers.filter(c => c.companyId === company.id);
+    for (const c of companyChantiers) await deleteDoc(doc(db, "chantiers", String(c.id)));
+
+    // Delete all requests of this company
+    const companyRequests = requests.filter(r => r.companyId === company.id);
+    for (const r of companyRequests) await deleteDoc(doc(db, "requests", String(r.id)));
+
+    // Finally delete the company itself
     await deleteDoc(doc(db, "companies", company.id));
-    showToast("🗑 Compagnie supprimée");
+    showToast(`🗑 Compagnie "${company.name}" et toutes ses données supprimées`);
   };
 
   const [lastCreatedAdmin, setLastCreatedAdmin] = useState(null);
