@@ -2320,6 +2320,7 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
   };
 
   const [lastCreatedAdmin, setLastCreatedAdmin] = useState(null);
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
 
   const createFirstAdmin = async (company) => {
     if (!adminForm.name.trim() || adminForm.pin.length !== 4) return;
@@ -2332,7 +2333,8 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
     };
     await setDoc(doc(db, "users", id), newAdmin);
     setLastCreatedAdmin({ ...newAdmin, companyName: company.name });
-    showToast(`✅ Admin créé pour ${company.name} — PIN: ${adminForm.pin}`);
+    setShowWhatsApp(true);
+    showToast(`✅ Admin créé — PIN: ${adminForm.pin}`);
     setAdminForm({ name: "", phone: "", email: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
   };
 
@@ -2529,7 +2531,7 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
                       {/* CREATE ADMIN FORM */}
                       {creatingAdmin === company.id ? (
                         <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                          {lastCreatedAdmin && creatingAdmin === company.id ? (
+                          {showWhatsApp && lastCreatedAdmin ? (
                             // SHOW WHATSAPP BUTTON AFTER CREATION
                             <div style={{ textAlign: "center", padding: "8px 0" }}>
                               <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
@@ -2554,7 +2556,7 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
                                 📲 Envoyer l'invitation via WhatsApp
                               </button>
                               <button className="btn btn-ghost btn-sm" style={{ width: "100%" }}
-                                onClick={() => { setCreatingAdmin(null); setLastCreatedAdmin(null); }}>
+                                onClick={() => { setCreatingAdmin(null); setLastCreatedAdmin(null); setShowWhatsApp(false); }}>
                                 Fermer
                               </button>
                             </div>
@@ -2581,7 +2583,7 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
                           )}
                         </div>
                       ) : (
-                        <button className="btn btn-blue btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => { setCreatingAdmin(company.id); setLastCreatedAdmin(null); }}>+ Ajouter un admin</button>
+                        <button className="btn btn-blue btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => { setCreatingAdmin(company.id); setLastCreatedAdmin(null); setShowWhatsApp(false); }}>+ Ajouter un admin</button>
                       )}
 
                       {/* ACTIONS */}
