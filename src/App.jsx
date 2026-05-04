@@ -628,12 +628,12 @@ export default function App() {
   };
   const displayedTools = filteredTools.filter(t => {
     const matchStatus = filterStatus === "all" ? true : t.status === filterStatus;
-    // Peintre ET chantier sont mutuellement exclusifs — un seul actif à la fois
-    const matchPeintre = filterUser === "all" || String(t.assignedTo) === filterUser || (filterUser === "none" && !t.assignedTo);
+    // Employé ET chantier sont mutuellement exclusifs — un seul actif à la fois
+    const matchEmployé = filterUser === "all" || String(t.assignedTo) === filterUser || (filterUser === "none" && !t.assignedTo);
     const matchChantier = filterChantier === "all" || t.location === filterChantier;
     const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.ref.toLowerCase().includes(search.toLowerCase());
     if (!isAdmin) return String(t.assignedTo) === String(currentUser.id) || t.status === "store";
-    return matchStatus && matchPeintre && matchChantier && matchSearch;
+    return matchStatus && matchEmployé && matchChantier && matchSearch;
   });
 
   // filteredTools, filteredUsers, viewers, myTools — définis plus haut avec filtrage compagnie
@@ -762,7 +762,7 @@ export default function App() {
                     </button>
                   ))}
                   <select className="form-input" style={{ width: "auto", fontSize: 12 }} value={filterUser} onChange={e => { setFilterUser(e.target.value); setFilterChantier("all"); }}>
-                    <option value="all">Tous les peintres</option>
+                    <option value="all">Tous les employés</option>
                     <option value="none">Non assigné</option>
                     {viewers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                   </select>
@@ -1087,7 +1087,7 @@ export default function App() {
                                       <div style={{ width: 44, height: 44, borderRadius: 10, background: u.role === "admin" ? "var(--accent)" : "var(--blue)", color: u.role === "admin" ? "#000" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>{u.avatar}</div>
                                       <div>
                                         <div style={{ fontWeight: 700, fontSize: 15 }}>{u.name}</div>
-                                        <div style={{ fontSize: 11, color: "var(--muted)" }}>{u.role === "admin" ? "🔑 Admin" : "🖌 Peintre"}</div>
+                                        <div style={{ fontSize: 11, color: "var(--muted)" }}>{u.role === "admin" ? "🔑 Admin" : "👷 Employé"}</div>
                                       </div>
                                     </div>
                                     <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}>
@@ -1120,7 +1120,7 @@ export default function App() {
                   const roleUsers = filteredUsers.filter(u => u.role === role);
                   if (roleUsers.length === 0) return null;
                   const roleColor = role === "admin" ? "var(--accent)" : "var(--blue)";
-                  const roleLabel = role === "admin" ? "🔑 Admins" : "🖌 Peintres";
+                  const roleLabel = role === "admin" ? "🔑 Admins" : "👷 Employés";
                   return (
                     <div key={role} style={{ marginBottom: 28 }}>
                       <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800, color: roleColor, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1146,7 +1146,7 @@ export default function App() {
                                       {isSelf && <span style={{ fontSize: 10, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "1px 6px", borderRadius: 8, marginLeft: 6, fontFamily: "var(--font-body)" }}>Moi</span>}
                                     </div>
                                     <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: roleColor + "22", color: roleColor, marginTop: 3, display: "inline-block" }}>
-                                      {role === "admin" ? "Admin" : "Peintre"}
+                                      {role === "admin" ? "Admin" : "Employé"}
                                     </span>
                                   </div>
                                 </div>
@@ -1575,7 +1575,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
               <h4>📤 Sortir du store → Chantier</h4>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <select className="form-input" value={assignForm.viewerId} onChange={e => setAssignForm(p => ({ ...p, viewerId: e.target.value }))}>
-                  <option value="">— Confier à (peintre) —</option>
+                  <option value="">— Confier à (employé) —</option>
                   {viewers.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                 </select>
                 <select className="form-input" value={assignForm.chantier} onChange={e => setAssignForm(p => ({ ...p, chantier: e.target.value }))}>
@@ -1602,12 +1602,12 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                   {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
                 <select className="form-input" value={moveForm.newViewerId} onChange={e => setMoveForm(p => ({ ...p, newViewerId: e.target.value }))}>
-                  <option value="">— Retour store (ou choisir nouveau peintre) —</option>
+                  <option value="">— Retour store (ou choisir nouveau employé) —</option>
                   {viewers.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                 </select>
                 <button className={`btn btn-green btn-sm ${loadingMove ? "loading" : ""}`} disabled={!moveForm.destination || loadingMove}
                   onClick={() => triggerMove(() => assignTool(tool.id, moveForm.newViewerId || null, moveForm.destination === "Store" ? null : moveForm.destination, moveForm.newViewerId ? "out" : "in"))}>
-                  {loadingMove ? "⏳ En cours..." : moveForm.newViewerId ? "Transférer à un autre peintre" : "Récupérer → Store"}
+                  {loadingMove ? "⏳ En cours..." : moveForm.newViewerId ? "Transférer à un autre employé" : "Récupérer → Store"}
                 </button>
               </div>
             </div>
@@ -1840,7 +1840,7 @@ function AddUserModal({ onClose, onSave, currentUser }) {
               <div className="form-group"><label className="form-label">Nom complet *</label><input className="form-input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
               <div className="form-group"><label className="form-label">Rôle *</label>
                 <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
-                  <option value="viewer">🖌 Peintre</option>
+                  <option value="viewer">👷 Employé</option>
                   <option value="admin">🔑 Admin</option>
                   {currentUser?.role === "superadmin" && <option value="superadmin">👑 Administrateur Principal</option>}
                 </select>
@@ -1868,7 +1868,7 @@ function AddUserModal({ onClose, onSave, currentUser }) {
               </div>
               <div>
                 <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800 }}>{savedUser.name}</div>
-                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{savedUser.role === "superadmin" ? "👑 Super Admin" : savedUser.role === "admin" ? "🔑 Admin" : "🖌 Peintre"}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{savedUser.role === "superadmin" ? "👑 Super Admin" : savedUser.role === "admin" ? "🔑 Admin" : "👷 Employé"}</div>
               </div>
               <div style={{ background: "var(--surface2)", borderRadius: 12, padding: "14px 24px", width: "100%" }}>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Code PIN</div>
@@ -1935,8 +1935,8 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
         <div className="cards-grid">
           {chantiers.map(c => {
             const toolsOnSite = tools.filter(t => t.location === c.name && t.status === "assigned");
-            const peintreIds = [...new Set(toolsOnSite.map(t => t.assignedTo))];
-            const peintres = peintreIds.map(id => users.find(u => u.id === id)).filter(Boolean);
+            const employéIds = [...new Set(toolsOnSite.map(t => t.assignedTo))];
+            const employés = employéIds.map(id => users.find(u => u.id === id)).filter(Boolean);
             const isActive = toolsOnSite.length > 0;
             return (
               <div key={c.id} style={{ background: "var(--surface)", border: `1px solid var(--border)`, borderTop: `4px solid ${c.color}`, borderRadius: 12, overflow: "hidden", transition: "all .2s" }}>
@@ -1968,10 +1968,10 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
                   </div>
 
                   {/* PEINTRES */}
-                  {peintres.length > 0 && (
+                  {employés.length > 0 && (
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, width: "100%", marginBottom: 2 }}>👷 Peintres</div>
-                      {peintres.map(p => (
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, width: "100%", marginBottom: 2 }}>👷 Employés</div>
+                      {employés.map(p => (
                         <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(58,142,246,.12)", border: "1px solid rgba(58,142,246,.2)", borderRadius: 20, padding: "3px 10px" }}>
                           <div style={{ width: 18, height: 18, borderRadius: 5, background: "var(--blue)", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{p.avatar}</div>
                           <span style={{ fontSize: 11, color: "var(--blue)", fontWeight: 600 }}>{p.name.split(" ")[0]}</span>
@@ -2101,7 +2101,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
             <div>
               <h2 style={{ fontSize: 17 }}>{selectedConv.subject}</h2>
               <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                {selectedConv.type === "annonce" ? "📢 Annonce — peintres en lecture seule" : "🔑 Conversation admins"}
+                {selectedConv.type === "annonce" ? "📢 Annonce — employés en lecture seule" : "🔑 Conversation admins"}
               </div>
             </div>
           </div>
@@ -2221,7 +2221,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
               <textarea className="form-input" rows={3} placeholder="Votre message..." value={newText} onChange={e => setNewText(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); createConversation(); } }} />
               <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                {tab === "annonces" ? "📢 Visible par tous — les peintres pourront lire mais pas répondre" : "🔑 Visible uniquement par les admins"}
+                {tab === "annonces" ? "📢 Visible par tous — les employés pourront lire mais pas répondre" : "🔑 Visible uniquement par les admins"}
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                 <button className="btn btn-ghost btn-sm" onClick={() => setNewConvOpen(false)}>Annuler</button>
@@ -2658,7 +2658,7 @@ function ParcToolRow({ tool: t, assignee, isMyTool, currentUser, onAsk }) {
     const id = String(Date.now());
     // Crée une demande visible par tous
     await setDoc(doc(db, "requests", id), {
-      id, type: "peintre-ask", status: "pending",
+      id, type: "employé-ask", status: "pending",
       from: currentUser.id, fromName: currentUser.name,
       toolId: String(t.id), toolName: t.name, toolLocation: t.location,
       targetViewerId: String(t.assignedTo), targetViewerName: assignee?.name,
@@ -2746,7 +2746,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
         <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue)" }}>🔄 Demande de transfert</div>
           <select className="form-input" value={targetViewer} onChange={e => setTargetViewer(e.target.value)}>
-            <option value="">— Vers quel peintre ? —</option>
+            <option value="">— Vers quel employé ? —</option>
             {otherPainters.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
           <select className="form-input" value={targetChantier} onChange={e => setTargetChantier(e.target.value)}>
@@ -2814,7 +2814,7 @@ function PinLogin({ user, onSuccess }) {
   if (!open) {
     const bgColor = user.role === "superadmin" ? "#e84040" : user.role === "admin" ? "var(--accent)" : "var(--blue)";
     const textColor = user.role === "viewer" ? "#fff" : "#000";
-    const roleLabel = user.role === "superadmin" ? "👑 Super Admin" : user.role === "admin" ? "🔑 Admin" : "🖌 Peintre";
+    const roleLabel = user.role === "superadmin" ? "👑 Super Admin" : user.role === "admin" ? "🔑 Admin" : "👷 Employé";
     return (
       <div className="user-select-item" onClick={() => setOpen(true)}>
         <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: bgColor, color: textColor }}>{user.avatar}</div>
