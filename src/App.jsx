@@ -712,13 +712,9 @@ export default function App() {
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 24 }}>
                       {[
                         { label: "🏢 Compagnies", value: companies.length, color: "var(--accent)" },
-                        { label: "🔧 Outils total", value: tools.length, color: "var(--blue)" },
                         { label: "👷 Équipes total", value: users.filter(u => u.role !== "superadmin").length, color: "var(--green)" },
-                        { label: "🟢 En store", value: tools.filter(t => t.status === "store").length, color: "var(--green)" },
-                        { label: "🔵 Sur chantiers", value: tools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
-                        { label: "🔴 Non fonctionnels", value: tools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
-                        { label: "⏳ Demandes en attente", value: requests.filter(r => r.status === "pending").length, color: "var(--accent)" },
                         { label: "🏗 Chantiers actifs", value: chantiers.length, color: "var(--blue)" },
+                        { label: "⏳ Demandes en attente", value: requests.filter(r => r.status === "pending").length, color: "var(--accent)" },
                         { label: "⏸ Compagnies suspendues", value: companies.filter(c => c.active === false).length, color: "var(--red)" },
                       ].map(s => (
                         <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
@@ -726,6 +722,40 @@ export default function App() {
                           <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4, lineHeight: 1.3 }}>{s.label}</div>
                         </div>
                       ))}
+                    </div>
+
+                    {/* OUTILS SUMMARY */}
+                    <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 16, marginBottom: 24 }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                        <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800 }}>🔧 Outils — {tools.length} au total</div>
+                        <div style={{ fontSize: 13, color: "var(--accent)", fontWeight: 700 }}>🇲🇺 Rs {tools.reduce((s,t) => s + (t.price||0), 0).toLocaleString("fr-MU")}</div>
+                      </div>
+                      {/* BARRE DE RÉPARTITION */}
+                      <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", height: 12, marginBottom: 10 }}>
+                        {[
+                          { status: "store", color: "var(--green)" },
+                          { status: "assigned", color: "var(--blue)" },
+                          { status: "nonfunctional", color: "#f07030" },
+                          { status: "obsolete", color: "#666" },
+                        ].map(s => {
+                          const count = tools.filter(t => t.status === s.status).length;
+                          const pct = tools.length > 0 ? (count / tools.length) * 100 : 0;
+                          return pct > 0 ? <div key={s.status} style={{ width: `${pct}%`, background: s.color }} /> : null;
+                        })}
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                        {[
+                          { label: "🟢 En store", value: tools.filter(t => t.status === "store").length, color: "var(--green)" },
+                          { label: "🔵 Sur chantiers", value: tools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
+                          { label: "🔴 Non fonct.", value: tools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+                          { label: "⚫ Obsolètes", value: tools.filter(t => t.status === "obsolete").length, color: "#666" },
+                        ].map(s => (
+                          <div key={s.label} style={{ textAlign: "center" }}>
+                            <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
+                            <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 2 }}>{s.label}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* ── DÉTAILS PAR COMPAGNIE ── */}
