@@ -942,89 +942,151 @@ export default function App() {
             <>
               <div className="topbar">
                 <h2>🔔 Demandes</h2>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>{pendingRequests} en attente</span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>{filteredRequests.filter(r => r.status === "pending").length} en attente</span>
               </div>
               <div className="content">
-                {requests.length === 0 && (
+                {filteredRequests.length === 0 && (
                   <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
                     <div style={{ fontSize: 40, marginBottom: 8 }}>🔔</div>
                     <div>Aucune demande pour le moment</div>
                   </div>
                 )}
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {requests.map(r => {
-                    const tool = tools.find(t => String(t.id) === String(r.toolId));
-                    const isPending = r.status === "pending";
+
+                {isSuperAdmin ? (
+                  // ── SUPERADMIN — lecture seule, groupé par compagnie, chrono + WhatsApp ──
+                  companies.map(company => {
+                    const companyRequests = requests.filter(r => r.companyId === company.id);
+                    if (companyRequests.length === 0) return null;
+                    const companyAdmins = users.filter(u => u.companyId === company.id && u.role === "admin");
                     return (
-                      <div key={r.id} style={{
-                        background: "var(--surface)", borderRadius: 12, padding: 16,
-                        border: `1px solid ${isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)"}`,
-                        opacity: isPending ? 1 : 0.7,
-                      }}>
-                        {/* HEADER */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                          <div>
-                            <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: isPending ? "rgba(245,166,35,.2)" : r.status === "approved" ? "rgba(39,201,122,.2)" : "rgba(232,82,10,.2)", color: isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)" }}>
-                              {isPending ? "⏳ En attente" : r.status === "approved" ? "✅ Approuvé" : "❌ Refusé"}
-                            </span>
-                            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{new Date(r.date).toLocaleString("fr-MU")}</div>
-                          </div>
-                          {tool && <span style={{ fontSize: 20 }}>{tool.photo}</span>}
+                      <div key={company.id} style={{ marginBottom: 24 }}>
+                        <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: company.color || "var(--accent)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                          🏢 {company.name}
+                          <span style={{ fontSize: 11, background: (company.color || "var(--accent)") + "22", color: company.color || "var(--accent)", padding: "2px 8px", borderRadius: 20 }}>
+                            {companyRequests.filter(r => r.status === "pending").length} en attente
+                          </span>
                         </div>
-
-                        {/* MESSAGE */}
-                        <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginBottom: 10 }}>{r.text}</div>
-
-                        {/* ADMIN NOTE */}
-                        {r.adminNote && (
-                          <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", background: "var(--surface2)", borderRadius: 8, padding: "6px 10px", marginBottom: 10 }}>
-                            💬 Admin : "{r.adminNote}"
-                          </div>
-                        )}
-
-                        {/* ADMIN ACTIONS */}
-                        {isAdmin && isPending && (
-                          <RequestActions
-                            request={r}
-                            tool={tool}
-                            onApprove={async (adminNote) => {
-                              // Appliquer le mouvement
-                              if (r.type === "transfer" && tool) {
-                                await setDoc(doc(db, "tools", String(tool.id)), {
-                                  ...tool,
-                                  status: "assigned",
-                                  assignedTo: String(r.targetViewerId),
-                                  location: r.targetChantier,
-                                  history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Transfert approuvé → ${r.targetViewerName} (${r.targetChantier}) — par ${currentUser.name}`, by: currentUser.name }],
-                                  lastReminder: new Date().toISOString(),
-                                });
-                              } else if (r.type === "return" && tool) {
-                                await setDoc(doc(db, "tools", String(tool.id)), {
-                                  ...tool, status: "store", assignedTo: null, location: "Store",
-                                  history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Retour store approuvé — par ${currentUser.name}`, by: currentUser.name }],
-                                  lastReminder: null,
-                                });
-                              }
-                              await setDoc(doc(db, "requests", r.id), { ...r, status: "approved", adminNote: adminNote || "", approvedBy: currentUser.name, approvedAt: new Date().toISOString() });
-                              showToast("✅ Demande approuvée !");
-                            }}
-                            onRefuse={async (adminNote) => {
-                              await setDoc(doc(db, "requests", r.id), { ...r, status: "refused", adminNote: adminNote || "", refusedBy: currentUser.name, refusedAt: new Date().toISOString() });
-                              showToast("❌ Demande refusée");
-                            }}
-                          />
-                        )}
-
-                        {/* PEINTRE VIEW */}
-                        {!isAdmin && (
-                          <div style={{ fontSize: 11, color: "var(--muted)" }}>
-                            {isPending ? "⏳ En attente d'approbation par un admin" : r.status === "approved" ? `✅ Approuvé par ${r.approvedBy}` : `❌ Refusé par ${r.refusedBy}`}
-                          </div>
-                        )}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                          {companyRequests.map(r => {
+                            const tool = tools.find(t => String(t.id) === String(r.toolId));
+                            const isPending = r.status === "pending";
+                            // Calculate time since request
+                            const hoursAgo = Math.floor((Date.now() - new Date(r.date)) / (1000*60*60));
+                            const timeLabel = hoursAgo < 1 ? "< 1h" : hoursAgo < 24 ? `${hoursAgo}h` : `${Math.floor(hoursAgo/24)}j`;
+                            const timeColor = hoursAgo > 48 ? "var(--red)" : hoursAgo > 24 ? "var(--accent)" : "var(--green)";
+                            return (
+                              <div key={r.id} style={{ background: "var(--surface)", borderRadius: 10, padding: 14, border: `1px solid ${isPending ? "var(--border)" : "var(--surface2)"}`, opacity: isPending ? 1 : 0.6 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                                    <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: isPending ? "rgba(245,166,35,.2)" : r.status === "approved" ? "rgba(39,201,122,.2)" : "rgba(232,82,10,.2)", color: isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)" }}>
+                                      {isPending ? "⏳ En attente" : r.status === "approved" ? "✅ Approuvé" : "❌ Refusé"}
+                                    </span>
+                                    {/* CHRONOMETRE */}
+                                    {isPending && (
+                                      <span style={{ fontSize: 11, fontWeight: 700, color: timeColor, background: timeColor + "22", padding: "2px 8px", borderRadius: 20 }}>
+                                        ⏱ {timeLabel}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {tool && <span style={{ fontSize: 18 }}>{tool.photo}</span>}
+                                </div>
+                                <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginBottom: 8 }}>{r.text}</div>
+                                {r.adminNote && (
+                                  <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", background: "var(--surface2)", borderRadius: 8, padding: "6px 10px", marginBottom: 8 }}>
+                                    💬 {r.adminNote}
+                                  </div>
+                                )}
+                                {/* WHATSAPP REMINDER — only for pending requests */}
+                                {isPending && companyAdmins.length > 0 && (
+                                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                                    {companyAdmins.map(admin => (
+                                      <button key={admin.id} className="btn btn-sm" style={{ background: "rgba(37,211,102,.15)", color: "#25d366", fontSize: 11 }}
+                                        onClick={() => {
+                                          const msg = encodeURIComponent(
+                                            `📋 *TOOL TRACK — Rappel demande en attente*\n\n` +
+                                            `Bonjour ${admin.name},\n\n` +
+                                            `Une demande attend votre réponse depuis *${timeLabel}* sur Tool Track :\n\n` +
+                                            `"${r.text}"\n\n` +
+                                            `Merci de traiter cette demande dès que possible.\n` +
+                                            `📱 https://tool-track-rosy.vercel.app`
+                                          );
+                                          const phone = admin.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
+                                          window.open(phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`, "_blank");
+                                        }}>
+                                        📲 Rappel → {admin.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
                     );
-                  })}
-                </div>
+                  })
+                ) : (
+                  // ── ADMIN / EMPLOYÉ — actions normales ──
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    {filteredRequests.map(r => {
+                      const tool = tools.find(t => String(t.id) === String(r.toolId));
+                      const isPending = r.status === "pending";
+                      return (
+                        <div key={r.id} style={{
+                          background: "var(--surface)", borderRadius: 12, padding: 16,
+                          border: `1px solid ${isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)"}`,
+                          opacity: isPending ? 1 : 0.7,
+                        }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                            <div>
+                              <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: isPending ? "rgba(245,166,35,.2)" : r.status === "approved" ? "rgba(39,201,122,.2)" : "rgba(232,82,10,.2)", color: isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)" }}>
+                                {isPending ? "⏳ En attente" : r.status === "approved" ? "✅ Approuvé" : "❌ Refusé"}
+                              </span>
+                              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{new Date(r.date).toLocaleString("fr-MU")}</div>
+                            </div>
+                            {tool && <span style={{ fontSize: 20 }}>{tool.photo}</span>}
+                          </div>
+                          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.6, marginBottom: 10 }}>{r.text}</div>
+                          {r.adminNote && (
+                            <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", background: "var(--surface2)", borderRadius: 8, padding: "6px 10px", marginBottom: 10 }}>
+                              💬 Admin : "{r.adminNote}"
+                            </div>
+                          )}
+                          {isAdmin && isPending && (
+                            <RequestActions
+                              request={r}
+                              tool={tool}
+                              onApprove={async (adminNote) => {
+                                if (r.type === "transfer" && tool) {
+                                  await setDoc(doc(db, "tools", String(tool.id)), {
+                                    ...tool, status: "assigned", assignedTo: String(r.targetViewerId), location: r.targetChantier,
+                                    history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Transfert approuvé → ${r.targetViewerName} (${r.targetChantier}) — par ${currentUser.name}`, by: currentUser.name }],
+                                  });
+                                } else if (r.type === "return" && tool) {
+                                  await setDoc(doc(db, "tools", String(tool.id)), {
+                                    ...tool, status: "store", assignedTo: null, location: "Store",
+                                    history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Retour store approuvé — par ${currentUser.name}`, by: currentUser.name }],
+                                  });
+                                }
+                                await setDoc(doc(db, "requests", r.id), { ...r, status: "approved", adminNote: adminNote || "", approvedBy: currentUser.name, approvedAt: new Date().toISOString() });
+                                showToast("✅ Demande approuvée !");
+                              }}
+                              onRefuse={async (adminNote) => {
+                                await setDoc(doc(db, "requests", r.id), { ...r, status: "refused", adminNote: adminNote || "", refusedBy: currentUser.name, refusedAt: new Date().toISOString() });
+                                showToast("❌ Demande refusée");
+                              }}
+                            />
+                          )}
+                          {!isAdmin && (
+                            <div style={{ fontSize: 11, color: "var(--muted)" }}>
+                              {isPending ? "⏳ En attente d'approbation par un admin" : r.status === "approved" ? `✅ Approuvé par ${r.approvedBy}` : `❌ Refusé par ${r.refusedBy}`}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </>
           )}
