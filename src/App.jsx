@@ -560,8 +560,17 @@ export default function App() {
   };
   const deleteChantier = async (id) => {
     const c = chantiers.find(c => c.id === id);
-    const hasTools = tools.some(t => t.location === c?.name && t.status === "assigned");
-    if (hasTools) { showToast("⚠️ Des outils sont encore sur ce chantier !", "warn"); return; }
+    const toolsOnSite = tools.filter(t => t.location === c?.name && t.status === "assigned");
+    if (toolsOnSite.length > 0) {
+      const toolNames = toolsOnSite.map(t => `• ${t.name}`).join("\n");
+      window.alert(
+        `⚠️ Impossible de supprimer "${c?.name}"\n\n` +
+        `${toolsOnSite.length} outil${toolsOnSite.length > 1 ? "s sont encore" : " est encore"} sur ce chantier :\n\n${toolNames}\n\n` +
+        `Retournez ces outils au store ou transférez-les avant de supprimer ce chantier.`
+      );
+      return;
+    }
+    if (!window.confirm(`Supprimer le chantier "${c?.name}" ?`)) return;
     await deleteDoc(doc(db, "chantiers", String(id)));
     showToast("🗑 Chantier supprimé");
   };
