@@ -386,6 +386,7 @@ export default function App() {
 
   // ── COMPANY BLOCKED SCREEN ──────────────────────────────────────────────────
   if (currentUser && !isSuperAdmin && myCompany && myCompany.active === false) {
+    const contactEmail = myCompany.contactEmail || "";
     return (
       <>
         <style>{css}</style>
@@ -393,9 +394,14 @@ export default function App() {
           <div className="login-card" style={{ textAlign: "center" }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>⏸</div>
             <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, color: "var(--red)", marginBottom: 8 }}>Compte suspendu</div>
-            <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 20, lineHeight: 1.6 }}>
-              L'accès à <strong>{myCompany.name}</strong> a été suspendu.<br/>
-              Contactez votre administrateur principal.
+            <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 16, lineHeight: 1.6 }}>
+              L'accès à <strong>{myCompany.name}</strong> a été suspendu.
+              {myCompany.suspendReason === "expiration" && (
+                <div style={{ marginTop: 8, color: "var(--accent)" }}>
+                  Pour renouveler votre accès, envoyez votre preuve de paiement à :<br/>
+                  <strong style={{ fontSize: 16 }}>{contactEmail || "Contactez votre administrateur"}</strong>
+                </div>
+              )}
             </div>
             <button className="btn btn-ghost btn-sm" onClick={logoutUser}>⇄ Changer de compte</button>
           </div>
@@ -403,6 +409,10 @@ export default function App() {
       </>
     );
   }
+
+  // ── EXPIRY WARNING (5 days before) ──────────────────────────────────────────
+  const daysLeft = myCompany?.expiryDate ? Math.ceil((new Date(myCompany.expiryDate) - new Date()) / (1000*60*60*24)) : null;
+  const showExpiryWarning = !isSuperAdmin && myCompany && daysLeft !== null && daysLeft >= 0 && daysLeft <= 5;
 
   // ── LOADING ─────────────────────────────────────────────────────────────────
   if (loading) {
@@ -633,7 +643,18 @@ export default function App() {
     <>
       <style>{css}</style>
       <div className="app">
-        {/* SIDEBAR */}
+        {/* EXPIRY WARNING BANNER */}
+      {showExpiryWarning && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 999, background: "rgba(245,166,35,.95)", color: "#000", padding: "10px 20px", display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 600 }}>
+          <span style={{ fontSize: 20 }}>⚠️</span>
+          <span>
+            Votre accès expire dans <strong>{daysLeft} jour{daysLeft > 1 ? "s" : ""}</strong>.
+            Envoyez votre preuve de paiement à <strong>{myCompany.contactEmail || "votre administrateur"}</strong> pour renouveler.
+          </span>
+        </div>
+      )}
+
+      {/* SIDEBAR */}
         <aside className="sidebar">
           <div className="sidebar-logo">
             <h1>TOOL<br />TRACK</h1>
@@ -2215,10 +2236,53 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#f5a623");
+  const [newExpiry, setNewExpiry] = useState("");
+  const [newContactEmail, setNewContactEmail] = useState(currentUser.email || "");
   const [expandedId, setExpandedId] = useState(null);
   const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
   const [creatingAdmin, setCreatingAdmin] = useState(null);
-  const [loadingCreate, triggerCreate] = useLoadingBtn();
+  const [editingExpiry, setEditingExpiry] = useState(null); // companyId being edited
+  const [editExpiryDate, setEditExpiryDate] = useState("");
+  const [editContactEmail, setEditContactEmail] = useState("");
+  const APP_URL = "tool-track-rosy.vercel.app";
+
+  // Check expiry dates on load — auto-suspend expired companies
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    companies.forEach(async c => {
+      if (!c.expiryDate) return;
+      const expiry = new Date(c.expiryDate);
+      expiry.setHours(0,0,0,0);
+      // Auto-suspend if expired
+      if (expiry <= today && c.active !== false) {
+        await setDoc(doc(db, "companies", c.id), { ...c, active: false, suspendedAt: new Date().toISOString(), suspendReason: "expiration" });
+      }
+    });
+  }, [companies]);
+
+  const getDaysUntilExpiry = (expiryDate) => {
+    if (!expiryDate) return null;
+    const today = new Date(); today.setHours(0,0,0,0);
+    const expiry = new Date(expiryDate); expiry.setHours(0,0,0,0);
+    return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+  };
+
+  const sendExpiryWarningWhatsApp = (company, adminUser, daysLeft) => {
+    const contactEmail = company.contactEmail || currentUser.email || "";
+    const msg = encodeURIComponent(
+      `⚠️ *TOOL TRACK — Avertissement d'expiration*\n\n` +
+      `Bonjour ${adminUser?.name || ""},\n\n` +
+      `Votre accès à *Tool Track* pour la compagnie *${company.name}* expirera dans *${daysLeft} jour${daysLeft > 1 ? "s" : ""}*.\n\n` +
+      `📅 Date d'expiration : *${new Date(company.expiryDate).toLocaleDateString("fr-MU")}*\n\n` +
+      `Pour renouveler votre abonnement, envoyez votre preuve de paiement à :\n` +
+      `📧 *${contactEmail}*\n\n` +
+      `Sans renouvellement, l'accès à ${APP_URL} sera automatiquement suspendu à la date d'expiration.\n\n` +
+      `Merci de votre confiance.`
+    );
+    const phone = adminUser?.phone?.replace(/\s/g, "").replace(/^\+/, "") || "";
+    window.open(phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`, "_blank");
+  };
 
   const createCompany = async () => {
     if (!newName.trim()) return;
@@ -2227,9 +2291,21 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
       id, name: newName.trim(), color: newColor,
       active: true, createdAt: new Date().toISOString(),
       createdBy: currentUser.id,
+      expiryDate: newExpiry || null,
+      contactEmail: newContactEmail || currentUser.email || "",
     });
-    setNewName(""); setShowForm(false);
+    setNewName(""); setNewExpiry(""); setShowForm(false);
     showToast("🏢 Compagnie créée !");
+  };
+
+  const saveExpiry = async (company) => {
+    await setDoc(doc(db, "companies", company.id), {
+      ...company,
+      expiryDate: editExpiryDate || null,
+      contactEmail: editContactEmail || company.contactEmail || currentUser.email || "",
+    });
+    setEditingExpiry(null);
+    showToast("✅ Date d'expiration mise à jour !");
   };
 
   const toggleCompany = async (company) => {
@@ -2287,6 +2363,16 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
               <input className="form-input" style={{ flex: 1 }} placeholder="Nom de la compagnie *" value={newName} onChange={e => setNewName(e.target.value)} />
               <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid var(--border)", cursor: "pointer", padding: 2 }} />
             </div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📅 Date d'expiration</label>
+                <input className="form-input" type="date" value={newExpiry} onChange={e => setNewExpiry(e.target.value)} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📧 Email de contact (paiements)</label>
+                <input className="form-input" type="email" placeholder={currentUser.email || "votre@email.com"} value={newContactEmail} onChange={e => setNewContactEmail(e.target.value)} />
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Annuler</button>
               <button className="btn btn-primary btn-sm" disabled={!newName.trim()} onClick={createCompany}>Créer</button>
@@ -2319,9 +2405,18 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
                     <div style={{ width: 44, height: 44, borderRadius: 10, background: company.color || "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>🏢</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800 }}>{company.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
-                        👷 {compUsers.length} membres · 🔧 {compTools.length} outils
-                        {!isActive && <span style={{ color: "var(--red)", marginLeft: 8, fontWeight: 700 }}>⏸ Suspendue</span>}
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span>👷 {compUsers.length} membres · 🔧 {compTools.length} outils</span>
+                        {!isActive && <span style={{ color: "var(--red)", fontWeight: 700 }}>⏸ Suspendue</span>}
+                        {/* EXPIRY BADGE */}
+                        {company.expiryDate && (() => {
+                          const days = getDaysUntilExpiry(company.expiryDate);
+                          if (days === null) return null;
+                          if (days < 0) return <span style={{ background: "rgba(232,82,10,.2)", color: "var(--red)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>❌ Expiré</span>;
+                          if (days <= 5) return <span style={{ background: "rgba(245,166,35,.2)", color: "var(--accent)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>⚠️ Expire dans {days}j</span>;
+                          return <span style={{ background: "rgba(39,201,122,.15)", color: "var(--green)", fontWeight: 600, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>📅 {new Date(company.expiryDate).toLocaleDateString("fr-MU")}</span>;
+                        })()}
+                        {!company.expiryDate && <span style={{ color: "var(--muted)", fontSize: 10 }}>📅 Pas de date d'expiration</span>}
                       </div>
                     </div>
                     <button className="btn btn-ghost btn-sm" onClick={() => setExpandedId(isExpanded ? null : company.id)}>
@@ -2331,6 +2426,73 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
 
                   {isExpanded && (
                     <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                      {/* EXPIRY DATE EDITOR */}
+                      <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", marginBottom: 8 }}>📅 Expiration & Contact</div>
+                        {editingExpiry === company.id ? (
+                          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: 10, color: "var(--muted)", display: "block", marginBottom: 2 }}>Date d'expiration</label>
+                                <input className="form-input" type="date" value={editExpiryDate} onChange={e => setEditExpiryDate(e.target.value)} />
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: 10, color: "var(--muted)", display: "block", marginBottom: 2 }}>Email contact paiements</label>
+                                <input className="form-input" type="email" placeholder={currentUser.email} value={editContactEmail} onChange={e => setEditContactEmail(e.target.value)} />
+                              </div>
+                            </div>
+                            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                              <button className="btn btn-ghost btn-sm" onClick={() => setEditingExpiry(null)}>Annuler</button>
+                              <button className="btn btn-primary btn-sm" onClick={() => saveExpiry(company)}>✅ Sauvegarder</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                            <div>
+                              <div style={{ fontSize: 12 }}>
+                                {company.expiryDate
+                                  ? `📅 Expire le : ${new Date(company.expiryDate).toLocaleDateString("fr-MU")}`
+                                  : "📅 Aucune date d'expiration"}
+                              </div>
+                              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>
+                                📧 {company.contactEmail || currentUser.email || "Non défini"}
+                              </div>
+                            </div>
+                            <button className="btn btn-ghost btn-sm" onClick={() => {
+                              setEditingExpiry(company.id);
+                              setEditExpiryDate(company.expiryDate || "");
+                              setEditContactEmail(company.contactEmail || currentUser.email || "");
+                            }}>✏️ Modifier</button>
+                          </div>
+                        )}
+                        {/* WARNING SEND BUTTON — only if expiry within 5 days */}
+                        {company.expiryDate && getDaysUntilExpiry(company.expiryDate) !== null && getDaysUntilExpiry(company.expiryDate) <= 5 && getDaysUntilExpiry(company.expiryDate) >= 0 && (
+                          <div style={{ marginTop: 10, padding: "10px 12px", background: "rgba(245,166,35,.1)", borderRadius: 8, border: "1px solid rgba(245,166,35,.3)" }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", marginBottom: 6 }}>
+                              ⚠️ Expire dans {getDaysUntilExpiry(company.expiryDate)} jour{getDaysUntilExpiry(company.expiryDate) > 1 ? "s" : ""} — Envoyer un avertissement
+                            </div>
+                            {compAdmins.map(admin => (
+                              <button key={admin.id} className="btn btn-sm" style={{ background: "rgba(37,211,102,.2)", color: "#25d366", fontSize: 12, marginRight: 6 }}
+                                onClick={() => sendExpiryWarningWhatsApp(company, admin, getDaysUntilExpiry(company.expiryDate))}>
+                                📲 WhatsApp → {admin.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {/* MANUAL WARNING — send anytime */}
+                        {company.expiryDate && compAdmins.length > 0 && (
+                          <div style={{ marginTop: 8 }}>
+                            <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 4 }}>Envoyer l'avertissement manuellement :</div>
+                            {compAdmins.map(admin => (
+                              <button key={admin.id} className="btn btn-ghost btn-sm" style={{ fontSize: 11, marginRight: 4 }}
+                                onClick={() => sendExpiryWarningWhatsApp(company, admin, getDaysUntilExpiry(company.expiryDate))}>
+                                📲 {admin.name}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {/* ADMINS */}
                       <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5 }}>Administrateurs</div>
                       {compAdmins.length === 0 ? (
