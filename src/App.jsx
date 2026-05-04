@@ -2555,7 +2555,7 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
                       {/* ADMINS */}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
                         <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5 }}>
-                          Administrateurs ({compAdmins.length}/3)
+                          Administrateurs ({compAdmins.length}/30)
                         </div>
                       </div>
                       {compAdmins.length === 0 ? (
@@ -2582,9 +2582,9 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
                       )}
 
                       {/* CREATE ADMIN FORM — max 3 */}
-                      {compAdmins.length >= 3 ? (
+                      {compAdmins.length >= 30 ? (
                         <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", textAlign: "center", padding: "8px 0" }}>
-                          ⚠️ Maximum 3 administrateurs atteint
+                          ⚠️ Maximum 30 administrateurs atteint
                         </div>
                       ) : creatingAdmin === company.id ? (
                         <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2607,7 +2607,7 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
                         </div>
                       ) : (
                         <button className="btn btn-blue btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => { setCreatingAdmin(company.id); setLastCreatedAdmin(null); setShowWhatsApp(false); }}>
-                          + Ajouter un admin {compAdmins.length > 0 ? `(${compAdmins.length}/3)` : ""}
+                          + Ajouter un admin {compAdmins.length > 0 ? `(${compAdmins.length}/30)` : ""}
                         </button>
                       )}
 
