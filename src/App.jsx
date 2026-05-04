@@ -1199,6 +1199,9 @@ export default function App() {
 
       {/* ── BOTTOM NAV (mobile) ── */}
       <nav className="bottom-nav">
+        <button className="bottom-nav-item" onClick={logoutUser}>
+          <span className="bn-icon">⇄</span>Profil
+        </button>
         {isAdmin && (
           <button className={`bottom-nav-item ${page === "dashboard" ? "active" : ""}`} onClick={() => setPage("dashboard")}>
             <span className="bn-icon">📊</span>Stats
@@ -1233,9 +1236,6 @@ export default function App() {
             <span className="bn-icon">👷</span>Équipe
           </button>
         )}
-        <button className="bottom-nav-item" onClick={logoutUser}>
-          <span className="bn-icon">⇄</span>Profil
-        </button>
       </nav>
 
       {/* ── MODALS ── */}
