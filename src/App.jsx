@@ -1226,7 +1226,7 @@ export default function App() {
 
       {/* ── MODALS ── */}
       {modal && (
-        <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} addTool={addTool} addUser={addUser} assignTool={assignTool} deleteTool={deleteTool} updateTool={updateTool} />
+        <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} addTool={addTool} addUser={addUser} assignTool={assignTool} deleteTool={deleteTool} updateTool={updateTool} myCompany={myCompany} />
       )}
 
       {/* ── TOAST ── */}
@@ -1240,10 +1240,10 @@ export default function App() {
 }
 
 // ─── MODAL ROUTER ─────────────────────────────────────────────────────────────
-function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool }) {
+function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool, myCompany }) {
   const isAdmin = currentUser.role === "admin" || currentUser.role === "superadmin";
   if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
-  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} />;
+  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} myCompany={myCompany} />;
   if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} />;
   if (modal.type === "whatsappInvite") {
     const admin = modal.data;
@@ -1786,7 +1786,7 @@ function AddToolModal({ onClose, onSave }) {
 }
 
 // ─── ADD USER MODAL ───────────────────────────────────────────────────────────
-function AddUserModal({ onClose, onSave, currentUser }) {
+function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
   const APP_URL = "tool-track-rosy.vercel.app";
   const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
   const [form, setForm] = useState({ name: "", role: "viewer", phone: "", email: "", pin: generatePin() });
@@ -1800,17 +1800,19 @@ function AddUserModal({ onClose, onSave, currentUser }) {
   };
 
   const sendWhatsApp = () => {
+    const companyPin = myCompany?.companyPin || "";
+    const companyName = myCompany?.name || currentUser?.companyName || "";
     const msg = encodeURIComponent(
       `Bonjour ${savedUser.name} 👋\n\nTu es invité(e) sur *Tool Track* — l'app de gestion des outils.\n\n` +
       `📱 Installe l'app : https://${APP_URL}\n` +
+      (companyName ? `🏢 Compagnie : *${companyName}*\n` : "") +
+      (companyPin ? `🔐 Code de la compagnie : *${companyPin}*\n` : "") +
       `👤 Ton profil : *${savedUser.name}*\n` +
       `🔑 Ton code PIN : *${savedUser.pin}*\n\n` +
       `_Sur ton téléphone, ouvre le lien dans Safari (iPhone) ou Chrome (Android) et ajoute-le à ton écran d'accueil pour l'avoir comme une vraie app !_`
     );
     const phone = savedUser.phone.replace(/\s/g, "").replace(/^\+/, "");
-    const url = phone
-      ? `https://wa.me/${phone}?text=${msg}`
-      : `https://wa.me/?text=${msg}`;
+    const url = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
     window.open(url, "_blank");
   };
 
