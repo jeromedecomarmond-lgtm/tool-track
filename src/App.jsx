@@ -1070,7 +1070,17 @@ export default function App() {
                                       <div style={{ fontSize: 10, color: "var(--muted)" }}>🔑 PIN</div>
                                       <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, color: "var(--accent)", letterSpacing: 6 }}>{u.pin}</div>
                                     </div>
-                                    {u.phone && <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>📞 {u.phone}</div>}
+                                    {u.phone && <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>📞 {u.phone}</div>}
+                                    <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }}
+                                      onClick={() => {
+                                        if (assignedTools.length > 0) { showToast("⚠️ Ce profil a des outils confiés !", "warn"); return; }
+                                        if (window.confirm(`Supprimer ${u.name} ?`)) {
+                                          deleteDoc(doc(db, "users", String(u.id)));
+                                          showToast("🗑 Profil supprimé");
+                                        }
+                                      }}>
+                                      🗑 Supprimer
+                                    </button>
                                   </div>
                                 </div>
                               );
