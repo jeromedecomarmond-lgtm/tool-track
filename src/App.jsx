@@ -696,6 +696,9 @@ export default function App() {
               db={db}
               currentUser={currentUser}
               showToast={showToast}
+              onAdminCreated={(admin, companyName) => {
+                setModal({ type: "whatsappInvite", data: { ...admin, companyName } });
+              }}
             />
           )}
 
@@ -1252,10 +1255,52 @@ export default function App() {
 
 // ─── MODAL ROUTER ─────────────────────────────────────────────────────────────
 function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool }) {
-  const isAdmin = currentUser.role === "admin";
+  const isAdmin = currentUser.role === "admin" || currentUser.role === "superadmin";
   if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
   if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} />;
   if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} />;
+  if (modal.type === "whatsappInvite") {
+    const admin = modal.data;
+    const msg = encodeURIComponent(
+      `Bonjour ${admin.name} 👋\n\n` +
+      `Vous avez été nommé *Administrateur* de *${admin.companyName}* sur *Tool Track*.\n\n` +
+      `📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n` +
+      `👤 Votre profil : *${admin.name}*\n` +
+      `🔑 Votre code PIN : *${admin.pin}*\n\n` +
+      `Sur votre téléphone, ouvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n` +
+      `_Bonne gestion d'équipe !_ 🚀`
+    );
+    const phone = admin.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
+    const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
+    return (
+      <div className="modal-overlay" onClick={() => setModal(null)}>
+        <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+          <div className="modal-header">
+            <h3>✅ Admin créé !</h3>
+            <button className="close-btn" onClick={() => setModal(null)}>×</button>
+          </div>
+          <div className="modal-body" style={{ textAlign: "center", gap: 16 }}>
+            <div style={{ width: 60, height: 60, borderRadius: 14, background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, margin: "0 auto" }}>{admin.avatar}</div>
+            <div>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800 }}>{admin.name}</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>🔑 Admin · {admin.companyName}</div>
+            </div>
+            <div style={{ background: "var(--surface2)", borderRadius: 12, padding: "14px 24px" }}>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Code PIN</div>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 36, fontWeight: 800, color: "var(--accent)", letterSpacing: 8 }}>{admin.pin}</div>
+            </div>
+            <button className="btn btn-green" style={{ width: "100%", justifyContent: "center", fontSize: 15 }}
+              onClick={() => { window.open(waUrl, "_blank"); setModal(null); }}>
+              📲 Envoyer l'invitation via WhatsApp
+            </button>
+          </div>
+          <div className="modal-footer">
+            <button className="btn btn-ghost" onClick={() => setModal(null)}>Fermer sans envoyer</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return null;
 }
 
@@ -2232,7 +2277,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
 }
 
 // ─── COMPANIES PAGE ───────────────────────────────────────────────────────────
-function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) {
+function CompaniesPage({ companies, users, tools, db, currentUser, showToast, onAdminCreated }) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#f5a623");
@@ -2332,10 +2377,10 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
       companyId: company.id, companyName: company.name,
     };
     await setDoc(doc(db, "users", id), newAdmin);
-    setLastCreatedAdmin({ ...newAdmin, companyName: company.name });
-    setShowWhatsApp(true);
+    onAdminCreated({ ...newAdmin, companyName: company.name });
     showToast(`✅ Admin créé — PIN: ${adminForm.pin}`);
     setAdminForm({ name: "", phone: "", email: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
+    setCreatingAdmin(null);
   };
 
   const sendAdminWhatsApp = (admin) => {
@@ -2531,56 +2576,22 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
                       {/* CREATE ADMIN FORM */}
                       {creatingAdmin === company.id ? (
                         <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                          {showWhatsApp && lastCreatedAdmin ? (
-                            // SHOW WHATSAPP BUTTON AFTER CREATION
-                            <div style={{ textAlign: "center", padding: "8px 0" }}>
-                              <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
-                              <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{lastCreatedAdmin.name}</div>
-                              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>
-                                🔑 Admin · PIN : <strong style={{ color: "var(--accent)", letterSpacing: 4, fontSize: 18 }}>{lastCreatedAdmin.pin}</strong>
-                              </div>
-                              <button className="btn btn-green" style={{ width: "100%", justifyContent: "center", marginBottom: 8, fontSize: 14 }}
-                                onClick={() => {
-                                  const msg = encodeURIComponent(
-                                    `Bonjour ${lastCreatedAdmin.name} 👋\n\n` +
-                                    `Vous avez été nommé *Administrateur* de *${company.name}* sur *Tool Track*.\n\n` +
-                                    `📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n` +
-                                    `👤 Votre profil : *${lastCreatedAdmin.name}*\n` +
-                                    `🔑 Votre code PIN : *${lastCreatedAdmin.pin}*\n\n` +
-                                    `Sur votre téléphone, ouvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n` +
-                                    `_Bonne gestion d'équipe !_ 🚀`
-                                  );
-                                  const phone = lastCreatedAdmin.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
-                                  window.open(phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`, "_blank");
-                                }}>
-                                📲 Envoyer l'invitation via WhatsApp
-                              </button>
-                              <button className="btn btn-ghost btn-sm" style={{ width: "100%" }}
-                                onClick={() => { setCreatingAdmin(null); setLastCreatedAdmin(null); setShowWhatsApp(false); }}>
-                                Fermer
-                              </button>
-                            </div>
-                          ) : (
-                            // CREATION FORM
-                            <>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>🔑 Créer un admin</div>
-                              <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
-                              <div style={{ display: "flex", gap: 8 }}>
-                                <input className="form-input" placeholder="Téléphone WhatsApp" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} />
-                                <input className="form-input" placeholder="Email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} />
-                              </div>
-                              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                                <input className="form-input" style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, letterSpacing: 8, textAlign: "center" }}
-                                  maxLength={4} value={adminForm.pin}
-                                  onChange={e => setAdminForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} />
-                                <button className="btn btn-ghost btn-sm" onClick={() => setAdminForm(p => ({ ...p, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>🔄</button>
-                              </div>
-                              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                <button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>Annuler</button>
-                                <button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>Créer l'admin</button>
-                              </div>
-                            </>
-                          )}
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>🔑 Créer un admin</div>
+                          <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <input className="form-input" placeholder="Téléphone WhatsApp" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} />
+                            <input className="form-input" placeholder="Email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} />
+                          </div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <input className="form-input" style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, letterSpacing: 8, textAlign: "center" }}
+                              maxLength={4} value={adminForm.pin}
+                              onChange={e => setAdminForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} />
+                            <button className="btn btn-ghost btn-sm" onClick={() => setAdminForm(p => ({ ...p, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>🔄</button>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>Annuler</button>
+                            <button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>Créer l'admin</button>
+                          </div>
                         </div>
                       ) : (
                         <button className="btn btn-blue btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => { setCreatingAdmin(company.id); setLastCreatedAdmin(null); setShowWhatsApp(false); }}>+ Ajouter un admin</button>
