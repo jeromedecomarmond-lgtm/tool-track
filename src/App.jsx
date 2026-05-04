@@ -1251,6 +1251,7 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
       `Bonjour ${admin.name} 👋\n\n` +
       `Vous avez été nommé *Administrateur* de *${admin.companyName}* sur *Tool Track*.\n\n` +
       `📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n` +
+      `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n` +
       `👤 Votre profil : *${admin.name}*\n` +
       `🔑 Votre code PIN : *${admin.pin}*\n\n` +
       `Sur votre téléphone, ouvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n` +
@@ -2363,6 +2364,7 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
       id, name: adminForm.name, role: "admin", avatar: initials,
       phone: adminForm.phone, email: adminForm.email, pin: adminForm.pin,
       companyId: company.id, companyName: company.name,
+      companyPin: company.companyPin || "",
     };
     await setDoc(doc(db, "users", id), newAdmin);
     onAdminCreated({ ...newAdmin, companyName: company.name });
