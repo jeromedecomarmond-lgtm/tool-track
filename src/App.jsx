@@ -658,8 +658,8 @@ export default function App() {
           <nav className="sidebar-nav">
             {isAdmin && <button className={`nav-item ${page === "dashboard" ? "active" : ""}`} onClick={() => setPage("dashboard")}><span className="icon">📊</span><span>Dashboard</span></button>}
             {isSuperAdmin && <button className={`nav-item ${page === "companies" ? "active" : ""}`} onClick={() => setPage("companies")}><span className="icon">🏢</span><span>Compagnies</span></button>}
-            {isAdmin && <button className={`nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}><span className="icon">🔧</span><span>Outils</span></button>}
-            {isAdmin && <button className={`nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}><span className="icon">🏗</span><span>Chantiers</span></button>}
+            {isAdmin && !isSuperAdmin && <button className={`nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}><span className="icon">🔧</span><span>Outils</span></button>}
+            {isAdmin && !isSuperAdmin && <button className={`nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}><span className="icon">🏗</span><span>Chantiers</span></button>}
             {!isAdmin && <button className={`nav-item ${page === "mytools" ? "active" : ""}`} onClick={() => setPage("mytools")}><span className="icon">📦</span><span>Mes outils</span></button>}
             {!isAdmin && <button className={`nav-item ${page === "parc" ? "active" : ""}`} onClick={() => setPage("parc")}><span className="icon">🔧</span><span>Parc outils</span></button>}
             <button className={`nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
@@ -1396,12 +1396,12 @@ export default function App() {
             <span className="bn-icon">📊</span>Stats
           </button>
         )}
-        {isAdmin && (
+        {isAdmin && !isSuperAdmin && (
           <button className={`bottom-nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}>
             <span className="bn-icon">🔧</span>Outils
           </button>
         )}
-        {isAdmin && (
+        {isAdmin && !isSuperAdmin && (
           <button className={`bottom-nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}>
             <span className="bn-icon">🏗</span>Chantiers
           </button>
