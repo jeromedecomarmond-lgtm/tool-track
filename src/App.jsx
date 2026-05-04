@@ -2551,7 +2551,11 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
                       </div>
 
                       {/* ADMINS */}
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5 }}>Administrateurs</div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5 }}>
+                          Administrateurs ({compAdmins.length}/3)
+                        </div>
+                      </div>
                       {compAdmins.length === 0 ? (
                         <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>Aucun admin — créez-en un !</div>
                       ) : (
@@ -2560,14 +2564,27 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
                             <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>{u.avatar}</div>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div>
-                              <div style={{ fontSize: 11, color: "var(--muted)" }}>PIN: {u.pin} · {u.phone}</div>
+                              <div style={{ fontSize: 11, color: "var(--muted)" }}>PIN: {u.pin}{u.phone ? ` · ${u.phone}` : ""}</div>
                             </div>
+                            <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px", flexShrink: 0 }}
+                              onClick={() => {
+                                if (window.confirm(`Supprimer l'admin ${u.name} ? La compagnie ${company.name} restera intacte.`)) {
+                                  deleteDoc(doc(db, "users", String(u.id)));
+                                  showToast(`🗑 Admin ${u.name} supprimé`);
+                                }
+                              }}>
+                              🗑 Retirer
+                            </button>
                           </div>
                         ))
                       )}
 
-                      {/* CREATE ADMIN FORM */}
-                      {creatingAdmin === company.id ? (
+                      {/* CREATE ADMIN FORM — max 3 */}
+                      {compAdmins.length >= 3 ? (
+                        <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", textAlign: "center", padding: "8px 0" }}>
+                          ⚠️ Maximum 3 administrateurs atteint
+                        </div>
+                      ) : creatingAdmin === company.id ? (
                         <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>🔑 Créer un admin</div>
                           <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
@@ -2587,15 +2604,27 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
                           </div>
                         </div>
                       ) : (
-                        <button className="btn btn-blue btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => { setCreatingAdmin(company.id); setLastCreatedAdmin(null); setShowWhatsApp(false); }}>+ Ajouter un admin</button>
+                        <button className="btn btn-blue btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => { setCreatingAdmin(company.id); setLastCreatedAdmin(null); setShowWhatsApp(false); }}>
+                          + Ajouter un admin {compAdmins.length > 0 ? `(${compAdmins.length}/3)` : ""}
+                        </button>
                       )}
 
-                      {/* ACTIONS */}
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4, borderTop: "1px solid var(--border)", paddingTop: 10 }}>
-                        <button className={`btn btn-sm ${isActive ? "btn-danger" : "btn-green"}`} onClick={() => toggleCompany(company)}>
-                          {isActive ? "⏸ Suspendre" : "✅ Réactiver"}
-                        </button>
-                        <button className="btn btn-danger btn-sm" onClick={() => deleteCompany(company)}>🗑 Supprimer</button>
+                      {/* ACTIONS COMPAGNIE */}
+                      <div style={{ marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                        <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 8, fontWeight: 600 }}>Actions compagnie</div>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                          <button className={`btn btn-sm ${isActive ? "btn-danger" : "btn-green"}`} onClick={() => toggleCompany(company)}>
+                            {isActive ? "⏸ Suspendre" : "✅ Réactiver"}
+                          </button>
+                          <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "var(--red)", border: "1px solid rgba(232,82,10,.4)", fontWeight: 700 }}
+                            onClick={() => {
+                              if (window.confirm(`⚠️ Supprimer définitivement la compagnie "${company.name}" ?\n\nTous les membres et données seront perdus.`)) {
+                                deleteCompany(company);
+                              }
+                            }}>
+                            🏚 Supprimer la compagnie
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
