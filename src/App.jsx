@@ -2529,21 +2529,31 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast }) 
                       {/* CREATE ADMIN FORM */}
                       {creatingAdmin === company.id ? (
                         <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                          {lastCreatedAdmin && lastCreatedAdmin.companyId === company.id ? (
+                          {lastCreatedAdmin && creatingAdmin === company.id ? (
                             // SHOW WHATSAPP BUTTON AFTER CREATION
-                            <div style={{ textAlign: "center" }}>
+                            <div style={{ textAlign: "center", padding: "8px 0" }}>
                               <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
                               <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{lastCreatedAdmin.name}</div>
-                              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 12 }}>🔑 Admin · PIN : <strong style={{ color: "var(--accent)", letterSpacing: 4 }}>{lastCreatedAdmin.pin}</strong></div>
-                              {lastCreatedAdmin.phone ? (
-                                <button className="btn btn-green" style={{ width: "100%", justifyContent: "center" }}
-                                  onClick={() => sendAdminWhatsApp(lastCreatedAdmin)}>
-                                  📲 Envoyer l'invitation via WhatsApp
-                                </button>
-                              ) : (
-                                <div style={{ fontSize: 12, color: "var(--muted)" }}>Aucun téléphone — communiquez le PIN manuellement : <strong style={{ color: "var(--accent)" }}>{lastCreatedAdmin.pin}</strong></div>
-                              )}
-                              <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, width: "100%" }}
+                              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>
+                                🔑 Admin · PIN : <strong style={{ color: "var(--accent)", letterSpacing: 4, fontSize: 18 }}>{lastCreatedAdmin.pin}</strong>
+                              </div>
+                              <button className="btn btn-green" style={{ width: "100%", justifyContent: "center", marginBottom: 8, fontSize: 14 }}
+                                onClick={() => {
+                                  const msg = encodeURIComponent(
+                                    `Bonjour ${lastCreatedAdmin.name} 👋\n\n` +
+                                    `Vous avez été nommé *Administrateur* de *${company.name}* sur *Tool Track*.\n\n` +
+                                    `📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n` +
+                                    `👤 Votre profil : *${lastCreatedAdmin.name}*\n` +
+                                    `🔑 Votre code PIN : *${lastCreatedAdmin.pin}*\n\n` +
+                                    `Sur votre téléphone, ouvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n` +
+                                    `_Bonne gestion d'équipe !_ 🚀`
+                                  );
+                                  const phone = lastCreatedAdmin.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
+                                  window.open(phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`, "_blank");
+                                }}>
+                                📲 Envoyer l'invitation via WhatsApp
+                              </button>
+                              <button className="btn btn-ghost btn-sm" style={{ width: "100%" }}
                                 onClick={() => { setCreatingAdmin(null); setLastCreatedAdmin(null); }}>
                                 Fermer
                               </button>
