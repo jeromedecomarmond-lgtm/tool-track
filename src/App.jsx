@@ -435,61 +435,12 @@ export default function App() {
     return (
       <>
         <style>{css}</style>
-        <div className="login-screen">
-          <div className="login-card">
-            <div className="login-title">TOOL TRACK</div>
-            {users.length === 0 ? (
-              <>
-                <div className="login-sub">Bienvenue ! Créez le premier administrateur pour démarrer.</div>
-                <FirstAdminForm onSave={async (u) => { await setDoc(doc(db, "users", String(u.id)), u); loginUser(u); }} />
-              </>
-            ) : (
-              <>
-                <div className="login-sub">Choisissez votre profil</div>
-                {/* Group by company */}
-                {companies.length > 0 ? (
-                  companies.map(company => {
-                    const companyUsers = users.filter(u => u.companyId === company.id);
-                    if (companyUsers.length === 0) return null;
-                    return (
-                      <div key={company.id} style={{ width: "100%", marginBottom: 16 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: company.color || "var(--accent)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: company.color || "var(--accent)", display: "inline-block" }} />
-                          {company.name}
-                        </div>
-                        <div className="user-select-list" style={{ marginBottom: 0 }}>
-                          {companyUsers.map(u => (
-                            <PinLogin key={u.id} user={u} onSuccess={(u) => loginUser(u)} />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  // No companies yet — show all users (superadmin only scenario)
-                  <div className="user-select-list">
-                    {users.map(u => (
-                      <PinLogin key={u.id} user={u} onSuccess={(u) => loginUser(u)} />
-                    ))}
-                  </div>
-                )}
-                {/* Superadmin always shown separately */}
-                {users.filter(u => u.role === "superadmin").length > 0 && (
-                  <div style={{ width: "100%", marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: "#e84040", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
-                      👑 Administration
-                    </div>
-                    <div className="user-select-list" style={{ marginBottom: 0 }}>
-                      {users.filter(u => u.role === "superadmin").map(u => (
-                        <PinLogin key={u.id} user={u} onSuccess={(u) => loginUser(u)} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+        <LoginScreen
+          users={users}
+          companies={companies}
+          onLogin={loginUser}
+          db={db}
+        />
       </>
     );
   }
@@ -2367,15 +2318,17 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
   const createCompany = async () => {
     if (!newName.trim()) return;
     const id = String(Date.now());
+    const companyPin = String(Math.floor(1000 + Math.random() * 9000));
     await setDoc(doc(db, "companies", id), {
       id, name: newName.trim(), color: newColor,
       active: true, createdAt: new Date().toISOString(),
       createdBy: currentUser.id,
       expiryDate: newExpiry || null,
       contactEmail: newContactEmail || currentUser.email || "",
+      companyPin,
     });
     setNewName(""); setNewExpiry(""); setShowForm(false);
-    showToast("🏢 Compagnie créée !");
+    showToast(`🏢 Compagnie créée ! Code d'accès : ${companyPin}`);
   };
 
   const saveExpiry = async (company) => {
@@ -2506,6 +2459,7 @@ function CompaniesPage({ companies, users, tools, db, currentUser, showToast, on
                       <div style={{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800 }}>{company.name}</div>
                       <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span>👷 {compUsers.length} membres · 🔧 {compTools.length} outils</span>
+                        {company.companyPin && <span style={{ background: "var(--surface2)", padding: "1px 8px", borderRadius: 20, fontFamily: "var(--font-head)", fontWeight: 800, color: "var(--accent)", letterSpacing: 3 }}>🔐 {company.companyPin}</span>}
                         {!isActive && <span style={{ color: "var(--red)", fontWeight: 700 }}>⏸ Suspendue</span>}
                         {/* EXPIRY BADGE */}
                         {company.expiryDate && (() => {
@@ -2822,6 +2776,123 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
+function LoginScreen({ users, companies, onLogin, db }) {
+  const [step, setStep] = useState("company"); // "company" | "profile"
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [companyPin, setCompanyPin] = useState("");
+  const [pinError, setPinError] = useState(false);
+
+  const superAdmins = users.filter(u => u.role === "superadmin");
+
+  const handleCompanyPin = (digit) => {
+    const newPin = companyPin + digit;
+    setCompanyPin(newPin);
+    setPinError(false);
+
+    if (newPin.length === 4) {
+      // Find company with this PIN
+      const found = companies.find(c => c.companyPin === newPin && c.active !== false);
+      if (found) {
+        setSelectedCompany(found);
+        setStep("profile");
+        setCompanyPin("");
+      } else {
+        setPinError(true);
+        setTimeout(() => { setCompanyPin(""); setPinError(false); }, 1000);
+      }
+    }
+  };
+
+  // If no users at all — show first admin form
+  if (users.length === 0) {
+    return (
+      <div className="login-screen">
+        <div className="login-card">
+          <div className="login-title">TOOL TRACK</div>
+          <div className="login-sub">Bienvenue ! Créez le premier administrateur pour démarrer.</div>
+          <FirstAdminForm onSave={async (u) => {
+            await setDoc(doc(db, "users", String(u.id)), u);
+            onLogin(u);
+          }} />
+        </div>
+      </div>
+    );
+  }
+
+  // STEP 2 — Choose profile within company
+  if (step === "profile" && selectedCompany) {
+    const companyUsers = users.filter(u => u.companyId === selectedCompany.id);
+    return (
+      <div className="login-screen">
+        <div className="login-card">
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, width: "100%" }}>
+            <button onClick={() => { setStep("company"); setSelectedCompany(null); }} style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 22, cursor: "pointer", padding: 0 }}>←</button>
+            <div style={{ flex: 1 }}>
+              <div className="login-title" style={{ fontSize: 22, marginBottom: 0 }}>TOOL TRACK</div>
+              <div style={{ fontSize: 13, color: selectedCompany.color || "var(--accent)", fontWeight: 700 }}>🏢 {selectedCompany.name}</div>
+            </div>
+          </div>
+          <div className="login-sub">Choisissez votre profil</div>
+          <div className="user-select-list">
+            {companyUsers.map(u => (
+              <PinLogin key={u.id} user={u} onSuccess={onLogin} />
+            ))}
+          </div>
+          {companyUsers.length === 0 && (
+            <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: "20px 0" }}>
+              Aucun profil dans cette compagnie
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // STEP 1 — Enter company PIN
+  return (
+    <div className="login-screen">
+      <div className="login-card">
+        <div className="login-title">TOOL TRACK</div>
+        <div className="login-sub">Entrez le code de votre compagnie</div>
+
+        {/* PIN DOTS */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 16, margin: "20px 0" }}>
+          {[0,1,2,3].map(i => (
+            <div key={i} style={{ width: 16, height: 16, borderRadius: "50%", background: i < companyPin.length ? (pinError ? "var(--red)" : "var(--accent)") : "var(--border)", transition: "all .15s" }} />
+          ))}
+        </div>
+
+        {pinError && <div style={{ color: "var(--red)", fontSize: 12, marginBottom: 12, fontWeight: 700 }}>❌ Code incorrect</div>}
+
+        {/* KEYPAD */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, width: "100%", maxWidth: 280 }}>
+          {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((d, i) => (
+            <button key={i}
+              onClick={() => {
+                if (d === "⌫") { setCompanyPin(p => p.slice(0,-1)); setPinError(false); }
+                else if (d !== "") handleCompanyPin(String(d));
+              }}
+              style={{ padding: "16px 0", borderRadius: 12, border: "1px solid var(--border)", background: d === "⌫" ? "rgba(232,82,10,.1)" : "var(--surface)", color: d === "⌫" ? "var(--red)" : "var(--text)", fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 700, cursor: d === "" ? "default" : "pointer", opacity: d === "" ? 0 : 1 }}>
+              {d}
+            </button>
+          ))}
+        </div>
+
+        {/* Superadmin access */}
+        {superAdmins.length > 0 && (
+          <div style={{ marginTop: 24, borderTop: "1px solid var(--border)", paddingTop: 16, width: "100%" }}>
+            <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center", marginBottom: 10 }}>Administration</div>
+            {superAdmins.map(u => (
+              <PinLogin key={u.id} user={u} onSuccess={onLogin} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
