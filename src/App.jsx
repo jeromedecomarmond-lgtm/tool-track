@@ -1920,6 +1920,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
 // ─── ADD TOOL MODAL ───────────────────────────────────────────────────────────
 function AddToolModal({ onClose, onSave }) {
   const [form, setForm] = useState({ name: "", ref: "", purchaseDate: "", price: "", description: "", photo: "🔧", photoUrl: null });
+  const [submitted, setSubmitted] = useState(false);
   const fileRef = useRef();
 
   const handlePhoto = (e) => {
@@ -1930,22 +1931,33 @@ function AddToolModal({ onClose, onSave }) {
     reader.readAsDataURL(file);
   };
 
+  const handleSave = () => {
+    setSubmitted(true);
+    if (!form.name.trim()) return;
+    onSave(form);
+  };
+
+  const fieldStyle = (val) => ({
+    borderColor: submitted && !val?.trim() ? "var(--red)" : undefined,
+    boxShadow: submitted && !val?.trim() ? "0 0 0 2px rgba(232,82,10,.2)" : undefined,
+  });
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header"><h3>Ajouter un outil</h3><button className="close-btn" onClick={onClose}>×</button></div>
         <div className="modal-body">
 
-          {/* PHOTO UPLOAD */}
+          {/* PHOTO UPLOAD — optionnel */}
           <div className="form-group">
-            <label className="form-label">📷 Photo de l'outil</label>
+            <label className="form-label">📷 Photo de l'outil <span style={{ fontSize: 10, color: "var(--muted)" }}>(optionnel)</span></label>
             <div className="photo-upload-zone" onClick={() => fileRef.current.click()}>
               <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} />
               {form.photoUrl
                 ? <img src={form.photoUrl} alt="aperçu" className="photo-preview" />
                 : <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "10px 0" }}>
                     <span style={{ fontSize: 36 }}>📷</span>
-                    <span>Cliquez pour choisir une photo depuis votre appareil</span>
+                    <span>Cliquez pour choisir une photo</span>
                     <span style={{ fontSize: 11, opacity: .6 }}>JPG, PNG, HEIC — recommandé 800×600px</span>
                   </div>
               }
@@ -1958,30 +1970,36 @@ function AddToolModal({ onClose, onSave }) {
           </div>
 
           <div className="form-row">
-            <div className="form-group"><label className="form-label">Nom *</label><input className="form-input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
-            <div className="form-group"><label className="form-label">Fournisseur</label><input className="form-input" value={form.ref} onChange={e => setForm(p => ({ ...p, ref: e.target.value }))} /></div>
+            <div className="form-group">
+              <label className="form-label">Nom <span style={{ color: "var(--red)" }}>*</span></label>
+              <input className="form-input" style={fieldStyle(form.name)} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="ex: Perceuse Bosch" />
+              {submitted && !form.name.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Le nom est obligatoire</div>}
+            </div>
+            <div className="form-group">
+              <label className="form-label">Fournisseur</label>
+              <input className="form-input" value={form.ref} onChange={e => setForm(p => ({ ...p, ref: e.target.value }))} placeholder="ex: Neetoo" />
+            </div>
           </div>
-          <div className="form-group"><label className="form-label">Date d'achat</label><input className="form-input" type="date" value={form.purchaseDate} onChange={e => setForm(p => ({ ...p, purchaseDate: e.target.value }))} /></div>
+          <div className="form-group">
+            <label className="form-label">Date d'achat</label>
+            <input className="form-input" type="date" value={form.purchaseDate} onChange={e => setForm(p => ({ ...p, purchaseDate: e.target.value }))} />
+          </div>
           <div className="form-group">
             <label className="form-label">🇲🇺 Prix d'achat (Rs)</label>
-            <input
-              className="form-input"
-              type="text"
-              inputMode="numeric"
-              placeholder="ex: 20 000"
-              value={form.price}
+            <input className="form-input" type="text" inputMode="numeric" placeholder="ex: 20 000" value={form.price}
               onChange={e => {
                 const raw = e.target.value.replace(/\s/g, "").replace(/[^0-9]/g, "");
-                const formatted = raw.replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-                setForm(p => ({ ...p, price: formatted }));
-              }}
-            />
+                setForm(p => ({ ...p, price: raw.replace(/\B(?=(\d{3})+(?!\d))/g, " ") }));
+              }} />
           </div>
-          <div className="form-group"><label className="form-label">Description</label><textarea className="form-input" rows={3} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></div>
+          <div className="form-group">
+            <label className="form-label">Description</label>
+            <textarea className="form-input" rows={3} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
+          </div>
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-          <button className="btn btn-primary" disabled={!form.name} onClick={() => onSave(form)}>Ajouter</button>
+          <button className="btn btn-primary" onClick={handleSave}>Ajouter</button>
         </div>
       </div>
     </div>
@@ -1995,8 +2013,16 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
   const [form, setForm] = useState({ name: "", role: "viewer", phone: "", email: "", pin: generatePin() });
   const [saved, setSaved] = useState(false);
   const [savedUser, setSavedUser] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+
+  const fieldStyle = (val) => ({
+    borderColor: submitted && !val?.trim() ? "var(--red)" : undefined,
+    boxShadow: submitted && !val?.trim() ? "0 0 0 2px rgba(232,82,10,.2)" : undefined,
+  });
 
   const handleSave = async () => {
+    setSubmitted(true);
+    if (!form.name.trim() || form.pin.length !== 4) return;
     const user = await onSave(form);
     setSavedUser({ ...form });
     setSaved(true);
@@ -2029,8 +2055,12 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
         <div className="modal-body">
           {!saved ? (
             <>
-              <div className="form-group"><label className="form-label">Nom complet *</label><input className="form-input" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} /></div>
-              <div className="form-group"><label className="form-label">Rôle *</label>
+              <div className="form-group">
+                <label className="form-label">Nom complet <span style={{ color: "var(--red)" }}>*</span></label>
+                <input className="form-input" style={fieldStyle(form.name)} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="ex: Jean Dupont" />
+                {submitted && !form.name.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Le nom est obligatoire</div>}
+              </div>
+              <div className="form-group"><label className="form-label">Rôle <span style={{ color: "var(--red)" }}>*</span></label>
                 <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
                   <option value="viewer">👷 Employé</option>
                   <option value="admin">🔑 Admin</option>
@@ -2042,14 +2072,15 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
                 <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
               </div>
               <div className="form-group">
-                <label className="form-label">🔑 Code PIN (4 chiffres)</label>
+                <label className="form-label">🔑 Code PIN (4 chiffres) <span style={{ color: "var(--red)" }}>*</span></label>
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input className="form-input" style={{ flex: 1, fontSize: 22, fontWeight: 800, letterSpacing: 8, textAlign: "center" }}
+                  <input className="form-input" style={{ flex: 1, fontSize: 22, fontWeight: 800, letterSpacing: 8, textAlign: "center", ...(submitted && form.pin.length !== 4 ? { borderColor: "var(--red)", boxShadow: "0 0 0 2px rgba(232,82,10,.2)" } : {}) }}
                     maxLength={4} value={form.pin}
                     onChange={e => setForm(p => ({ ...p, pin: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
                   />
                   <button className="btn btn-ghost btn-sm" onClick={() => setForm(p => ({ ...p, pin: generatePin() }))}>🔄 Nouveau</button>
                 </div>
+                {submitted && form.pin.length !== 4 && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Le PIN doit contenir 4 chiffres</div>}
                 <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Ce PIN sera envoyé à la personne via WhatsApp</div>
               </div>
             </>
@@ -2084,7 +2115,7 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
           {!saved ? (
             <>
               <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-              <button className="btn btn-primary" disabled={!form.name || form.pin.length !== 4} onClick={handleSave}>Créer le profil</button>
+              <button className="btn btn-primary" onClick={handleSave}>Créer le profil</button>
             </>
           ) : (
             <button className="btn btn-ghost" onClick={onClose}>Fermer</button>
@@ -2475,6 +2506,12 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
   const [newColor, setNewColor] = useState("#f5a623");
   const [newExpiry, setNewExpiry] = useState("");
   const [newContactEmail, setNewContactEmail] = useState(currentUser.email || "");
+  const [formSubmitted, setFormSubmitted] = useState(false);
+
+  const companyFieldStyle = (val) => ({
+    borderColor: formSubmitted && !val?.trim() ? "var(--red)" : undefined,
+    boxShadow: formSubmitted && !val?.trim() ? "0 0 0 2px rgba(232,82,10,.2)" : undefined,
+  });
   const [expandedId, setExpandedId] = useState(null);
   const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
   const [creatingAdmin, setCreatingAdmin] = useState(null);
@@ -2522,7 +2559,8 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
   };
 
   const createCompany = async () => {
-    if (!newName.trim()) return;
+    setFormSubmitted(true);
+    if (!newName.trim() || !newExpiry || !newContactEmail.trim()) return;
     const id = String(Date.now());
     const companyPin = String(Math.floor(1000 + Math.random() * 9000));
     await setDoc(doc(db, "companies", id), {
@@ -2639,22 +2677,27 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
           <div style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
             <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800, color: "var(--accent)", marginBottom: 12 }}>🏢 Nouvelle compagnie</div>
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-              <input className="form-input" style={{ flex: 1 }} placeholder="Nom de la compagnie *" value={newName} onChange={e => setNewName(e.target.value)} />
+              <div style={{ flex: 1 }}>
+                <input className="form-input" style={companyFieldStyle(newName)} placeholder="Nom de la compagnie *" value={newName} onChange={e => { setNewName(e.target.value); }} />
+                {formSubmitted && !newName.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Le nom est obligatoire</div>}
+              </div>
               <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid var(--border)", cursor: "pointer", padding: 2 }} />
             </div>
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📅 Date d'expiration</label>
-                <input className="form-input" type="date" value={newExpiry} onChange={e => setNewExpiry(e.target.value)} />
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📅 Date d'expiration <span style={{ color: "var(--red)" }}>*</span></label>
+                <input className="form-input" style={companyFieldStyle(newExpiry)} type="date" value={newExpiry} onChange={e => setNewExpiry(e.target.value)} />
+                {formSubmitted && !newExpiry && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ La date d'expiration est obligatoire</div>}
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📧 Email de contact (paiements)</label>
-                <input className="form-input" type="email" placeholder={currentUser.email || "votre@email.com"} value={newContactEmail} onChange={e => setNewContactEmail(e.target.value)} />
+                <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📧 Email de contact <span style={{ color: "var(--red)" }}>*</span></label>
+                <input className="form-input" style={companyFieldStyle(newContactEmail)} type="email" placeholder={currentUser.email || "votre@email.com"} value={newContactEmail} onChange={e => setNewContactEmail(e.target.value)} />
+                {formSubmitted && !newContactEmail.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ L'email est obligatoire</div>}
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowForm(false)}>Annuler</button>
-              <button className="btn btn-primary btn-sm" disabled={!newName.trim()} onClick={createCompany}>Créer</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormSubmitted(false); }}>Annuler</button>
+              <button className="btn btn-primary btn-sm" onClick={createCompany}>Créer</button>
             </div>
           </div>
         )}
