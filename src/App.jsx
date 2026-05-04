@@ -2893,6 +2893,18 @@ function LoginScreen({ users, companies, onLogin, db }) {
     <div className="login-screen">
       <div className="login-card">
         <div className="login-title">TOOL TRACK</div>
+
+        {/* Superadmin — direct access at top */}
+        {superAdmins.length > 0 && (
+          <div style={{ width: "100%", marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: "#e84040", textAlign: "center", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>👑 Administration</div>
+            {superAdmins.map(u => (
+              <PinLogin key={u.id} user={u} onSuccess={onLogin} />
+            ))}
+            <div style={{ borderTop: "1px solid var(--border)", marginTop: 16, marginBottom: 16 }} />
+          </div>
+        )}
+
         <div className="login-sub">Entrez le code de votre compagnie</div>
 
         {/* PIN DOTS */}
@@ -2917,16 +2929,6 @@ function LoginScreen({ users, companies, onLogin, db }) {
             </button>
           ))}
         </div>
-
-        {/* Superadmin access */}
-        {superAdmins.length > 0 && (
-          <div style={{ marginTop: 24, borderTop: "1px solid var(--border)", paddingTop: 16, width: "100%" }}>
-            <div style={{ fontSize: 11, color: "var(--muted)", textAlign: "center", marginBottom: 10 }}>Administration</div>
-            {superAdmins.map(u => (
-              <PinLogin key={u.id} user={u} onSuccess={onLogin} />
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
