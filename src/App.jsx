@@ -702,34 +702,134 @@ export default function App() {
           {/* ── DASHBOARD ── */}
           {page === "dashboard" && isAdmin && (
             <>
-              <div className="topbar"><h2>Dashboard</h2></div>
+              <div className="topbar"><h2>📊 Dashboard</h2></div>
               <div className="content">
-                <div className="stats-grid">
-                  <div className="stat-card"><div className="stat-num stat-accent">{filteredTools.length}</div><div className="stat-label">Outils total</div></div>
-                  <div className="stat-card"><div className="stat-num stat-green">{filteredTools.filter(t => t.status === "store").length}</div><div className="stat-label">🟢 En store</div></div>
-                  <div className="stat-card"><div className="stat-num stat-blue">{filteredTools.filter(t => t.status === "assigned").length}</div><div className="stat-label">🔵 Chantiers</div></div>
-                  <div className="stat-card"><div className="stat-num" style={{ color: "#f07030" }}>{filteredTools.filter(t => t.status === "nonfunctional").length}</div><div className="stat-label">🔴 Non fonctionnels</div></div>
-                  <div className="stat-card"><div className="stat-num" style={{ color: "#aaa" }}>{filteredTools.filter(t => t.status === "obsolete").length}</div><div className="stat-label">⚫ Obsolètes</div></div>
-                  <div className="stat-card"><div className="stat-num stat-red">{messages.filter(m => !m.read).length}</div><div className="stat-label">Messages non lus</div></div>
-                </div>
-                <h3 style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Outils sur chantiers</h3>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {filteredTools.filter(t => t.status === "assigned").map(t => {
-                    const assignee = users.find(u => String(u.id) === String(t.assignedTo));
-                    const days = daysSince(t.lastReminder);
-                    return (
-                      <div key={t.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontSize: 22 }}>{t.photo}</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, fontSize: 14 }}>{t.name} <span style={{ color: "var(--muted)", fontSize: 11 }}>({t.ref})</span></div>
-                          <div style={{ fontSize: 12, color: "var(--muted)" }}>📍 {t.location} — 👷 {assignee?.name || "—"}</div>
+
+                {isSuperAdmin ? (
+                  <>
+                    {/* ── STATS GLOBALES ── */}
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--accent)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Vue globale</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 24 }}>
+                      {[
+                        { label: "🏢 Compagnies", value: companies.length, color: "var(--accent)" },
+                        { label: "🔧 Outils total", value: tools.length, color: "var(--blue)" },
+                        { label: "👷 Équipes total", value: users.filter(u => u.role !== "superadmin").length, color: "var(--green)" },
+                        { label: "🟢 En store", value: tools.filter(t => t.status === "store").length, color: "var(--green)" },
+                        { label: "🔵 Sur chantiers", value: tools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
+                        { label: "🔴 Non fonctionnels", value: tools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+                        { label: "⏳ Demandes en attente", value: requests.filter(r => r.status === "pending").length, color: "var(--accent)" },
+                        { label: "🏗 Chantiers actifs", value: chantiers.length, color: "var(--blue)" },
+                        { label: "⏸ Compagnies suspendues", value: companies.filter(c => c.active === false).length, color: "var(--red)" },
+                      ].map(s => (
+                        <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
+                          <div style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
+                          <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4, lineHeight: 1.3 }}>{s.label}</div>
                         </div>
-                        {days !== null && days >= 3 && <span style={{ background: "rgba(232,82,10,.2)", color: "var(--accent2)", fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20 }}>⚠️ {days}j sans news</span>}
-                        <button className="btn btn-ghost btn-sm" onClick={() => openTool(t)}>Détails</button>
-                      </div>
-                    );
-                  })}
-                </div>
+                      ))}
+                    </div>
+
+                    {/* ── DÉTAILS PAR COMPAGNIE ── */}
+                    <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--accent)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Par compagnie</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {companies.map(company => {
+                        const cTools = tools.filter(t => t.companyId === company.id);
+                        const cUsers = users.filter(u => u.companyId === company.id);
+                        const cChantiers = chantiers.filter(c => c.companyId === company.id);
+                        const cRequests = requests.filter(r => r.companyId === company.id && r.status === "pending");
+                        const isActive = company.active !== false;
+                        const daysLeft = company.expiryDate ? Math.ceil((new Date(company.expiryDate) - new Date()) / (1000*60*60*24)) : null;
+
+                        return (
+                          <div key={company.id} style={{ background: "var(--surface)", border: `1px solid ${isActive ? "var(--border)" : "rgba(232,82,10,.3)"}`, borderRadius: 12, overflow: "hidden" }}>
+                            {/* COLOR BAR */}
+                            <div style={{ height: 4, background: company.color || "var(--accent)" }} />
+                            <div style={{ padding: "12px 16px" }}>
+                              {/* HEADER */}
+                              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  <div style={{ width: 36, height: 36, borderRadius: 8, background: company.color || "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🏢</div>
+                                  <div>
+                                    <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800 }}>{company.name}</div>
+                                    <div style={{ fontSize: 10, color: isActive ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+                                      {isActive ? "🟢 Active" : "⏸ Suspendue"}
+                                      {daysLeft !== null && isActive && daysLeft <= 10 && (
+                                        <span style={{ color: daysLeft <= 3 ? "var(--red)" : "var(--accent)", marginLeft: 8 }}>
+                                          ⚠️ Expire dans {daysLeft}j
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                {cRequests.length > 0 && (
+                                  <span style={{ background: "rgba(245,166,35,.2)", color: "var(--accent)", fontWeight: 800, fontSize: 12, padding: "3px 10px", borderRadius: 20 }}>
+                                    🔔 {cRequests.length} demande{cRequests.length > 1 ? "s" : ""}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* STATS GRID */}
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                                {[
+                                  { label: "👷 Équipe", value: cUsers.length, color: "var(--blue)" },
+                                  { label: "🔧 Outils", value: cTools.length, color: "var(--accent)" },
+                                  { label: "🏗 Chantiers", value: cChantiers.length, color: "var(--green)" },
+                                  { label: "🟢 Store", value: cTools.filter(t => t.status === "store").length, color: "var(--green)" },
+                                  { label: "🔵 Chantiers", value: cTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
+                                  { label: "🔴 Non fonct.", value: cTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+                                  { label: "👑 Admins", value: cUsers.filter(u => u.role === "admin").length, color: "var(--accent)" },
+                                  { label: "👷 Employés", value: cUsers.filter(u => u.role === "viewer").length, color: "var(--muted)" },
+                                ].map(s => (
+                                  <div key={s.label} style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 6px", textAlign: "center" }}>
+                                    <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</div>
+                                    <div style={{ fontSize: 9, color: "var(--muted)", marginTop: 2, lineHeight: 1.3 }}>{s.label}</div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {/* VALEUR TOTALE OUTILS */}
+                              {cTools.length > 0 && (
+                                <div style={{ marginTop: 10, background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <div style={{ fontSize: 11, color: "var(--muted)" }}>Valeur totale du parc</div>
+                                  <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--accent)" }}>
+                                    🇲🇺 Rs {cTools.reduce((sum, t) => sum + (t.price || 0), 0).toLocaleString("fr-MU")}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  // ── DASHBOARD ADMIN NORMAL ──
+                  <>
+                    <div className="stats-grid">
+                      <div className="stat-card"><div className="stat-num stat-accent">{filteredTools.length}</div><div className="stat-label">Outils total</div></div>
+                      <div className="stat-card"><div className="stat-num stat-green">{filteredTools.filter(t => t.status === "store").length}</div><div className="stat-label">🟢 En store</div></div>
+                      <div className="stat-card"><div className="stat-num stat-blue">{filteredTools.filter(t => t.status === "assigned").length}</div><div className="stat-label">🔵 Chantiers</div></div>
+                      <div className="stat-card"><div className="stat-num" style={{ color: "#f07030" }}>{filteredTools.filter(t => t.status === "nonfunctional").length}</div><div className="stat-label">🔴 Non fonctionnels</div></div>
+                      <div className="stat-card"><div className="stat-num" style={{ color: "#aaa" }}>{filteredTools.filter(t => t.status === "obsolete").length}</div><div className="stat-label">⚫ Obsolètes</div></div>
+                      <div className="stat-card"><div className="stat-num stat-red">{filteredRequests.filter(r => r.status === "pending").length}</div><div className="stat-label">⏳ Demandes</div></div>
+                    </div>
+                    <h3 style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Outils sur chantiers</h3>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {filteredTools.filter(t => t.status === "assigned").map(t => {
+                        const assignee = filteredUsers.find(u => String(u.id) === String(t.assignedTo));
+                        return (
+                          <div key={t.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                            <span style={{ fontSize: 22 }}>{t.photo}</span>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 600, fontSize: 14 }}>{t.name}</div>
+                              <div style={{ fontSize: 12, color: "var(--muted)" }}>📍 {t.location} — 👷 {assignee?.name || "—"}</div>
+                            </div>
+                            <button className="btn btn-ghost btn-sm" onClick={() => openTool(t)}>Détails</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
