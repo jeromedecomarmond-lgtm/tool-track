@@ -1158,7 +1158,7 @@ export default function App() {
                                     }
                                   </div>
                                 )}
-                                {!isSelf && (
+                                {!isSelf && (u.role === "viewer" ? true : currentUser.role === "superadmin") && (
                                   <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }}
                                     onClick={() => {
                                       if (assignedTools.length > 0) { showToast("⚠️ Ce profil a encore des outils confiés !", "warn"); return; }
