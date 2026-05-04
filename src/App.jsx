@@ -446,11 +446,46 @@ export default function App() {
             ) : (
               <>
                 <div className="login-sub">Choisissez votre profil</div>
-                <div className="user-select-list">
-                  {users.map(u => (
-                    <PinLogin key={u.id} user={u} onSuccess={(u) => loginUser(u)} />
-                  ))}
-                </div>
+                {/* Group by company */}
+                {companies.length > 0 ? (
+                  companies.map(company => {
+                    const companyUsers = users.filter(u => u.companyId === company.id);
+                    if (companyUsers.length === 0) return null;
+                    return (
+                      <div key={company.id} style={{ width: "100%", marginBottom: 16 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: company.color || "var(--accent)", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: company.color || "var(--accent)", display: "inline-block" }} />
+                          {company.name}
+                        </div>
+                        <div className="user-select-list" style={{ marginBottom: 0 }}>
+                          {companyUsers.map(u => (
+                            <PinLogin key={u.id} user={u} onSuccess={(u) => loginUser(u)} />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  // No companies yet — show all users (superadmin only scenario)
+                  <div className="user-select-list">
+                    {users.map(u => (
+                      <PinLogin key={u.id} user={u} onSuccess={(u) => loginUser(u)} />
+                    ))}
+                  </div>
+                )}
+                {/* Superadmin always shown separately */}
+                {users.filter(u => u.role === "superadmin").length > 0 && (
+                  <div style={{ width: "100%", marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: "#e84040", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+                      👑 Administration
+                    </div>
+                    <div className="user-select-list" style={{ marginBottom: 0 }}>
+                      {users.filter(u => u.role === "superadmin").map(u => (
+                        <PinLogin key={u.id} user={u} onSuccess={(u) => loginUser(u)} />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
