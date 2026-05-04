@@ -1133,7 +1133,7 @@ export default function App() {
                         {roleUsers.map(u => {
                           const assignedTools = filteredTools.filter(t => String(t.assignedTo) === String(u.id));
                           const isSelf = String(u.id) === String(currentUser.id);
-                          const canSeePins = currentUser.role === "superadmin";
+                          const canSeePins = currentUser.role === "superadmin" || currentUser.role === "admin";
                           return (
                             <div key={u.id} style={{ background: "var(--surface)", border: `1px solid ${isSelf ? roleColor : "var(--border)"}`, borderRadius: 12, overflow: "hidden" }}>
                               <div style={{ height: 6, background: roleColor }} />
