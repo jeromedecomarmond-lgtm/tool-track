@@ -1508,7 +1508,12 @@ export default function App() {
                                     }
                                   </div>
                                 )}
-                                {!isSelf && (u.role === "viewer" ? true : currentUser.role === "superadmin" || (currentUser.role === "director" && u.role === "admin")) && (
+                                {!isSelf && (
+                                  u.role === "viewer" ? true :
+                                  u.role === "admin" ? (currentUser.role === "superadmin" || currentUser.role === "director") :
+                                  u.role === "director" ? currentUser.role === "superadmin" :
+                                  false
+                                ) && (
                                   <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }}
                                     onClick={() => {
                                       if (assignedTools.length > 0) { showToast("⚠️ Ce profil a encore des outils confiés !", "warn"); return; }
@@ -2186,7 +2191,8 @@ function AddToolModal({ onClose, onSave }) {
 function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
   const APP_URL = "tool-track-rosy.vercel.app";
   const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
-  const [form, setForm] = useState({ name: "", role: "viewer", phone: "", email: "", pin: generatePin() });
+  const defaultRole = currentUser?.role === "director" ? "admin" : "viewer";
+  const [form, setForm] = useState({ name: "", role: defaultRole, phone: "", email: "", pin: generatePin() });
   const [saved, setSaved] = useState(false);
   const [savedUser, setSavedUser] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -2238,13 +2244,13 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
               </div>
               <div className="form-group"><label className="form-label">Rôle <span style={{ color: "var(--red)" }}>*</span></label>
                 <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
+                  {/* Admin can only create: viewer */}
+                  {currentUser?.role === "admin" && <>
+                    <option value="viewer">👷 Employé</option>
+                  </>}
                   {/* Director can create: admin and viewer */}
                   {currentUser?.role === "director" && <>
                     <option value="admin">🔑 Admin</option>
-                    <option value="viewer">👷 Employé</option>
-                  </>}
-                  {/* Admin can create: viewer only */}
-                  {currentUser?.role === "admin" && <>
                     <option value="viewer">👷 Employé</option>
                   </>}
                   {/* Superadmin can create all */}
