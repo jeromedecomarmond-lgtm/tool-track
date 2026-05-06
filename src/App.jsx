@@ -2737,7 +2737,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
     return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
   };
 
-  const sendExpiryWarningWhatsApp = (company, adminUser, daysLeft) => {
+  const sendExpiryWarningWhatsApp = async (company, adminUser, daysLeft) => {
     const contactEmail = company.contactEmail || currentUser.email || "";
     const msg = encodeURIComponent(
       `⚠️ *TOOL TRACK — Avertissement d'expiration*\n\n` +
@@ -2751,6 +2751,20 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
     );
     const phone = adminUser?.phone?.replace(/\s/g, "").replace(/^\+/, "") || "";
     window.open(phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`, "_blank");
+
+    // Sauvegarder l'historique du rappel dans Firebase
+    const reminder = {
+      date: new Date().toISOString(),
+      sentTo: adminUser?.name || "—",
+      sentBy: currentUser.name,
+      daysLeft: daysLeft,
+      expiryDate: company.expiryDate,
+    };
+    const existingReminders = company.reminders || [];
+    await setDoc(doc(db, "companies", company.id), {
+      ...company,
+      reminders: [...existingReminders, reminder],
+    });
   };
 
   const createCompany = async () => {
@@ -3028,6 +3042,30 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         )}
                       </div>
 
+                      {/* HISTORIQUE DES RAPPELS */}
+                      {company.reminders && company.reminders.length > 0 && (
+                        <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, marginBottom: 10 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", marginBottom: 8, display: "flex", alignItems: "center", gap: 6 }}>
+                            📋 Historique des rappels
+                            <span style={{ fontSize: 10, background: "var(--surface)", padding: "1px 6px", borderRadius: 10 }}>{company.reminders.length}</span>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {[...company.reminders].reverse().map((r, i) => (
+                              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11, padding: "6px 8px", background: "var(--surface)", borderRadius: 8 }}>
+                                <span style={{ fontSize: 16 }}>📲</span>
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ fontWeight: 600 }}>Envoyé à <span style={{ color: "#25d366" }}>{r.sentTo}</span></div>
+                                  <div style={{ color: "var(--muted)", marginTop: 2 }}>
+                                    {new Date(r.date).toLocaleDateString("fr-MU")} à {new Date(r.date).toLocaleTimeString("fr-MU", { hour: "2-digit", minute: "2-digit" })}
+                                    {r.daysLeft !== undefined && <span style={{ marginLeft: 8, color: r.daysLeft <= 1 ? "var(--red)" : "var(--accent)", fontWeight: 700 }}>· {r.daysLeft}j restant{r.daysLeft > 1 ? "s" : ""}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* TOUS LES MEMBRES PAR RÔLE */}
                       {[
                         { role: "director", label: "🏢 Directeurs/Administrateurs", color: "#9b59b6" },
@@ -3050,18 +3088,15 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                                     <div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div>
                                     <div style={{ fontSize: 11, color: "var(--muted)" }}>🔑 {u.pin}{u.phone ? ` · 📞 ${u.phone}` : ""}</div>
                                   </div>
-                                  {/* Superadmin peut supprimer uniquement les directeurs */}
-                                  {role === "director" && (
-                                    <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px", flexShrink: 0 }}
-                                      onClick={() => {
-                                        if (window.confirm(`Supprimer le directeur ${u.name} ?`)) {
-                                          deleteDoc(doc(db, "users", String(u.id)));
-                                          showToast(`🗑 ${u.name} supprimé`);
-                                        }
-                                      }}>
-                                      🗑
-                                    </button>
-                                  )}
+                                  <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px", flexShrink: 0 }}
+                                    onClick={() => {
+                                      if (window.confirm(`Supprimer ${u.name} ?`)) {
+                                        deleteDoc(doc(db, "users", String(u.id)));
+                                        showToast(`🗑 ${u.name} supprimé`);
+                                      }
+                                    }}>
+                                    🗑
+                                  </button>
                                 </div>
                               ))
                             )}
