@@ -403,7 +403,7 @@ export default function App() {
   // Sauvegarde l'utilisateur connecté dans le navigateur
   const loginUser = (u) => {
     setCurrentUser(u);
-    setPage(u.role === "admin" || u.role === "superadmin" ? "tools" : "mytools");
+    setPage(u.role === "superadmin" ? "dashboard" : u.role === "admin" ? "tools" : "mytools");
     try { localStorage.setItem("tooltrack_user_id", u.id); } catch(e) {}
   };
   const logoutUser = () => {
@@ -426,7 +426,7 @@ export default function App() {
           const savedUser = loadedUsers.find(u => u.id === savedId);
           if (savedUser) {
             setCurrentUser(savedUser);
-            setPage(savedUser.role === "admin" || savedUser.role === "superadmin" ? "tools" : "mytools");
+            setPage(savedUser.role === "superadmin" ? "dashboard" : savedUser.role === "admin" ? "tools" : "mytools");
           } else {
             // User not found in Firebase — clear invalid session
             localStorage.removeItem("tooltrack_user_id");
