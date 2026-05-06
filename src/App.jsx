@@ -1677,17 +1677,31 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             <div className="form-group"><label className="form-label">Description</label>
               <textarea className="form-input" rows={2} value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} />
             </div>
-            <div className="form-group"><label className="form-label">📷 Changer la photo</label>
-              <div className="photo-upload-zone" onClick={() => fileRef.current.click()}>
-                <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
-                  onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setNewPhoto(ev.target.result); r.readAsDataURL(f); }} />
-                {newPhoto
-                  ? <img src={newPhoto} alt="aperçu" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
-                  : <div style={{ padding: "10px 0", textAlign: "center", color: "var(--muted)", fontSize: 13 }}>
-                      {tool.photoUrl ? "📷 Cliquez pour changer la photo" : "📷 Ajouter une photo"}
-                    </div>
-                }
-              </div>
+            <div className="form-group">
+              <label className="form-label">📷 Changer la photo</label>
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
+                onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setNewPhoto(ev.target.result); r.readAsDataURL(f); }} />
+              <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} id="cameraEditInput"
+                onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setNewPhoto(ev.target.result); r.readAsDataURL(f); }} />
+              {newPhoto ? (
+                <div>
+                  <img src={newPhoto} alt="aperçu" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8 }} />
+                  <button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setNewPhoto(null)}>🗑 Supprimer</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="btn btn-ghost btn-sm" style={{ flex: 1, flexDirection: "column", gap: 4, padding: "12px 0" }}
+                    onClick={() => document.getElementById("cameraEditInput").click()}>
+                    <span style={{ fontSize: 22 }}>📸</span>
+                    <span style={{ fontSize: 11 }}>Caméra</span>
+                  </button>
+                  <button className="btn btn-ghost btn-sm" style={{ flex: 1, flexDirection: "column", gap: 4, padding: "12px 0" }}
+                    onClick={() => fileRef.current.click()}>
+                    <span style={{ fontSize: 22 }}>🖼</span>
+                    <span style={{ fontSize: 11 }}>Galerie</span>
+                  </button>
+                </div>
+              )}
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setNewPhoto(null); }}>Annuler</button>
@@ -1922,6 +1936,7 @@ function AddToolModal({ onClose, onSave }) {
   const [form, setForm] = useState({ name: "", ref: "", purchaseDate: "", price: "", description: "", photo: "🔧", photoUrl: null });
   const [submitted, setSubmitted] = useState(false);
   const fileRef = useRef();
+  const cameraRef = useRef();
 
   const handlePhoto = (e) => {
     const file = e.target.files[0];
@@ -1951,21 +1966,30 @@ function AddToolModal({ onClose, onSave }) {
           {/* PHOTO UPLOAD — optionnel */}
           <div className="form-group">
             <label className="form-label">📷 Photo de l'outil <span style={{ fontSize: 10, color: "var(--muted)" }}>(optionnel)</span></label>
-            <div className="photo-upload-zone" onClick={() => fileRef.current.click()}>
-              <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} />
-              {form.photoUrl
-                ? <img src={form.photoUrl} alt="aperçu" className="photo-preview" />
-                : <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "10px 0" }}>
-                    <span style={{ fontSize: 36 }}>📷</span>
-                    <span>Cliquez pour choisir une photo</span>
-                    <span style={{ fontSize: 11, opacity: .6 }}>JPG, PNG, HEIC — recommandé 800×600px</span>
-                  </div>
-              }
-            </div>
-            {form.photoUrl && (
-              <button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setForm(p => ({ ...p, photoUrl: null }))}>
-                🗑 Supprimer la photo
-              </button>
+            {/* Hidden inputs */}
+            <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: "none" }} />
+
+            {form.photoUrl ? (
+              <div style={{ position: "relative" }}>
+                <img src={form.photoUrl} alt="aperçu" className="photo-preview" style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 10, background: "var(--surface2)" }} />
+                <button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setForm(p => ({ ...p, photoUrl: null }))}>
+                  🗑 Supprimer la photo
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 10 }}>
+                <button className="btn btn-ghost" style={{ flex: 1, flexDirection: "column", gap: 6, padding: "16px 0", fontSize: 13 }}
+                  onClick={() => cameraRef.current.click()}>
+                  <span style={{ fontSize: 28 }}>📸</span>
+                  Prendre une photo
+                </button>
+                <button className="btn btn-ghost" style={{ flex: 1, flexDirection: "column", gap: 6, padding: "16px 0", fontSize: 13 }}
+                  onClick={() => fileRef.current.click()}>
+                  <span style={{ fontSize: 28 }}>🖼</span>
+                  Choisir depuis la galerie
+                </button>
+              </div>
             )}
           </div>
 
