@@ -3011,34 +3011,49 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         )}
                       </div>
 
-                      {/* ADMINS */}
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5 }}>
-                          Administrateurs/Directeurs ({compAdmins.length}/30)
-                        </div>
-                      </div>
-                      {compAdmins.length === 0 ? (
-                        <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>Aucun admin — créez-en un !</div>
-                      ) : (
-                        compAdmins.map(u => (
-                          <div key={u.id} style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: 8, background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>{u.avatar}</div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div>
-                              <div style={{ fontSize: 11, color: "var(--muted)" }}>PIN: {u.pin}{u.phone ? ` · ${u.phone}` : ""}</div>
+                      {/* TOUS LES MEMBRES PAR RÔLE */}
+                      {[
+                        { role: "director", label: "🏢 Directeurs/Administrateurs", color: "#9b59b6" },
+                        { role: "admin", label: "🔑 Admins", color: "var(--accent)" },
+                        { role: "viewer", label: "👷 Employés", color: "var(--blue)" },
+                      ].map(({ role, label, color }) => {
+                        const roleUsers = compUsers.filter(u => u.role === role);
+                        return (
+                          <div key={role} style={{ marginBottom: 12 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: .5, marginBottom: 6, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                              <span>{label} ({roleUsers.length})</span>
                             </div>
-                            <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px", flexShrink: 0 }}
-                              onClick={() => {
-                                if (window.confirm(`Supprimer l'admin ${u.name} ? La compagnie ${company.name} restera intacte.`)) {
-                                  deleteDoc(doc(db, "users", String(u.id)));
-                                  showToast(`🗑 Admin ${u.name} supprimé`);
-                                }
-                              }}>
-                              🗑 Retirer
-                            </button>
+                            {roleUsers.length === 0 ? (
+                              <div style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic", paddingLeft: 8 }}>Aucun</div>
+                            ) : (
+                              roleUsers.map(u => (
+                                <div key={u.id} style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                                  <div style={{ width: 32, height: 32, borderRadius: 8, background: color, color: role === "viewer" ? "#fff" : "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, flexShrink: 0 }}>{u.avatar}</div>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div>
+                                    <div style={{ fontSize: 11, color: "var(--muted)" }}>🔑 {u.pin}{u.phone ? ` · 📞 ${u.phone}` : ""}</div>
+                                  </div>
+                                  <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px", flexShrink: 0 }}
+                                    onClick={() => {
+                                      if (window.confirm(`Supprimer ${u.name} ?`)) {
+                                        deleteDoc(doc(db, "users", String(u.id)));
+                                        showToast(`🗑 ${u.name} supprimé`);
+                                      }
+                                    }}>
+                                    🗑
+                                  </button>
+                                </div>
+                              ))
+                            )}
                           </div>
-                        ))
-                      )}
+                        );
+                      })}
+
+                      {/* DIRECTEURS — section création */}
+                      <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 4 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 8 }}>
+                          Ajouter un Directeur ({compAdmins.length}/30)
+                        </div>
 
                       {/* CREATE ADMIN FORM — max 3 */}
                       {compAdmins.length >= 30 ? (
@@ -3069,6 +3084,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                           + Ajouter un Directeur {compAdmins.length > 0 ? `(${compAdmins.length}/30)` : ""}
                         </button>
                       )}
+                      </div> {/* end director creation section */}
 
                       {/* ACTIONS COMPAGNIE */}
                       <div style={{ marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
