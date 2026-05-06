@@ -387,7 +387,8 @@ export default function App() {
   const toastRef = useRef();
 
   const isSuperAdmin = currentUser?.role === "superadmin";
-  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "superadmin";
+  const isDirector = currentUser?.role === "director";
+  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "director" || currentUser?.role === "superadmin";
   const unread = messages.filter(m => !m.read && String(m.from) !== String(currentUser?.id)).length;
 
   // ── FILTRAGE PAR COMPAGNIE ───────────────────────────────────────────────────
@@ -405,7 +406,7 @@ export default function App() {
   // Sauvegarde l'utilisateur connecté dans le navigateur
   const loginUser = (u) => {
     setCurrentUser(u);
-    setPage(u.role === "superadmin" ? "dashboard" : u.role === "admin" ? "tools" : "mytools");
+    setPage(u.role === "superadmin" ? "dashboard" : u.role === "admin" || u.role === "director" ? "tools" : "mytools");
     try { localStorage.setItem("tooltrack_user_id", u.id); } catch(e) {}
   };
   const logoutUser = () => {
@@ -428,7 +429,7 @@ export default function App() {
           const savedUser = loadedUsers.find(u => u.id === savedId);
           if (savedUser) {
             setCurrentUser(savedUser);
-            setPage(savedUser.role === "superadmin" ? "dashboard" : savedUser.role === "admin" ? "tools" : "mytools");
+            setPage(savedUser.role === "superadmin" ? "dashboard" : savedUser.role === "admin" || savedUser.role === "director" ? "tools" : "mytools");
           } else {
             // User not found in Firebase — clear invalid session
             localStorage.removeItem("tooltrack_user_id");
@@ -1451,11 +1452,11 @@ export default function App() {
                   )
                 ) : (
                   // ADMIN — voit uniquement sa compagnie
-                  ["admin", "viewer"].map(role => {
+                  ["director", "admin", "viewer"].map(role => {
                   const roleUsers = filteredUsers.filter(u => u.role === role);
                   if (roleUsers.length === 0) return null;
-                  const roleColor = role === "admin" ? "var(--accent)" : "var(--blue)";
-                  const roleLabel = role === "admin" ? "🔑 Admins" : "👷 Employés";
+                  const roleColor = role === "director" ? "#9b59b6" : role === "admin" ? "var(--accent)" : "var(--blue)";
+                  const roleLabel = role === "director" ? "🏢 Administrateurs/Directeurs" : role === "admin" ? "🔑 Admins" : "👷 Employés";
                   return (
                     <div key={role} style={{ marginBottom: 28 }}>
                       <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800, color: roleColor, marginBottom: 12, textTransform: "uppercase", letterSpacing: 1, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1468,7 +1469,7 @@ export default function App() {
                         {roleUsers.map(u => {
                           const assignedTools = filteredTools.filter(t => String(t.assignedTo) === String(u.id));
                           const isSelf = String(u.id) === String(currentUser.id);
-                          const canSeePins = currentUser.role === "superadmin" || currentUser.role === "admin";
+                          const canSeePins = currentUser.role === "superadmin" || currentUser.role === "admin" || currentUser.role === "director";
                           return (
                             <div key={u.id} style={{ background: "var(--surface)", border: `1px solid ${isSelf ? roleColor : "var(--border)"}`, borderRadius: 12, overflow: "hidden" }}>
                               <div style={{ height: 6, background: roleColor }} />
@@ -1481,7 +1482,7 @@ export default function App() {
                                       {isSelf && <span style={{ fontSize: 10, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "1px 6px", borderRadius: 8, marginLeft: 6, fontFamily: "var(--font-body)" }}>Moi</span>}
                                     </div>
                                     <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: roleColor + "22", color: roleColor, marginTop: 3, display: "inline-block" }}>
-                                      {role === "admin" ? "Admin" : "Employé"}
+                                      {role === "director" ? "🏢 Directeur" : role === "admin" ? "🔑 Admin" : "👷 Employé"}
                                     </span>
                                   </div>
                                 </div>
@@ -1507,7 +1508,7 @@ export default function App() {
                                     }
                                   </div>
                                 )}
-                                {!isSelf && (u.role === "viewer" ? true : currentUser.role === "superadmin") && (
+                                {!isSelf && (u.role === "viewer" ? true : currentUser.role === "superadmin" || (currentUser.role === "director" && u.role === "admin")) && (
                                   <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }}
                                     onClick={() => {
                                       if (assignedTools.length > 0) { showToast("⚠️ Ce profil a encore des outils confiés !", "warn"); return; }
@@ -1595,7 +1596,7 @@ export default function App() {
 
 // ─── MODAL ROUTER ─────────────────────────────────────────────────────────────
 function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool, myCompany }) {
-  const isAdmin = currentUser.role === "admin" || currentUser.role === "superadmin";
+  const isAdmin = currentUser.role === "admin" || currentUser.role === "director" || currentUser.role === "superadmin";
   if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
   if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} myCompany={myCompany} />;
   if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} />;
@@ -2237,9 +2238,22 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
               </div>
               <div className="form-group"><label className="form-label">Rôle <span style={{ color: "var(--red)" }}>*</span></label>
                 <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
-                  <option value="viewer">👷 Employé</option>
-                  <option value="admin">🔑 Admin</option>
-                  {currentUser?.role === "superadmin" && <option value="superadmin">👑 Administrateur Principal</option>}
+                  {/* Director can create: admin and viewer */}
+                  {currentUser?.role === "director" && <>
+                    <option value="admin">🔑 Admin</option>
+                    <option value="viewer">👷 Employé</option>
+                  </>}
+                  {/* Admin can create: viewer only */}
+                  {currentUser?.role === "admin" && <>
+                    <option value="viewer">👷 Employé</option>
+                  </>}
+                  {/* Superadmin can create all */}
+                  {currentUser?.role === "superadmin" && <>
+                    <option value="viewer">👷 Employé</option>
+                    <option value="admin">🔑 Admin</option>
+                    <option value="director">🏢 Administrateur/Directeur</option>
+                    <option value="superadmin">👑 Super Admin</option>
+                  </>}
                 </select>
               </div>
               <div className="form-row">
@@ -2799,7 +2813,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
     const companyName = company.name || companies.find(c => c.id === company.id)?.name || "votre compagnie";
     const companyPin = company.companyPin || companies.find(c => c.id === company.id)?.companyPin || "";
     const newAdmin = {
-      id, name: adminForm.name, role: "admin", avatar: initials,
+      id, name: adminForm.name, role: "director", avatar: initials,
       phone: adminForm.phone, email: adminForm.email, pin: adminForm.pin,
       companyId: company.id, companyName,
       companyPin,
@@ -2889,7 +2903,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
           {companies.map(company => {
             const compUsers = users.filter(u => u.companyId === company.id);
             const compTools = tools.filter(t => t.companyId === company.id);
-            const compAdmins = compUsers.filter(u => u.role === "admin");
+            const compAdmins = compUsers.filter(u => u.role === "admin" || u.role === "director");
             const isExpanded = expandedId === company.id;
             const isActive = company.active !== false;
 
@@ -2993,8 +3007,8 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 
                       {/* ADMINS */}
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5 }}>
-                          Administrateurs ({compAdmins.length}/30)
+        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5 }}>
+                          Administrateurs/Directeurs ({compAdmins.length}/30)
                         </div>
                       </div>
                       {compAdmins.length === 0 ? (
@@ -3493,9 +3507,9 @@ function PinLogin({ user, onSuccess }) {
   };
 
   if (!open) {
-    const bgColor = user.role === "superadmin" ? "#e84040" : user.role === "admin" ? "var(--accent)" : "var(--blue)";
-    const textColor = user.role === "viewer" ? "#fff" : "#000";
-    const roleLabel = user.role === "superadmin" ? "👑 Super Admin" : user.role === "admin" ? "🔑 Admin" : "👷 Employé";
+    const roleLabel = user.role === "superadmin" ? "👑 Super Admin" : user.role === "director" ? "🏢 Directeur" : user.role === "admin" ? "🔑 Admin" : "👷 Employé";
+    const bgColor = user.role === "superadmin" ? "#e84040" : user.role === "director" ? "#9b59b6" : user.role === "admin" ? "var(--accent)" : "var(--blue)";
+    const textColor = user.role === "admin" ? "#000" : "#fff";
     return (
       <div className="user-select-item" onClick={() => setOpen(true)}>
         <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: bgColor, color: textColor }}>{user.avatar}</div>
