@@ -2936,6 +2936,23 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         })()}
                         {!company.expiryDate && <span style={{ color: "var(--muted)", fontSize: 10 }}>📅 Pas de date d'expiration</span>}
                       </div>
+                      {/* WHATSAPP REMINDER — visible même compagnie fermée */}
+                      {(() => {
+                        const days = getDaysUntilExpiry(company.expiryDate);
+                        const directors = compUsers.filter(u => u.role === "director");
+                        if (days === null || days > 5 || directors.length === 0) return null;
+                        return (
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                            {directors.map(d => (
+                              <button key={d.id} className="btn btn-sm"
+                                style={{ background: "rgba(37,211,102,.2)", color: "#25d366", fontSize: 11, padding: "3px 10px" }}
+                                onClick={e => { e.stopPropagation(); sendExpiryWarningWhatsApp(company, d, days); }}>
+                                📲 Rappel → {d.name}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <button className="btn btn-ghost btn-sm" onClick={() => setExpandedId(isExpanded ? null : company.id)}>
                       {isExpanded ? "▲" : "▼"}
