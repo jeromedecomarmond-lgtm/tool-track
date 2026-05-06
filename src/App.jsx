@@ -2,6 +2,98 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { db } from "./firebase";
 import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs } from "firebase/firestore";
 
+// ─── TRANSLATIONS ─────────────────────────────────────────────────────────────
+const T = {
+  fr: {
+    // Navigation
+    dashboard: "Dashboard", tools: "Outils", chantiers: "Chantiers",
+    requests: "Demandes", team: "Équipe", companies: "Compagnies",
+    mytools: "Mes outils", parc: "Parc", profile: "Profil",
+    // Actions
+    add: "Ajouter", save: "Sauvegarder", cancel: "Annuler", delete: "Supprimer",
+    edit: "Modifier", confirm: "Confirmer", send: "Envoyer", create: "Créer",
+    approve: "Approuver", refuse: "Refuser", close: "Fermer",
+    // Tools
+    addTool: "Ajouter un outil", toolName: "Nom", supplier: "Fournisseur",
+    purchaseDate: "Date d'achat", price: "Prix d'achat (Rs)", description: "Description",
+    photo: "Photo de l'outil", takePhoto: "Prendre une photo", gallery: "Choisir depuis la galerie",
+    noPhoto: "Aucune photo", store: "Store", assigned: "Sur chantier",
+    nonfunctional: "Non fonctionnel", obsolete: "Obsolète",
+    inStore: "En store", onSite: "Sur chantier",
+    // Users
+    addProfile: "Ajouter un profil", fullName: "Nom complet", role: "Rôle",
+    phone: "Téléphone WhatsApp", email: "Email", pin: "Code PIN (4 chiffres)",
+    employee: "Employé", admin: "Admin", superadmin: "Super Admin",
+    createProfile: "Créer le profil", sendWhatsApp: "Envoyer l'invitation via WhatsApp",
+    // Companies
+    newCompany: "Nouvelle compagnie", companyName: "Nom de la compagnie",
+    expiryDate: "Date d'expiration", contactEmail: "Email de contact",
+    companyCode: "Code de la compagnie", suspend: "Suspendre", reactivate: "Réactiver",
+    suspended: "Suspendue", active: "Active",
+    // Requests
+    pending: "En attente", approved: "Approuvé", refused: "Refusé",
+    transfer: "Transfert", returnStore: "Retour store", nonFunctional: "Non fonctionnel",
+    // Login
+    enterCompanyCode: "Entrez le code de votre compagnie",
+    chooseProfile: "Choisissez votre profil", administration: "Administration",
+    // Messages
+    noTools: "Aucun outil", noRequests: "Aucune demande", noTeam: "Aucun membre",
+    required: "obligatoire", optional: "optionnel",
+    // Language
+    language: "Langue", french: "Français", english: "English",
+  },
+  en: {
+    // Navigation
+    dashboard: "Dashboard", tools: "Tools", chantiers: "Job Sites",
+    requests: "Requests", team: "Team", companies: "Companies",
+    mytools: "My Tools", parc: "Tool Park", profile: "Profile",
+    // Actions
+    add: "Add", save: "Save", cancel: "Cancel", delete: "Delete",
+    edit: "Edit", confirm: "Confirm", send: "Send", create: "Create",
+    approve: "Approve", refuse: "Refuse", close: "Close",
+    // Tools
+    addTool: "Add a tool", toolName: "Name", supplier: "Supplier",
+    purchaseDate: "Purchase date", price: "Purchase price (Rs)", description: "Description",
+    photo: "Tool photo", takePhoto: "Take a photo", gallery: "Choose from gallery",
+    noPhoto: "No photo", store: "Store", assigned: "On site",
+    nonfunctional: "Not functional", obsolete: "Obsolete",
+    inStore: "In store", onSite: "On job site",
+    // Users
+    addProfile: "Add a profile", fullName: "Full name", role: "Role",
+    phone: "WhatsApp phone", email: "Email", pin: "PIN code (4 digits)",
+    employee: "Employee", admin: "Admin", superadmin: "Super Admin",
+    createProfile: "Create profile", sendWhatsApp: "Send invitation via WhatsApp",
+    // Companies
+    newCompany: "New company", companyName: "Company name",
+    expiryDate: "Expiry date", contactEmail: "Contact email",
+    companyCode: "Company code", suspend: "Suspend", reactivate: "Reactivate",
+    suspended: "Suspended", active: "Active",
+    // Requests
+    pending: "Pending", approved: "Approved", refused: "Refused",
+    transfer: "Transfer", returnStore: "Return to store", nonFunctional: "Not functional",
+    // Login
+    enterCompanyCode: "Enter your company code",
+    chooseProfile: "Choose your profile", administration: "Administration",
+    // Messages
+    noTools: "No tools", noRequests: "No requests", noTeam: "No members",
+    required: "required", optional: "optional",
+    // Language
+    language: "Language", french: "Français", english: "English",
+  }
+};
+
+// ─── LANGUAGE HOOK ────────────────────────────────────────────────────────────
+function useLang() {
+  const [lang, setLang] = useState(() => {
+    try { return localStorage.getItem("tooltrack_lang") || "fr"; } catch { return "fr"; }
+  });
+  const setLanguage = (l) => {
+    setLang(l);
+    try { localStorage.setItem("tooltrack_lang", l); } catch {}
+  };
+  return [T[lang], lang, setLanguage];
+}
+
 // ─── HOOK LOADING BUTTON ──────────────────────────────────────────────────────
 // Rend un bouton temporairement inactif après confirmation pour éviter les doublons
 function useLoadingBtn() {
@@ -273,6 +365,7 @@ const css = `
 // ─── APP ─────────────────────────────────────────────────────────────────────
 // ─── APP ─────────────────────────────────────────────────────────────────────
 export default function App() {
+  const [t, lang, setLanguage] = useLang();
   const [currentUser, setCurrentUser] = useState(null);
   const [users, setUsers] = useState(INITIAL_USERS);
   const [tools, setTools] = useState(INITIAL_TOOLS);
@@ -440,6 +533,9 @@ export default function App() {
           companies={companies}
           onLogin={loginUser}
           db={db}
+          lang={lang}
+          setLanguage={setLanguage}
+          t={t}
         />
       </>
     );
@@ -676,7 +772,16 @@ export default function App() {
                 <div className="role">{currentUser.role}</div>
               </div>
             </div>
-            <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={logoutUser}>⇄ Changer</button>
+            <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={logoutUser}>⇄ {t.profile}</button>
+            {/* LANGUAGE SELECTOR */}
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              <button onClick={() => setLanguage("fr")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "fr" ? "var(--accent)" : "var(--border)"}`, background: lang === "fr" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "fr" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                🇫🇷 FR
+              </button>
+              <button onClick={() => setLanguage("en")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "en" ? "var(--accent)" : "var(--border)"}`, background: lang === "en" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "en" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                🇬🇧 EN
+              </button>
+            </div>
           </div>
         </aside>
 
@@ -1389,8 +1494,13 @@ export default function App() {
       {/* ── BOTTOM NAV (mobile) ── */}
       <nav className="bottom-nav">
         <button className="bottom-nav-item" onClick={logoutUser}>
-          <span className="bn-icon">⇄</span>Profil
+          <span className="bn-icon">⇄</span>{t.profile}
         </button>
+        {isSuperAdmin && (
+          <button className={`bottom-nav-item ${page === "companies" ? "active" : ""}`} onClick={() => setPage("companies")}>
+            <span className="bn-icon">🏢</span>Compagnies
+          </button>
+        )}
         {isAdmin && (
           <button className={`bottom-nav-item ${page === "dashboard" ? "active" : ""}`} onClick={() => setPage("dashboard")}>
             <span className="bn-icon">📊</span>Stats
@@ -3104,7 +3214,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
 }
 
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
-function LoginScreen({ users, companies, onLogin, db }) {
+function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
   const [step, setStep] = useState("company"); // "company" | "profile"
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [companyPin, setCompanyPin] = useState("");
@@ -3182,6 +3292,16 @@ function LoginScreen({ users, companies, onLogin, db }) {
       <div className="login-card">
         <div className="login-title">TOOL TRACK</div>
 
+        {/* LANGUAGE SELECTOR */}
+        <div style={{ display: "flex", gap: 8, width: "100%", marginBottom: 8 }}>
+          <button onClick={() => setLanguage("fr")} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `2px solid ${lang === "fr" ? "var(--accent)" : "var(--border)"}`, background: lang === "fr" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "fr" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            🇫🇷 Français
+          </button>
+          <button onClick={() => setLanguage("en")} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `2px solid ${lang === "en" ? "var(--accent)" : "var(--border)"}`, background: lang === "en" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "en" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            🇬🇧 English
+          </button>
+        </div>
+
         {/* Superadmin — direct access at top */}
         {superAdmins.length > 0 && (
           <div style={{ width: "100%", marginBottom: 16 }}>
@@ -3193,7 +3313,7 @@ function LoginScreen({ users, companies, onLogin, db }) {
           </div>
         )}
 
-        <div className="login-sub">Entrez le code de votre compagnie</div>
+        <div className="login-sub">{t.enterCompanyCode}</div>
 
         {/* PIN DOTS */}
         <div style={{ display: "flex", justifyContent: "center", gap: 16, margin: "20px 0" }}>
