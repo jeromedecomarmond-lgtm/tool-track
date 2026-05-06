@@ -765,7 +765,7 @@ export default function App() {
               <span className="icon">🔔</span><span>Demandes</span>
               {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
             </button>
-            {isAdmin && <button className={`nav-item ${page === "users" ? "active" : ""}`} onClick={() => setPage("users")}><span className="icon">👷</span><span>Équipe</span></button>}
+            {isAdmin && !isSuperAdmin && <button className={`nav-item ${page === "users" ? "active" : ""}`} onClick={() => setPage("users")}><span className="icon">👷</span><span>Équipe</span></button>}
           </nav>
           <div className="sidebar-user">
             <div className="user-pill">
@@ -1577,7 +1577,7 @@ export default function App() {
           <span className="bn-icon">🔔</span>Demandes
           {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
         </button>
-        {isAdmin && (
+        {isAdmin && !isSuperAdmin && (
           <button className={`bottom-nav-item ${page === "users" ? "active" : ""}`} onClick={() => setPage("users")}>
             <span className="bn-icon">👷</span>Équipe
           </button>
