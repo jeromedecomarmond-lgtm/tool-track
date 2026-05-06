@@ -1243,7 +1243,7 @@ export default function App() {
                   companies.map(company => {
                     const companyRequests = requests.filter(r => r.companyId === company.id);
                     if (companyRequests.length === 0) return null;
-                    const companyAdmins = users.filter(u => u.companyId === company.id && u.role === "admin");
+                    const companyAdmins = users.filter(u => u.companyId === company.id && u.role === "director");
                     return (
                       <div key={company.id} style={{ marginBottom: 24 }}>
                         <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: company.color || "var(--accent)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
@@ -2987,24 +2987,24 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         {company.expiryDate && getDaysUntilExpiry(company.expiryDate) !== null && getDaysUntilExpiry(company.expiryDate) <= 5 && getDaysUntilExpiry(company.expiryDate) >= 0 && (
                           <div style={{ marginTop: 10, padding: "10px 12px", background: "rgba(245,166,35,.1)", borderRadius: 8, border: "1px solid rgba(245,166,35,.3)" }}>
                             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", marginBottom: 6 }}>
-                              ⚠️ Expire dans {getDaysUntilExpiry(company.expiryDate)} jour{getDaysUntilExpiry(company.expiryDate) > 1 ? "s" : ""} — Envoyer un avertissement
+                              ⚠️ Expire dans {getDaysUntilExpiry(company.expiryDate)} jour{getDaysUntilExpiry(company.expiryDate) > 1 ? "s" : ""} — Envoyer un avertissement au Directeur
                             </div>
-                            {compAdmins.map(admin => (
-                              <button key={admin.id} className="btn btn-sm" style={{ background: "rgba(37,211,102,.2)", color: "#25d366", fontSize: 12, marginRight: 6 }}
-                                onClick={() => sendExpiryWarningWhatsApp(company, admin, getDaysUntilExpiry(company.expiryDate))}>
-                                📲 WhatsApp → {admin.name}
+                            {compUsers.filter(u => u.role === "director").map(director => (
+                              <button key={director.id} className="btn btn-sm" style={{ background: "rgba(37,211,102,.2)", color: "#25d366", fontSize: 12, marginRight: 6 }}
+                                onClick={() => sendExpiryWarningWhatsApp(company, director, getDaysUntilExpiry(company.expiryDate))}>
+                                📲 WhatsApp → {director.name}
                               </button>
                             ))}
                           </div>
                         )}
-                        {/* MANUAL WARNING — send anytime */}
-                        {company.expiryDate && compAdmins.length > 0 && (
+                        {/* MANUAL WARNING — send anytime, directors only */}
+                        {company.expiryDate && compUsers.filter(u => u.role === "director").length > 0 && (
                           <div style={{ marginTop: 8 }}>
-                            <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 4 }}>Envoyer l'avertissement manuellement :</div>
-                            {compAdmins.map(admin => (
-                              <button key={admin.id} className="btn btn-ghost btn-sm" style={{ fontSize: 11, marginRight: 4 }}
-                                onClick={() => sendExpiryWarningWhatsApp(company, admin, getDaysUntilExpiry(company.expiryDate))}>
-                                📲 {admin.name}
+                            <div style={{ fontSize: 10, color: "var(--muted)", marginBottom: 4 }}>Envoyer l'avertissement manuellement au Directeur :</div>
+                            {compUsers.filter(u => u.role === "director").map(director => (
+                              <button key={director.id} className="btn btn-ghost btn-sm" style={{ fontSize: 11, marginRight: 4 }}
+                                onClick={() => sendExpiryWarningWhatsApp(company, director, getDaysUntilExpiry(company.expiryDate))}>
+                                📲 {director.name}
                               </button>
                             ))}
                           </div>
@@ -3033,15 +3033,18 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                                     <div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div>
                                     <div style={{ fontSize: 11, color: "var(--muted)" }}>🔑 {u.pin}{u.phone ? ` · 📞 ${u.phone}` : ""}</div>
                                   </div>
-                                  <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px", flexShrink: 0 }}
-                                    onClick={() => {
-                                      if (window.confirm(`Supprimer ${u.name} ?`)) {
-                                        deleteDoc(doc(db, "users", String(u.id)));
-                                        showToast(`🗑 ${u.name} supprimé`);
-                                      }
-                                    }}>
-                                    🗑
-                                  </button>
+                                  {/* Superadmin peut supprimer uniquement les directeurs */}
+                                  {role === "director" && (
+                                    <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px", flexShrink: 0 }}
+                                      onClick={() => {
+                                        if (window.confirm(`Supprimer le directeur ${u.name} ?`)) {
+                                          deleteDoc(doc(db, "users", String(u.id)));
+                                          showToast(`🗑 ${u.name} supprimé`);
+                                        }
+                                      }}>
+                                      🗑
+                                    </button>
+                                  )}
                                 </div>
                               ))
                             )}
