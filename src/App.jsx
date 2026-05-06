@@ -381,6 +381,8 @@ export default function App() {
   const [filterUser, setFilterUser] = useState("all");
   const [filterChantier, setFilterChantier] = useState("all");
   const [search, setSearch] = useState("");
+  const [selectedTools, setSelectedTools] = useState([]); // Multi-select
+  const [showMovePanel, setShowMovePanel] = useState(false);
   const [writeMsg, setWriteMsg] = useState({ toolId: "", text: "", type: "info" });
   const toastRef = useRef();
 
@@ -974,7 +976,14 @@ export default function App() {
             <>
               <div className="topbar">
                 <h2>Outils</h2>
-                <button className="btn btn-primary" onClick={() => setModal({ type: "addTool" })}>+ Ajouter un outil</button>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {selectedTools.length > 0 && (
+                    <button className="btn btn-blue btn-sm" onClick={() => setShowMovePanel(true)}>
+                      ↗ Déplacer ({selectedTools.length})
+                    </button>
+                  )}
+                  <button className="btn btn-primary" onClick={() => setModal({ type: "addTool" })}>+ Ajouter</button>
+                </div>
               </div>
               <div className="content">
                 <div className="filters">
@@ -1004,6 +1013,24 @@ export default function App() {
                     {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
+
+                {/* SELECT ALL */}
+                {displayedTools.length > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, padding: "8px 12px", background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border)" }}>
+                    <input type="checkbox"
+                      checked={selectedTools.length === displayedTools.length && displayedTools.length > 0}
+                      onChange={e => setSelectedTools(e.target.checked ? displayedTools.map(t => t.id) : [])}
+                      style={{ width: 18, height: 18, cursor: "pointer", accentColor: "var(--accent)" }}
+                    />
+                    <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>
+                      {selectedTools.length === 0 ? "Sélectionner tout" : `${selectedTools.length} outil${selectedTools.length > 1 ? "s" : ""} sélectionné${selectedTools.length > 1 ? "s" : ""}`}
+                    </span>
+                    {selectedTools.length > 0 && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => setSelectedTools([])}>✕ Désélectionner</button>
+                    )}
+                  </div>
+                )}
+
                 <div className="cards-grid">
                   {displayedTools.length === 0 && (
                     <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
@@ -1014,47 +1041,61 @@ export default function App() {
                   )}
                   {displayedTools.map(t => {
                     const assignee = users.find(u => String(u.id) === String(t.assignedTo));
+                    const isSelected = selectedTools.includes(t.id);
                     return (
-                      <div key={t.id} className={`tool-card${t.status === "nonfunctional" ? " nonfunctional" : t.status === "obsolete" ? " obsolete" : ""}`} onClick={() => openTool(t)} style={{ cursor: "pointer" }}>
-                        {t.photoUrl
-                          ? <img src={t.photoUrl} alt={t.name} className="tool-photo-card" />
-                          : <div className="tool-photo-placeholder"><span className="big-emoji">{t.photo}</span><span style={{ fontSize: 11 }}>Aucune photo</span></div>
-                        }
-                        <div className="tool-card-top">
-                          <div className="tool-meta" style={{ width: "100%" }}>
-                            <div className="tool-name">{t.name}</div>
-                            {t.ref && <div className="tool-ref">🏭 {t.ref}</div>}
-                          </div>
+                      <div key={t.id} style={{ position: "relative" }}>
+                        {/* CHECKBOX */}
+                        <div style={{ position: "absolute", top: 8, left: 8, zIndex: 10 }}
+                          onClick={e => { e.stopPropagation(); setSelectedTools(prev => isSelected ? prev.filter(id => id !== t.id) : [...prev, t.id]); }}>
+                          <input type="checkbox" checked={isSelected} readOnly
+                            style={{ width: 20, height: 20, cursor: "pointer", accentColor: "var(--accent)" }} />
                         </div>
-                        <div className="tool-card-body">
-                          <div className="tool-desc">{t.description}</div>
-                          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>Acheté le {fmt(t.purchaseDate)} · 📍 {t.location}</div>
-                          {t.status === "nonfunctional" && t.obsoleteType && (
-                            <div style={{ marginTop: 6, fontSize: 11, color: "#f07030", background: "rgba(232,82,10,.1)", padding: "4px 8px", borderRadius: 6 }}>
-                              🔴 {t.repairCost ? `🔎 Suivi en cours — Rs ${t.repairCost.toLocaleString("fr-MU")}` : "🔎 Suivi en cours"}
+                        <div className={`tool-card${t.status === "nonfunctional" ? " nonfunctional" : t.status === "obsolete" ? " obsolete" : ""}${isSelected ? " selected" : ""}`}
+                          onClick={() => openTool(t)} style={{ cursor: "pointer", border: isSelected ? "2px solid var(--accent)" : undefined }}>
+                          {t.photoUrl
+                            ? <img src={t.photoUrl} alt={t.name} className="tool-photo-card" />
+                            : <div className="tool-photo-placeholder"><span className="big-emoji">{t.photo}</span><span style={{ fontSize: 11 }}>Aucune photo</span></div>
+                          }
+                          <div className="tool-card-top">
+                            <div className="tool-meta" style={{ width: "100%" }}>
+                              <div className="tool-name">{t.name}</div>
+                              {t.ref && <div className="tool-ref">🏭 {t.ref}</div>}
                             </div>
-                          )}
-                        </div>
-                        <div className="tool-card-footer">
-                          {{
-                            store: <span className="status-badge status-store">🟢 Store</span>,
-                            assigned: <span className="status-badge status-assigned">🔵 Chantier</span>,
-                            nonfunctional: <span className="status-badge status-nonfunctional">🔴 Non fonctionnel</span>,
-                            obsolete: <span className="status-badge status-obsolete">⚫ Obsolète</span>,
-                          }[t.status] || <span className="status-badge">{t.status}</span>}
-                          {t.price && <span className="price-tag">🇲🇺 Rs {t.price.toLocaleString("fr-MU")}</span>}
-                          {t.totalRepairCost > 0 && (
-                            <span className="repair-tag" title="Total cumulatif des réparations">
-                              🔧 Rs {t.totalRepairCost.toLocaleString("fr-MU")}
-                            </span>
-                          )}
-                          {assignee && <span className="assignee-chip"><div style={{ width: 20, height: 20, fontSize: 9, borderRadius: 5, background: "var(--blue)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{assignee.avatar}</div>{assignee.name.split(" ")[0]}</span>}
+                          </div>
+                          <div className="tool-card-body">
+                            <div className="tool-desc">{t.description}</div>
+                            <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>📍 {t.location}</div>
+                          </div>
+                          <div className="tool-card-footer">
+                            {{
+                              store: <span className="status-badge status-store">🟢 Store</span>,
+                              assigned: <span className="status-badge status-assigned">🔵 Chantier</span>,
+                              nonfunctional: <span className="status-badge status-nonfunctional">🔴 Non fonctionnel</span>,
+                              obsolete: <span className="status-badge status-obsolete">⚫ Obsolète</span>,
+                            }[t.status] || <span className="status-badge">{t.status}</span>}
+                            {t.price && <span className="price-tag">🇲🇺 Rs {t.price.toLocaleString("fr-MU")}</span>}
+                            {assignee && <span className="assignee-chip"><div style={{ width: 20, height: 20, fontSize: 9, borderRadius: 5, background: "var(--blue)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{assignee.avatar}</div>{assignee.name.split(" ")[0]}</span>}
+                          </div>
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
+
+              {/* MOVE PANEL — multi-select action */}
+              {showMovePanel && (
+                <MovePanelModal
+                  selectedIds={selectedTools}
+                  tools={filteredTools}
+                  viewers={viewers}
+                  chantiers={filteredChantiers}
+                  currentUser={currentUser}
+                  onClose={() => { setShowMovePanel(false); setSelectedTools([]); }}
+                  assignTool={assignTool}
+                  showToast={showToast}
+                />
+              )}
             </>
           )}
 
@@ -3035,6 +3076,95 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
         </div>
       </div>
     </>
+  );
+}
+
+// ─── MOVE PANEL MODAL ────────────────────────────────────────────────────────
+function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, onClose, assignTool, showToast }) {
+  const [action, setAction] = useState(""); // "out" | "in" | "nonfunctional"
+  const [viewerId, setViewerId] = useState("");
+  const [chantier, setChantier] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const selectedTools = tools.filter(t => selectedIds.includes(t.id));
+
+  const handleMove = async () => {
+    if (!action) return;
+    if (action === "out" && (!viewerId || !chantier)) return;
+    setLoading(true);
+    for (const t of selectedTools) {
+      if (action === "out") await assignTool(t.id, viewerId, chantier, "out");
+      else if (action === "in") await assignTool(t.id, null, null, "in");
+      else if (action === "nonfunctional") {
+        await setDoc(doc(db, "tools", String(t.id)), {
+          ...t, status: "nonfunctional",
+          history: [...(t.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `🔴 Déclaré non fonctionnel — par ${currentUser.name}`, by: currentUser.name }],
+        });
+      }
+    }
+    showToast(`✅ ${selectedIds.length} outil${selectedIds.length > 1 ? "s" : ""} déplacé${selectedIds.length > 1 ? "s" : ""} !`);
+    setLoading(false);
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ maxWidth: 420 }}>
+        <div className="modal-header">
+          <h3>↗ Déplacer {selectedIds.length} outil{selectedIds.length > 1 ? "s" : ""}</h3>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          {/* LISTE DES OUTILS SÉLECTIONNÉS */}
+          <div style={{ background: "var(--surface2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>Outils sélectionnés</div>
+            {selectedTools.map(t => (
+              <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span>{t.photo}</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</span>
+                <span style={{ fontSize: 11, color: "var(--muted)" }}>— 📍 {t.location}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* ACTION */}
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "var(--muted)" }}>Choisissez l'action :</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+            {[
+              { val: "out", label: "↗ Sortir & Confier à un employé", color: "var(--blue)" },
+              { val: "in", label: "↙ Retourner au Store", color: "var(--green)" },
+              { val: "nonfunctional", label: "🔴 Déclarer non fonctionnel", color: "#f07030" },
+            ].map(a => (
+              <button key={a.val} onClick={() => setAction(a.val)}
+                style={{ padding: "12px 16px", borderRadius: 10, border: `2px solid ${action === a.val ? a.color : "var(--border)"}`, background: action === a.val ? a.color + "22" : "var(--surface)", color: action === a.val ? a.color : "var(--text)", fontWeight: 700, fontSize: 13, textAlign: "left", cursor: "pointer" }}>
+                {a.label}
+              </button>
+            ))}
+          </div>
+
+          {/* OPTIONS POUR "SORTIR" */}
+          {action === "out" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <select className="form-input" value={viewerId} onChange={e => setViewerId(e.target.value)}>
+                <option value="">— Choisir un employé —</option>
+                {viewers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+              <select className="form-input" value={chantier} onChange={e => setChantier(e.target.value)}>
+                <option value="">— Choisir un chantier —</option>
+                {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
+          <button className="btn btn-primary" disabled={!action || (action === "out" && (!viewerId || !chantier)) || loading}
+            onClick={handleMove}>
+            {loading ? "⏳ En cours..." : `✅ Confirmer (${selectedIds.length} outil${selectedIds.length > 1 ? "s" : ""})`}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
