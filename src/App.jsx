@@ -90,7 +90,13 @@ function useLang() {
   const setLanguage = (l) => {
     setLang(l);
     try { localStorage.setItem("tooltrack_lang", l); } catch {}
+    // Update HTML lang for browser translation
+    document.documentElement.lang = l;
   };
+  // Apply on mount
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, []);
   return [T[lang], lang, setLanguage];
 }
 
@@ -755,17 +761,17 @@ export default function App() {
             <p>Gestion d'outils</p>
           </div>
           <nav className="sidebar-nav">
-            {isAdmin && <button className={`nav-item ${page === "dashboard" ? "active" : ""}`} onClick={() => setPage("dashboard")}><span className="icon">📊</span><span>Dashboard</span></button>}
-            {isSuperAdmin && <button className={`nav-item ${page === "companies" ? "active" : ""}`} onClick={() => setPage("companies")}><span className="icon">🏢</span><span>Compagnies</span></button>}
-            {isAdmin && !isSuperAdmin && <button className={`nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}><span className="icon">🔧</span><span>Outils</span></button>}
-            {isAdmin && !isSuperAdmin && <button className={`nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}><span className="icon">🏗</span><span>Chantiers</span></button>}
-            {!isAdmin && <button className={`nav-item ${page === "mytools" ? "active" : ""}`} onClick={() => setPage("mytools")}><span className="icon">📦</span><span>Mes outils</span></button>}
-            {!isAdmin && <button className={`nav-item ${page === "parc" ? "active" : ""}`} onClick={() => setPage("parc")}><span className="icon">🔧</span><span>Parc outils</span></button>}
+            {isAdmin && <button className={`nav-item ${page === "dashboard" ? "active" : ""}`} onClick={() => setPage("dashboard")}><span className="icon">📊</span><span>{t.dashboard}</span></button>}
+            {isSuperAdmin && <button className={`nav-item ${page === "companies" ? "active" : ""}`} onClick={() => setPage("companies")}><span className="icon">🏢</span><span>{t.companies}</span></button>}
+            {isAdmin && !isSuperAdmin && <button className={`nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}><span className="icon">🔧</span><span>{t.tools}</span></button>}
+            {isAdmin && !isSuperAdmin && <button className={`nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}><span className="icon">🏗</span><span>{t.chantiers}</span></button>}
+            {!isAdmin && <button className={`nav-item ${page === "mytools" ? "active" : ""}`} onClick={() => setPage("mytools")}><span className="icon">📦</span><span>{t.mytools}</span></button>}
+            {!isAdmin && <button className={`nav-item ${page === "parc" ? "active" : ""}`} onClick={() => setPage("parc")}><span className="icon">🔧</span><span>{t.parc}</span></button>}
             <button className={`nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
-              <span className="icon">🔔</span><span>Demandes</span>
+              <span className="icon">🔔</span><span>{t.requests}</span>
               {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
             </button>
-            {isAdmin && !isSuperAdmin && <button className={`nav-item ${page === "users" ? "active" : ""}`} onClick={() => setPage("users")}><span className="icon">👷</span><span>Équipe</span></button>}
+            {isAdmin && !isSuperAdmin && <button className={`nav-item ${page === "users" ? "active" : ""}`} onClick={() => setPage("users")}><span className="icon">👷</span><span>{t.team}</span></button>}
           </nav>
           <div className="sidebar-user">
             <div className="user-pill">
@@ -810,7 +816,7 @@ export default function App() {
           {/* ── DASHBOARD ── */}
           {page === "dashboard" && isAdmin && (
             <>
-              <div className="topbar"><h2>📊 Dashboard</h2></div>
+              <div className="topbar"><h2>📊 {t.dashboard}</h2></div>
               <div className="content">
 
                 {isSuperAdmin ? (
@@ -911,7 +917,7 @@ export default function App() {
                                   { label: "👷 Équipe", value: cUsers.length, color: "var(--blue)" },
                                   { label: "🔧 Outils", value: cTools.length, color: "var(--accent)" },
                                   { label: "🏗 Chantiers", value: cChantiers.length, color: "var(--green)" },
-                                  { label: "🟢 Store", value: cTools.filter(t => t.status === "store").length, color: "var(--green)" },
+                                  { label: t.inStore, value: cTools.filter(t => t.status === "store").length, color: "var(--green)" },
                                   { label: "🔵 Chantiers", value: cTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
                                   { label: "🔴 Non fonct.", value: cTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
                                   { label: "👑 Admins", value: cUsers.filter(u => u.role === "admin").length, color: "var(--accent)" },
@@ -976,7 +982,7 @@ export default function App() {
           {page === "tools" && isAdmin && (
             <>
               <div className="topbar">
-                <h2>Outils</h2>
+                <h2>{t.tools}</h2>
                 <div style={{ display: "flex", gap: 8 }}>
                   {selectedTools.length > 0 && (
                     <button className="btn btn-blue btn-sm" onClick={() => setShowMovePanel(true)}>
@@ -994,9 +1000,9 @@ export default function App() {
                   </div>
                   {[
                     { val: "all", label: "Tous" },
-                    { val: "store", label: "🟢 Store" },
+                    { val: "store", label: t.inStore },
                     { val: "assigned", label: "🔵 Chantier" },
-                    { val: "nonfunctional", label: "🔴 Non fonctionnel" },
+                    { val: "nonfunctional", label: t.nonfunctional },
                     { val: "obsolete", label: "⚫ Obsolète" },
                   ].map(s => (
                     <button key={s.val} className={`filter-btn ${filterStatus === s.val ? "active" : ""}`} onClick={() => { setFilterStatus(s.val); setFilterUser("all"); setFilterChantier("all"); }}>
@@ -1104,7 +1110,7 @@ export default function App() {
           {page === "mytools" && !isAdmin && (
             <>
               <div className="topbar">
-                <h2>📦 Mes outils</h2>
+                <h2>📦 {t.mytools}</h2>
                 <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>
                   {myTools.length === 0 ? "Aucun outil confié" : `${myTools.length} outil${myTools.length > 1 ? "s" : ""} sous ma responsabilité`}
                 </span>
@@ -1139,7 +1145,7 @@ export default function App() {
           {/* ── PARC OUTILS (VIEWER) ── */}
           {page === "parc" && !isAdmin && (
             <>
-              <div className="topbar"><h2>🔧 Parc outils</h2></div>
+              <div className="topbar"><h2>🔧 {t.parc}</h2></div>
               <div className="content">
 
                 {/* STATS RAPIDES */}
@@ -1147,7 +1153,7 @@ export default function App() {
                   {[
                     { label: "🟢 En store", count: filteredTools.filter(t => t.status === "store").length, color: "var(--green)" },
                     { label: "🔵 Sur chantiers", count: filteredTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
-                    { label: "🔴 Non fonctionnel", count: filteredTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+                    { label: t.nonfunctional, count: filteredTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
                     { label: "📦 Mes outils", count: myTools.length, color: "var(--accent)" },
                   ].map(s => (
                     <div key={s.label} style={{ background: "var(--surface)", border: `1px solid var(--border)`, borderRadius: 12, padding: "14px 16px" }}>
@@ -1227,7 +1233,7 @@ export default function App() {
           {page === "requests" && (
             <>
               <div className="topbar">
-                <h2>🔔 Demandes</h2>
+                <h2>🔔 {t.requests}</h2>
                 <span style={{ fontSize: 12, color: "var(--muted)" }}>{filteredRequests.filter(r => r.status === "pending").length} en attente</span>
               </div>
               <div className="content">
@@ -1392,7 +1398,7 @@ export default function App() {
           {/* ── USERS (ADMIN ONLY) ── */}
           {page === "users" && isAdmin && (
             <>
-              <div className="topbar"><h2>Équipe</h2>{!isSuperAdmin && <button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ Ajouter un profil</button>}</div>
+              <div className="topbar"><h2>{t.team}</h2>{!isSuperAdmin && <button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ Ajouter un profil</button>}</div>
               <div className="content">
                 {isSuperAdmin ? (
                   // SUPERADMIN — voit tout par compagnie
@@ -1545,41 +1551,41 @@ export default function App() {
         </button>
         {isSuperAdmin && (
           <button className={`bottom-nav-item ${page === "companies" ? "active" : ""}`} onClick={() => setPage("companies")}>
-            <span className="bn-icon">🏢</span>Compagnies
+            <span className="bn-icon">🏢</span>{t.companies}
           </button>
         )}
         {isAdmin && (
           <button className={`bottom-nav-item ${page === "dashboard" ? "active" : ""}`} onClick={() => setPage("dashboard")}>
-            <span className="bn-icon">📊</span>Stats
+            <span className="bn-icon">📊</span>{t.dashboard}
           </button>
         )}
         {isAdmin && !isSuperAdmin && (
           <button className={`bottom-nav-item ${page === "tools" ? "active" : ""}`} onClick={() => setPage("tools")}>
-            <span className="bn-icon">🔧</span>Outils
+            <span className="bn-icon">🔧</span>{t.tools}
           </button>
         )}
         {isAdmin && !isSuperAdmin && (
           <button className={`bottom-nav-item ${page === "chantiers" ? "active" : ""}`} onClick={() => setPage("chantiers")}>
-            <span className="bn-icon">🏗</span>Chantiers
+            <span className="bn-icon">🏗</span>{t.chantiers}
           </button>
         )}
         {!isAdmin && (
           <button className={`bottom-nav-item ${page === "mytools" ? "active" : ""}`} onClick={() => setPage("mytools")}>
-            <span className="bn-icon">📦</span>Mes outils
+            <span className="bn-icon">📦</span>{t.mytools}
           </button>
         )}
         {!isAdmin && (
           <button className={`bottom-nav-item ${page === "parc" ? "active" : ""}`} onClick={() => setPage("parc")}>
-            <span className="bn-icon">🔧</span>Parc
+            <span className="bn-icon">🔧</span>{t.parc}
           </button>
         )}
         <button className={`bottom-nav-item ${page === "requests" ? "active" : ""}`} onClick={() => setPage("requests")}>
-          <span className="bn-icon">🔔</span>Demandes
+          <span className="bn-icon">🔔</span>{t.requests}
           {pendingRequests > 0 && <span className="badge">{pendingRequests}</span>}
         </button>
         {isAdmin && !isSuperAdmin && (
           <button className={`bottom-nav-item ${page === "users" ? "active" : ""}`} onClick={() => setPage("users")}>
-            <span className="bn-icon">👷</span>Équipe
+            <span className="bn-icon">👷</span>{t.team}
           </button>
         )}
       </nav>
@@ -1801,7 +1807,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             <div style={{ fontWeight: 700, marginBottom: 8, color: "var(--red)" }}>⚠️ Supprimer "{tool.name}" ?</div>
             <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Cette action est irréversible. L'outil sera définitivement supprimé.</div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)}>Annuler</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)}>{t.cancel}</button>
               <button className={`btn btn-danger btn-sm ${loadingDelete ? "loading" : ""}`} disabled={loadingDelete}
                 onClick={() => triggerDelete(() => deleteTool(tool.id))}>
                 {loadingDelete ? "⏳ Suppression..." : "Confirmer la suppression"}
@@ -1861,7 +1867,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
               )}
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setNewPhoto(null); }}>Annuler</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setNewPhoto(null); }}>{t.cancel}</button>
               <button className={`btn btn-primary btn-sm ${loadingSave ? "loading" : ""}`} disabled={!editForm.name.trim() || loadingSave}
                 onClick={() => triggerSave(() => updateTool(tool.id, {
                   name: editForm.name, ref: editForm.ref,
@@ -1885,7 +1891,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             <div className="detail-item"><div className="detail-key">Fournisseur</div><div className="detail-val">{tool.ref || "—"}</div></div>
             <div className="detail-item"><div className="detail-key">Achat</div><div className="detail-val">{new Date(tool.purchaseDate).toLocaleDateString("fr-MU")}</div></div>
             <div className="detail-item"><div className="detail-key">Statut</div><div className="detail-val">
-              {{ store: "🟢 En store", assigned: "🔵 Sur chantier", nonfunctional: "🔴 Non fonctionnel", obsolete: "⚫ Obsolète" }[tool.status] || tool.status}
+              {{ store: "🟢 En store", assigned: "🔵 Sur chantier", nonfunctional: t.nonfunctional, obsolete: "⚫ Obsolète" }[tool.status] || tool.status}
             </div></div>
             <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Localisation</div><div className="detail-val">📍 {tool.location}</div></div>
             {assignee && <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Responsable</div><div className="detail-val">👷 {assignee.name}</div></div>}
@@ -2179,8 +2185,8 @@ function AddToolModal({ onClose, onSave }) {
           </div>
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-          <button className="btn btn-primary" onClick={handleSave}>Ajouter</button>
+          <button className="btn btn-ghost" onClick={onClose}>{t.cancel}</button>
+          <button className="btn btn-primary" onClick={handleSave}{t.add}</button>
         </div>
       </div>
     </div>
@@ -2309,7 +2315,7 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
         <div className="modal-footer">
           {!saved ? (
             <>
-              <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
+              <button className="btn btn-ghost" onClick={onClose}>{t.cancel}</button>
               <button className="btn btn-primary" onClick={handleSave}>Créer le profil</button>
             </>
           ) : (
@@ -2330,7 +2336,7 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
 
   return (
     <>
-      <div className="topbar"><h2>Chantiers</h2></div>
+      <div className="topbar"><h2>{t.chantiers}</h2></div>
       <div className="content">
 
         {/* ADD CARD */}
@@ -2642,7 +2648,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
                 {tab === "annonces" ? "📢 Visible par tous — les employés pourront lire mais pas répondre" : "🔑 Visible uniquement par les admins"}
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => setNewConvOpen(false)}>Annuler</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setNewConvOpen(false)}>{t.cancel}</button>
                 <button className="btn btn-primary btn-sm" disabled={!newSubject.trim() || !newText.trim()} onClick={createConversation}>Envoyer</button>
               </div>
             </div>
@@ -2905,7 +2911,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormSubmitted(false); }}>Annuler</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormSubmitted(false); }}>{t.cancel}</button>
               <button className="btn btn-primary btn-sm" onClick={createCompany}>Créer</button>
             </div>
           </div>
@@ -2991,7 +2997,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                               </div>
                             </div>
                             <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-                              <button className="btn btn-ghost btn-sm" onClick={() => setEditingExpiry(null)}>Annuler</button>
+                              <button className="btn btn-ghost btn-sm" onClick={() => setEditingExpiry(null)}>{t.cancel}</button>
                               <button className="btn btn-primary btn-sm" onClick={() => saveExpiry(company)}>✅ Sauvegarder</button>
                             </div>
                           </div>
@@ -3130,7 +3136,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                             <button className="btn btn-ghost btn-sm" onClick={() => setAdminForm(p => ({ ...p, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>🔄</button>
                           </div>
                           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                            <button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>Annuler</button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{t.cancel}</button>
                             <button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>Créer le Directeur</button>
                           </div>
                         </div>
@@ -3248,7 +3254,7 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, o
           )}
         </div>
         <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
+          <button className="btn btn-ghost" onClick={onClose}>{t.cancel}</button>
           <button className="btn btn-primary" disabled={!action || (action === "out" && (!viewerId || !chantier)) || loading}
             onClick={handleMove}>
             {loading ? "⏳ En cours..." : `✅ Confirmer (${selectedIds.length} outil${selectedIds.length > 1 ? "s" : ""})`}
@@ -3270,7 +3276,7 @@ function RequestActions({ request: r, tool, onApprove, onRefuse }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <textarea className="form-input" rows={2} placeholder="Motif du refus..." value={note} onChange={e => setNote(e.target.value)} />
       <div style={{ display: "flex", gap: 6 }}>
-        <button className="btn btn-ghost btn-sm" onClick={() => setMode(null)}>Annuler</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setMode(null)}>{t.cancel}</button>
         <button className={`btn btn-danger btn-sm ${loadingRefuse ? "loading" : ""}`} disabled={loadingRefuse}
           onClick={() => triggerRefuse(() => onRefuse(note))}>
           {loadingRefuse ? "⏳..." : "Confirmer le refus"}
@@ -3399,7 +3405,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
           <textarea className="form-input" rows={2} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{t.cancel}</button>
             <button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier} onClick={() => submit("transfer")}>Envoyer la demande</button>
           </div>
         </div>
@@ -3412,7 +3418,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
           <textarea className="form-input" rows={2} placeholder="Note optionnelle... ex: travaux terminés" value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{t.cancel}</button>
             <button className="btn btn-green btn-sm" onClick={() => submit("return")}>Envoyer la demande</button>
           </div>
         </div>
@@ -3425,7 +3431,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
           <textarea className="form-input" rows={2} placeholder="Décrivez le problème... ex: câble coupé" value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>⚠️ L'outil sera marqué non fonctionnel et les admins notifiés immédiatement</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{t.cancel}</button>
             <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.3)", color: "#f07030" }} onClick={() => submit("nonfunctional")}>Confirmer</button>
           </div>
         </div>
