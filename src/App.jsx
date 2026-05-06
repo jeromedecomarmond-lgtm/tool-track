@@ -3037,11 +3037,11 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                       {/* CREATE ADMIN FORM — max 3 */}
                       {compAdmins.length >= 30 ? (
                         <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", textAlign: "center", padding: "8px 0" }}>
-                          ⚠️ Maximum 30 administrateurs atteint
+                          ⚠️ Maximum 30 Administrateurs/Directeurs atteint
                         </div>
                       ) : creatingAdmin === company.id ? (
                         <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>🔑 Créer un admin</div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--accent)" }}>🏢 Créer un Administrateur/Directeur</div>
                           <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
                           <div style={{ display: "flex", gap: 8 }}>
                             <input className="form-input" placeholder="Téléphone WhatsApp" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} />
@@ -3055,12 +3055,12 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                           </div>
                           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                             <button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>Annuler</button>
-                            <button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>Créer l'admin</button>
+                            <button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>Créer le Directeur</button>
                           </div>
                         </div>
                       ) : (
                         <button className="btn btn-blue btn-sm" style={{ alignSelf: "flex-start" }} onClick={() => { setCreatingAdmin(company.id); setLastCreatedAdmin(null); setShowWhatsApp(false); }}>
-                          + Ajouter un admin {compAdmins.length > 0 ? `(${compAdmins.length}/30)` : ""}
+                          + Ajouter un Directeur {compAdmins.length > 0 ? `(${compAdmins.length}/30)` : ""}
                         </button>
                       )}
 
