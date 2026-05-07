@@ -1226,7 +1226,7 @@ export default function App() {
 
           {/* ── CHANTIERS ── */}
           {page === "chantiers" && isAdmin && (
-            <ChantierPage chantiers={filteredChantiers} tools={filteredTools} users={filteredUsers} addChantier={addChantier} deleteChantier={deleteChantier} />
+            <ChantierPage chantiers={filteredChantiers} tools={filteredTools} users={filteredUsers} addChantier={addChantier} deleteChantier={deleteChantier} t={t} />
           )}
 
           {/* ── DEMANDES ── */}
@@ -1606,10 +1606,10 @@ export default function App() {
 }
 
 // ─── MODAL ROUTER ─────────────────────────────────────────────────────────────
-function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool, myCompany }) {
+function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool, myCompany, t }) {
   const isAdmin = currentUser.role === "admin" || currentUser.role === "director" || currentUser.role === "superadmin";
-  if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
-  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} myCompany={myCompany} />;
+  if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} t={t} />;
+  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} myCompany={myCompany} t={t} />;
   if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} />;
   if (modal.type === "whatsappInvite") {
     const admin = modal.data;
@@ -2095,7 +2095,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
 }
 
 // ─── ADD TOOL MODAL ───────────────────────────────────────────────────────────
-function AddToolModal({ onClose, onSave }) {
+function AddToolModal({ onClose, onSave, t }) {
   const [form, setForm] = useState({ name: "", ref: "", purchaseDate: "", price: "", description: "", photo: "🔧", photoUrl: null });
   const [submitted, setSubmitted] = useState(false);
   const fileRef = useRef();
@@ -2194,7 +2194,7 @@ function AddToolModal({ onClose, onSave }) {
 }
 
 // ─── ADD USER MODAL ───────────────────────────────────────────────────────────
-function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
+function AddUserModal({ onClose, onSave, currentUser, myCompany, t }) {
   const APP_URL = "tool-track-rosy.vercel.app";
   const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
   const defaultRole = currentUser?.role === "director" ? "admin" : "viewer";
@@ -2330,7 +2330,7 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
 // ─── CHANTIER PAGE ────────────────────────────────────────────────────────────
 const CHANTIER_COLORS = ["#3a8ef6","#27c97a","#f5a623","#e84040","#9b59b6","#e67e22","#1abc9c","#e91e8c"];
 
-function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) {
+function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, t }) {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(CHANTIER_COLORS[0]);
 
