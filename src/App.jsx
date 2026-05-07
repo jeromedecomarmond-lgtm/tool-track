@@ -2186,7 +2186,7 @@ function AddToolModal({ onClose, onSave }) {
         </div>
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>{t.cancel}</button>
-          <button className="btn btn-primary" onClick={handleSave}{t.add}</button>
+          <button className="btn btn-primary" onClick={handleSave}>{t.add}</button>
         </div>
       </div>
     </div>
