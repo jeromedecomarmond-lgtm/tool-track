@@ -2701,7 +2701,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
 }
 
 // ─── COMPANIES PAGE ───────────────────────────────────────────────────────────
-function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated }) {
+function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated, t }) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#f5a623");
