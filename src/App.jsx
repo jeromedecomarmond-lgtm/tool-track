@@ -1125,16 +1125,17 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="cards-grid">
-                    {myTools.map(t => (
+                    {myTools.map(myTool => (
                       <ViewerToolCard
-                        key={t.id}
-                        tool={t}
+                        key={myTool.id}
+                        tool={myTool}
                         currentUser={currentUser}
                         users={users}
                         viewers={viewers}
                         chantiers={chantiers}
-                        onOpen={() => openTool(t)}
+                        onOpen={() => openTool(myTool)}
                         onRequest={sendRequest}
+                        t={t}
                       />
                     ))}
                   </div>
@@ -3350,7 +3351,7 @@ function ParcToolRow({ tool: t, assignee, isMyTool, currentUser, onAsk }) {
 }
 
 // ─── VIEWER TOOL CARD ─────────────────────────────────────────────────────────
-function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpen, onRequest, t: tLang }) {
+function ViewerToolCard({ tool: toolItem, currentUser, users, viewers, chantiers, onOpen, onRequest, t }) {
   const [action, setAction] = useState(null);
   const [targetViewer, setTargetViewer] = useState("");
   const [targetChantier, setTargetChantier] = useState("");
@@ -3360,7 +3361,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
 
   const submit = (type) => {
     const targetName = targetViewer ? users.find(u => String(u.id) === String(targetViewer))?.name : null;
-    onRequest({ type, toolId: t.id, toolName: t.name, toolLocation: t.location, targetViewerId: targetViewer || null, targetViewerName: targetName, targetChantier: targetChantier || null, note });
+    onRequest({ type, toolId: toolItem.id, toolName: toolItem.name, toolLocation: toolItem.location, targetViewerId: targetViewer || null, targetViewerName: targetName, targetChantier: targetChantier || null, note });
     setAction(null); setNote(""); setTargetViewer(""); setTargetChantier("");
   };
 
