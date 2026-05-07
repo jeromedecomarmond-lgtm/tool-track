@@ -1610,7 +1610,7 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
   const isAdmin = currentUser.role === "admin" || currentUser.role === "director" || currentUser.role === "superadmin";
   if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} t={t} />;
   if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} myCompany={myCompany} t={t} />;
-  if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} />;
+  if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} t={t} />;
   if (modal.type === "whatsappInvite") {
     const admin = modal.data;
     const msg = encodeURIComponent(
