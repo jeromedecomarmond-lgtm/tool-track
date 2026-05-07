@@ -1658,7 +1658,7 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
 }
 
 // ─── TOOL DETAIL MODAL ────────────────────────────────────────────────────────
-function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, setTools, currentUser, deleteTool, updateTool }) {
+function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, setTools, currentUser, deleteTool, updateTool, t }) {
   const [assignForm, setAssignForm] = useState({ viewerId: "", chantier: "" });
   const [moveForm, setMoveForm] = useState({ destination: "", newViewerId: "" });
   const [editing, setEditing] = useState(false);
@@ -3177,7 +3177,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 }
 
 // ─── MOVE PANEL MODAL ────────────────────────────────────────────────────────
-function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, onClose, assignTool, showToast }) {
+function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, onClose, assignTool, showToast, t }) {
   const [action, setAction] = useState(""); // "out" | "in" | "nonfunctional"
   const [viewerId, setViewerId] = useState("");
   const [chantier, setChantier] = useState("");
@@ -3266,7 +3266,7 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, o
 }
 
 // ─── REQUEST ACTIONS ─────────────────────────────────────────────────────────
-function RequestActions({ request: r, tool, onApprove, onRefuse }) {
+function RequestActions({ request: r, tool, onApprove, onRefuse, t }) {
   const [note, setNote] = useState("");
   const [mode, setMode] = useState(null);
   const [loadingApprove, triggerApprove] = useLoadingBtn();
@@ -3349,7 +3349,7 @@ function ParcToolRow({ tool: t, assignee, isMyTool, currentUser, onAsk }) {
 }
 
 // ─── VIEWER TOOL CARD ─────────────────────────────────────────────────────────
-function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpen, onRequest }) {
+function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpen, onRequest, t: tLang }) {
   const [action, setAction] = useState(null);
   const [targetViewer, setTargetViewer] = useState("");
   const [targetChantier, setTargetChantier] = useState("");
