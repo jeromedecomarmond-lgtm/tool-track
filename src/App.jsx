@@ -3406,7 +3406,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
           <textarea className="form-input" rows={2} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{t.cancel}</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}></button>
             <button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier} onClick={() => submit("transfer")}>Envoyer la demande</button>
           </div>
         </div>
@@ -3419,7 +3419,7 @@ function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpe
           <textarea className="form-input" rows={2} placeholder="Note optionnelle... ex: travaux terminés" value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{t.cancel}</button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}></button>
             <button className="btn btn-green btn-sm" onClick={() => submit("return")}>Envoyer la demande</button>
           </div>
         </div>
