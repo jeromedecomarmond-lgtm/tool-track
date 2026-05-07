@@ -807,6 +807,7 @@ export default function App() {
               db={db}
               currentUser={currentUser}
               showToast={showToast}
+              t={t}
               onAdminCreated={(admin) => {
                 setModal({ type: "whatsappInvite", data: admin });
               }}
