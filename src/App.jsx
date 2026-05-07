@@ -1047,19 +1047,19 @@ export default function App() {
                       <div style={{ fontSize: 13 }}>Cliquez sur "+ Ajouter un outil" pour commencer</div>
                     </div>
                   )}
-                  {displayedTools.map(t => {
-                    const assignee = users.find(u => String(u.id) === String(t.assignedTo));
-                    const isSelected = selectedTools.includes(t.id);
+                  
+                    const assignee = users.find(u => String(u.id) === String(toolItem.assignedTo))
+                    const isSelected = selectedTools.includes(toolItem.id);
                     return (
-                      <div key={t.id} style={{ position: "relative" }}>
+                      <div key={toolItem.id} style={{ position: "relative" }}>
                         {/* CHECKBOX */}
                         <div style={{ position: "absolute", top: 8, left: 8, zIndex: 10 }}
-                          onClick={e => { e.stopPropagation(); setSelectedTools(prev => isSelected ? prev.filter(id => id !== t.id) : [...prev, t.id]); }}>
+                          onClick={e => { e.stopPropagation(); setSelectedTools(prev => isSelected ? prev.filter(id => id !== toolItem.id) : [...prev, toolItem.id]); }}>
                           <input type="checkbox" checked={isSelected} readOnly
                             style={{ width: 20, height: 20, cursor: "pointer", accentColor: "var(--accent)" }} />
                         </div>
                         <div className={`tool-card${t.status === "nonfunctional" ? " nonfunctional" : t.status === "obsolete" ? " obsolete" : ""}${isSelected ? " selected" : ""}`}
-                          onClick={() => openTool(t)} style={{ cursor: "pointer", border: isSelected ? "2px solid var(--accent)" : undefined }}>
+                          onClick={() => openTool(toolItem)} style={{ cursor: "pointer", border: isSelected ? "2px solid var(--accent)" : undefined }}>
                           {t.photoUrl
                             ? <img src={t.photoUrl} alt={t.name} className="tool-photo-card" />
                             : <div className="tool-photo-placeholder"><span className="big-emoji">{t.photo}</span><span style={{ fontSize: 11 }}>Aucune photo</span></div>
@@ -1190,7 +1190,7 @@ export default function App() {
                     <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--blue)", marginBottom: 10 }}>🔵 Sur chantiers</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {filteredTools.filter(t => t.status === "assigned").map(t => {
-                        const assignee = users.find(u => String(u.id) === String(t.assignedTo));
+                        const assignee = users.find(u => String(u.id) === String(toolItem.assignedTo))
                         const isMyTool = String(t.assignedTo) === String(currentUser.id);
                         return (
                           <ParcToolRow
