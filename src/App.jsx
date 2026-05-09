@@ -225,7 +225,6 @@ const css = `
   @keyframes slideIn { from { opacity:0; transform: translateY(20px); } to { opacity:1; transform: translateY(0); } }
   .toast-text { font-size: 12px; color: var(--muted); }
 `;
-echo "Part 1 OK: $(wc -c < /tmp/app_part1.js) bytes"
 export default function App() {
   const [tx, lang, setLanguage] = useLang(); // FIX #2 renommé tx
   const [currentUser, setCurrentUser] = useState(null);
