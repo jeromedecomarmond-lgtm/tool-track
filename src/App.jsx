@@ -1626,8 +1626,12 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
   const isAdmin = ["admin","director","superadmin"].includes(currentUser.role);
 
   useEffect(() => {
+    const isSuperAdmin = ["superadmin"].includes(currentUser.role);
     const unsub = onSnapshot(collection(db, "conversations"), snap => {
-      setConversations(snap.docs.map(d => ({ ...d.data(), id: d.id })).sort((a,b) => new Date(b.lastDate) - new Date(a.lastDate)));
+      // FIX #D — filtrer par companyId pour éviter qu'une compagnie voie les messages d'une autre
+      const all = snap.docs.map(d => ({ ...d.data(), id: d.id }));
+      const filtered = isSuperAdmin ? all : all.filter(c => c.companyId === (currentUser.companyId || null));
+      setConversations(filtered.sort((a,b) => new Date(b.lastDate) - new Date(a.lastDate)));
     }, err => console.error("Conversations:", err));
     return () => unsub();
   }, []);
@@ -1641,7 +1645,8 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
     if (!newText.trim() || !newSubject.trim()) return;
     const id = String(Date.now());
     const msg = { id: String(Date.now() + 1), from: currentUser.id, fromName: currentUser.name, fromAvatar: currentUser.avatar, fromRole: currentUser.role, text: newText, date: new Date().toISOString(), readBy: [String(currentUser.id)] };
-    await setDoc(doc(db, "conversations", id), { id, subject: newSubject, type: tab === "annonces" ? "annonce" : "admin", createdBy: currentUser.id, createdByName: currentUser.name, messages: [msg], lastDate: new Date().toISOString(), lastText: newText });
+    // FIX #E — companyId stocké pour que le filtre #D fonctionne sur les nouvelles conversations
+    await setDoc(doc(db, "conversations", id), { id, subject: newSubject, type: tab === "annonces" ? "annonce" : "admin", createdBy: currentUser.id, createdByName: currentUser.name, companyId: currentUser.companyId || null, messages: [msg], lastDate: new Date().toISOString(), lastText: newText });
     setNewSubject(""); setNewText(""); setNewConvOpen(false); setSelected(id);
     showToast("📨 Message envoyé !");
   };
