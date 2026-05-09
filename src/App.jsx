@@ -372,7 +372,8 @@ export default function App() {
     const tool = filteredTools.find(tool => String(tool.id) === String(toolId));
     if (!tool) return;
     await setDoc(doc(db, "tools", String(toolId)), { ...tool, ...updates });
-    showToast("✅ Outil mis à jour"); setModal(null);
+    // FIX #B — on ne ferme plus le modal, le ToolDetailModal sort du mode édition localement
+    showToast("✅ Outil mis à jour");
   };
   const assignTool = async (toolId, viewerId, chantier, direction) => {
     const newViewer = viewerId ? users.find(u => String(u.id) === String(viewerId)) : null;
@@ -396,7 +397,7 @@ export default function App() {
     };
     await setDoc(doc(db, "tools", String(toolId)), updatedTool);
     showToast(direction === "out" ? `✅ Confié à ${toPerson} — ${toLocation}` : newViewer ? `🔄 Transféré à ${toPerson} — ${toLocation}` : `🏠 Outil retourné au store`);
-    setModal(null);
+    // FIX #B2 — le modal reste ouvert, mis à jour en temps réel via FIX #7
   };
 
   const addTool = async (form) => {
@@ -1200,7 +1201,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setNewPhoto(null); }}>Annuler</button>
-              <button className={`btn btn-primary btn-sm ${loadingSave ? "loading" : ""}`} disabled={!editForm.name.trim() || loadingSave} onClick={() => triggerSave(() => updateTool(tool.id, { name: editForm.name, ref: editForm.ref, description: editForm.description, purchaseDate: editForm.purchaseDate, price: editForm.price ? Number(String(editForm.price).replace(/\s/g,"")) : null, photoUrl: newPhoto || tool.photoUrl }))}>{loadingSave ? "⏳..." : "✅ Sauvegarder"}</button>
+              <button className={`btn btn-primary btn-sm ${loadingSave ? "loading" : ""}`} disabled={!editForm.name.trim() || loadingSave} onClick={() => triggerSave(async () => { await updateTool(tool.id, { name: editForm.name, ref: editForm.ref, description: editForm.description, purchaseDate: editForm.purchaseDate, price: editForm.price ? Number(String(editForm.price).replace(/\s/g,"")) : null, photoUrl: newPhoto || tool.photoUrl }); setEditing(false); setNewPhoto(null); })}>{loadingSave ? "⏳..." : "✅ Sauvegarder"}</button>
             </div>
           </div>
         )}
