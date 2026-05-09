@@ -84,20 +84,14 @@ const T = {
 
 // ─── LANGUAGE HOOK ────────────────────────────────────────────────────────────
 function useLang() {
-  const [lang, setLang] = useState(() => {
-    try { return localStorage.getItem("tooltrack_lang") || "fr"; } catch { return "fr"; }
-  });
+  const savedLang = (() => { try { return localStorage.getItem("tooltrack_lang") || "fr"; } catch { return "fr"; } })();
+  const [lang, setLang] = useState(savedLang);
   const setLanguage = (l) => {
     setLang(l);
     try { localStorage.setItem("tooltrack_lang", l); } catch {}
-    // Update HTML lang for browser translation
-    document.documentElement.lang = l;
+    document.documentElement.lang = l === "en" ? "en" : "fr";
   };
-  // Apply on mount
-  useEffect(() => {
-    document.documentElement.lang = lang;
-  }, []);
-  return [T[lang], lang, setLanguage];
+  return [T[lang] || T["fr"], lang, setLanguage];
 }
 
 // ─── HOOK LOADING BUTTON ──────────────────────────────────────────────────────
@@ -807,7 +801,6 @@ export default function App() {
               db={db}
               currentUser={currentUser}
               showToast={showToast}
-              t={t}
               onAdminCreated={(admin) => {
                 setModal({ type: "whatsappInvite", data: admin });
               }}
@@ -1047,19 +1040,19 @@ export default function App() {
                       <div style={{ fontSize: 13 }}>Cliquez sur "+ Ajouter un outil" pour commencer</div>
                     </div>
                   )}
-                  
-                    const assignee = users.find(u => String(u.id) === String(toolItem.assignedTo))
-                    const isSelected = selectedTools.includes(toolItem.id);
+                  {displayedTools.map(t => {
+                    const assignee = users.find(u => String(u.id) === String(t.assignedTo));
+                    const isSelected = selectedTools.includes(t.id);
                     return (
-                      <div key={toolItem.id} style={{ position: "relative" }}>
+                      <div key={t.id} style={{ position: "relative" }}>
                         {/* CHECKBOX */}
                         <div style={{ position: "absolute", top: 8, left: 8, zIndex: 10 }}
-                          onClick={e => { e.stopPropagation(); setSelectedTools(prev => isSelected ? prev.filter(id => id !== toolItem.id) : [...prev, toolItem.id]); }}>
+                          onClick={e => { e.stopPropagation(); setSelectedTools(prev => isSelected ? prev.filter(id => id !== t.id) : [...prev, t.id]); }}>
                           <input type="checkbox" checked={isSelected} readOnly
                             style={{ width: 20, height: 20, cursor: "pointer", accentColor: "var(--accent)" }} />
                         </div>
                         <div className={`tool-card${t.status === "nonfunctional" ? " nonfunctional" : t.status === "obsolete" ? " obsolete" : ""}${isSelected ? " selected" : ""}`}
-                          onClick={() => openTool(toolItem)} style={{ cursor: "pointer", border: isSelected ? "2px solid var(--accent)" : undefined }}>
+                          onClick={() => openTool(t)} style={{ cursor: "pointer", border: isSelected ? "2px solid var(--accent)" : undefined }}>
                           {t.photoUrl
                             ? <img src={t.photoUrl} alt={t.name} className="tool-photo-card" />
                             : <div className="tool-photo-placeholder"><span className="big-emoji">{t.photo}</span><span style={{ fontSize: 11 }}>Aucune photo</span></div>
@@ -1125,17 +1118,16 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="cards-grid">
-                    {myTools.map(myTool => (
+                    {myTools.map(t => (
                       <ViewerToolCard
-                        key={myTool.id}
-                        tool={myTool}
+                        key={t.id}
+                        tool={t}
                         currentUser={currentUser}
                         users={users}
                         viewers={viewers}
                         chantiers={chantiers}
-                        onOpen={() => openTool(myTool)}
+                        onOpen={() => openTool(t)}
                         onRequest={sendRequest}
-                        t={t}
                       />
                     ))}
                   </div>
@@ -1190,7 +1182,7 @@ export default function App() {
                     <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--blue)", marginBottom: 10 }}>🔵 Sur chantiers</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                       {filteredTools.filter(t => t.status === "assigned").map(t => {
-                        const assignee = users.find(u => String(u.id) === String(toolItem.assignedTo))
+                        const assignee = users.find(u => String(u.id) === String(t.assignedTo));
                         const isMyTool = String(t.assignedTo) === String(currentUser.id);
                         return (
                           <ParcToolRow
@@ -1228,7 +1220,7 @@ export default function App() {
 
           {/* ── CHANTIERS ── */}
           {page === "chantiers" && isAdmin && (
-            <ChantierPage chantiers={filteredChantiers} tools={filteredTools} users={filteredUsers} addChantier={addChantier} deleteChantier={deleteChantier} t={t} />
+            <ChantierPage chantiers={filteredChantiers} tools={filteredTools} users={filteredUsers} addChantier={addChantier} deleteChantier={deleteChantier} />
           )}
 
           {/* ── DEMANDES ── */}
@@ -1608,11 +1600,11 @@ export default function App() {
 }
 
 // ─── MODAL ROUTER ─────────────────────────────────────────────────────────────
-function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool, myCompany, t }) {
+function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool, myCompany }) {
   const isAdmin = currentUser.role === "admin" || currentUser.role === "director" || currentUser.role === "superadmin";
-  if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} t={t} />;
-  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} myCompany={myCompany} t={t} />;
-  if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} t={t} />;
+  if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
+  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} myCompany={myCompany} />;
+  if (modal.type === "tool") return <ToolDetailModal tool={modal.data} onClose={() => setModal(null)} users={users} viewers={viewers} chantiers={chantiers} isAdmin={isAdmin} assignTool={assignTool} setTools={setTools} currentUser={currentUser} deleteTool={deleteTool} updateTool={updateTool} />;
   if (modal.type === "whatsappInvite") {
     const admin = modal.data;
     const msg = encodeURIComponent(
@@ -1660,7 +1652,7 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
 }
 
 // ─── TOOL DETAIL MODAL ────────────────────────────────────────────────────────
-function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, setTools, currentUser, deleteTool, updateTool, t }) {
+function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, setTools, currentUser, deleteTool, updateTool }) {
   const [assignForm, setAssignForm] = useState({ viewerId: "", chantier: "" });
   const [moveForm, setMoveForm] = useState({ destination: "", newViewerId: "" });
   const [editing, setEditing] = useState(false);
@@ -2097,7 +2089,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
 }
 
 // ─── ADD TOOL MODAL ───────────────────────────────────────────────────────────
-function AddToolModal({ onClose, onSave, t }) {
+function AddToolModal({ onClose, onSave }) {
   const [form, setForm] = useState({ name: "", ref: "", purchaseDate: "", price: "", description: "", photo: "🔧", photoUrl: null });
   const [submitted, setSubmitted] = useState(false);
   const fileRef = useRef();
@@ -2196,7 +2188,7 @@ function AddToolModal({ onClose, onSave, t }) {
 }
 
 // ─── ADD USER MODAL ───────────────────────────────────────────────────────────
-function AddUserModal({ onClose, onSave, currentUser, myCompany, t }) {
+function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
   const APP_URL = "tool-track-rosy.vercel.app";
   const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
   const defaultRole = currentUser?.role === "director" ? "admin" : "viewer";
@@ -2332,7 +2324,7 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany, t }) {
 // ─── CHANTIER PAGE ────────────────────────────────────────────────────────────
 const CHANTIER_COLORS = ["#3a8ef6","#27c97a","#f5a623","#e84040","#9b59b6","#e67e22","#1abc9c","#e91e8c"];
 
-function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, t }) {
+function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(CHANTIER_COLORS[0]);
 
@@ -2703,7 +2695,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
 }
 
 // ─── COMPANIES PAGE ───────────────────────────────────────────────────────────
-function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated, t }) {
+function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated }) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#f5a623");
@@ -3179,7 +3171,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 }
 
 // ─── MOVE PANEL MODAL ────────────────────────────────────────────────────────
-function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, onClose, assignTool, showToast, t }) {
+function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, onClose, assignTool, showToast }) {
   const [action, setAction] = useState(""); // "out" | "in" | "nonfunctional"
   const [viewerId, setViewerId] = useState("");
   const [chantier, setChantier] = useState("");
@@ -3268,7 +3260,7 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, o
 }
 
 // ─── REQUEST ACTIONS ─────────────────────────────────────────────────────────
-function RequestActions({ request: r, tool, onApprove, onRefuse, t }) {
+function RequestActions({ request: r, tool, onApprove, onRefuse }) {
   const [note, setNote] = useState("");
   const [mode, setMode] = useState(null);
   const [loadingApprove, triggerApprove] = useLoadingBtn();
@@ -3351,7 +3343,7 @@ function ParcToolRow({ tool: t, assignee, isMyTool, currentUser, onAsk }) {
 }
 
 // ─── VIEWER TOOL CARD ─────────────────────────────────────────────────────────
-function ViewerToolCard({ tool: toolItem, currentUser, users, viewers, chantiers, onOpen, onRequest, t }) {
+function ViewerToolCard({ tool: t, currentUser, users, viewers, chantiers, onOpen, onRequest }) {
   const [action, setAction] = useState(null);
   const [targetViewer, setTargetViewer] = useState("");
   const [targetChantier, setTargetChantier] = useState("");
@@ -3361,7 +3353,7 @@ function ViewerToolCard({ tool: toolItem, currentUser, users, viewers, chantiers
 
   const submit = (type) => {
     const targetName = targetViewer ? users.find(u => String(u.id) === String(targetViewer))?.name : null;
-    onRequest({ type, toolId: toolItem.id, toolName: toolItem.name, toolLocation: toolItem.location, targetViewerId: targetViewer || null, targetViewerName: targetName, targetChantier: targetChantier || null, note });
+    onRequest({ type, toolId: t.id, toolName: t.name, toolLocation: t.location, targetViewerId: targetViewer || null, targetViewerName: targetName, targetChantier: targetChantier || null, note });
     setAction(null); setNote(""); setTargetViewer(""); setTargetChantier("");
   };
 
@@ -3407,7 +3399,7 @@ function ViewerToolCard({ tool: toolItem, currentUser, users, viewers, chantiers
           <textarea className="form-input" rows={2} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}></button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{t.cancel}</button>
             <button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier} onClick={() => submit("transfer")}>Envoyer la demande</button>
           </div>
         </div>
@@ -3420,7 +3412,7 @@ function ViewerToolCard({ tool: toolItem, currentUser, users, viewers, chantiers
           <textarea className="form-input" rows={2} placeholder="Note optionnelle... ex: travaux terminés" value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver cette demande</div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}></button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{t.cancel}</button>
             <button className="btn btn-green btn-sm" onClick={() => submit("return")}>Envoyer la demande</button>
           </div>
         </div>
