@@ -262,10 +262,23 @@ export default function App() {
   const myTools = filteredTools.filter(tool => String(tool.assignedTo) === String(currentUser?.id));
   const myCompany = companies.find(c => c.id === myCompanyId);
 
+  // FIX #F — vérifie que la page sauvegardée est accessible pour le rôle de l'utilisateur
+  const getValidPage = (savedPage, u) => {
+    const isSA = u.role === "superadmin";
+    const isAd = ["admin", "director", "superadmin"].includes(u.role);
+    const isViewer = u.role === "viewer";
+    const adminPages = ["dashboard", "tools", "chantiers", "requests", "messages", "users"];
+    const viewerPages = ["mytools", "parc", "requests", "messages"];
+    const superPages = ["dashboard", "companies", "requests", "messages", "users"];
+    const allowed = isSA ? superPages : isAd ? adminPages : viewerPages;
+    if (savedPage && allowed.includes(savedPage)) return savedPage;
+    return isSA ? "dashboard" : isAd ? "tools" : "mytools";
+  };
+
   const loginUser = (u) => {
     setCurrentUser(u);
     const savedPage = (() => { try { return localStorage.getItem("tooltrack_last_page"); } catch { return null; } })();
-    setPage(savedPage || (u.role === "superadmin" ? "dashboard" : u.role === "admin" || u.role === "director" ? "tools" : "mytools"));
+    setPage(getValidPage(savedPage, u));
     try { localStorage.setItem("tooltrack_user_id", u.id); } catch(e) {}
   };
 
@@ -287,9 +300,9 @@ export default function App() {
           const savedUser = loadedUsers.find(u => u.id === savedId);
           if (savedUser) {
             setCurrentUser(savedUser);
-            // FIX #5 — restaure la dernière page
+            // FIX #5 + FIX #F — restaure la page uniquement si elle est accessible pour ce rôle
             const savedPage = localStorage.getItem("tooltrack_last_page");
-            setPage(savedPage || (savedUser.role === "superadmin" ? "dashboard" : savedUser.role === "admin" || savedUser.role === "director" ? "tools" : "mytools"));
+            setPage(getValidPage(savedPage, savedUser));
           } else {
             localStorage.removeItem("tooltrack_user_id");
             localStorage.removeItem("tooltrack_last_page");
