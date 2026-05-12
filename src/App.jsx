@@ -711,13 +711,18 @@ export default function App() {
 
     {/* BOTTOM NAV (mobile) — FIX #10 Messages inclus */}
     <nav className="bottom-nav">
-      <button className="bottom-nav-item" onClick={logoutUser}><span className="bn-icon">⇄</span>Profil</button>
+      <button className="bottom-nav-item" onClick={isSupervising ? stopSupervision : logoutUser}>
+        <span className="bn-icon">{isSupervising ? "✕" : "⇄"}</span>{isSupervising ? "Quitter" : "Profil"}
+      </button>
       {navItems.map(item => (
         <button key={item.key} className={`bottom-nav-item ${page === item.key ? "active" : ""}`} onClick={() => setPage(item.key)}>
           <span className="bn-icon">{item.icon}</span>{item.label}
           {item.badge > 0 && <span className="badge">{item.badge}</span>}
         </button>
       ))}
+      <button className="bottom-nav-item" onClick={() => setLanguage(lang === "fr" ? "en" : "fr")}>
+        <span className="bn-icon">{lang === "fr" ? "🇬🇧" : "🇫🇷"}</span>{lang === "fr" ? "EN" : "FR"}
+      </button>
     </nav>
 
     {modal && <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} effectiveUser={effectiveUser} addTool={addTool} addUser={addUser} assignTool={assignTool} deleteTool={deleteTool} updateTool={updateTool} myCompany={myCompany} />}
