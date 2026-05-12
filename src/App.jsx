@@ -291,7 +291,7 @@ export default function App() {
 
   // RESET TEMPORAIRE - A SUPPRIMER AVANT MISE EN PRODUCTION
   const resetAllData = async () => {
-    const confirm1 = window.confirm("ATTENTION - Supprimer TOUTES les donnees de test ?\n\nVotre compte SuperAdmin sera conserve.\n\nEtes-vous sur ?");
+   const confirm1 = window.confirm("ATTENTION - Supprimer TOUTES les donnees de test ?\n\nVotre compte SuperAdmin sera conserve.\n\nEtes-vous sur ?");
     if (!confirm1) return;
     const confirm2 = window.confirm("DERNIERE CONFIRMATION - Toutes les donnees seront supprimees. Continuer ?");
     if (!confirm2) return;
