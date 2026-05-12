@@ -245,23 +245,50 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [selectedTools, setSelectedTools] = useState([]);
   const [showMovePanel, setShowMovePanel] = useState(false);
+  const [supervisedUser, setSupervisedUser] = useState(null); // mode supervision
   const toastRef = useRef();
 
-  const isSuperAdmin = currentUser?.role === "superadmin";
-  const isAdmin = currentUser?.role === "admin" || currentUser?.role === "director" || currentUser?.role === "superadmin";
+  const isSuperAdmin = currentUser?.role === "superadmin" && !supervisedUser;
+  const effectiveUser = supervisedUser ? supervisedUser.fakeUser : currentUser;
+  const isAdmin = effectiveUser?.role === "admin" || effectiveUser?.role === "director" || (effectiveUser?.role === "superadmin" && !supervisedUser);
 
   // FIX #11 — unreadMessages utilisé dans la nav (badge messages)
-  const unreadMessages = messages.filter(m => !m.read && String(m.from) !== String(currentUser?.id)).length;
+  const unreadMessages = messages.filter(m => !m.read && String(m.from) !== String(effectiveUser?.id)).length;
 
-  const myCompanyId = currentUser?.companyId || null;
-  const filteredUsers = isSuperAdmin ? users : users.filter(u => u.companyId === myCompanyId);
-  const filteredTools = isSuperAdmin ? tools : tools.filter(tool => tool.companyId === myCompanyId);
-  const filteredChantiers = isSuperAdmin ? chantiers : chantiers.filter(c => c.companyId === myCompanyId);
-  const filteredRequests = isSuperAdmin ? requests : requests.filter(r => r.companyId === myCompanyId);
+  const myCompanyId = effectiveUser?.companyId || null;
+  const filteredUsers = (currentUser?.role === "superadmin" && !supervisedUser) ? users : users.filter(u => u.companyId === myCompanyId);
+  const filteredTools = (currentUser?.role === "superadmin" && !supervisedUser) ? tools : tools.filter(tool => tool.companyId === myCompanyId);
+  const filteredChantiers = (currentUser?.role === "superadmin" && !supervisedUser) ? chantiers : chantiers.filter(c => c.companyId === myCompanyId);
+  const filteredRequests = (currentUser?.role === "superadmin" && !supervisedUser) ? requests : requests.filter(r => r.companyId === myCompanyId);
   const pendingRequests = filteredRequests.filter(r => r.status === "pending").length;
   const viewers = filteredUsers.filter(u => u.role === "viewer");
-  const myTools = filteredTools.filter(tool => String(tool.assignedTo) === String(currentUser?.id));
+  const myTools = filteredTools.filter(tool => String(tool.assignedTo) === String(effectiveUser?.id));
   const myCompany = companies.find(c => c.id === myCompanyId);
+
+  // MODE SUPERVISION — le vrai user connecté reste intact, on simule un autre profil
+  const realUser = supervisedUser ? supervisedUser.realUser : null;
+  const activeUser = supervisedUser ? supervisedUser.fakeUser : currentUser;
+  const isSupervising = !!supervisedUser;
+
+  // Hiérarchie : qui peut superviser qui ?
+  const canSupervise = (supervisor, target) => {
+    const hierarchy = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
+    return (hierarchy[supervisor?.role] || 0) > (hierarchy[target?.role] || 0);
+  };
+
+  const startSupervision = (targetUser) => {
+    if (!canSupervise(currentUser, targetUser)) return;
+    setSupervisedUser({ realUser: currentUser, fakeUser: targetUser });
+    const targetCompany = companies.find(c => c.id === targetUser.companyId);
+    showToast(`👁 Mode supervision : ${targetUser.name}`);
+    setPage(["admin","director"].includes(targetUser.role) ? "tools" : "mytools");
+  };
+
+  const stopSupervision = () => {
+    setSupervisedUser(null);
+    showToast("✅ Retour à votre profil");
+    setPage(currentUser.role === "superadmin" ? "dashboard" : "tools");
+  };
 
   // FIX #F — vérifie que la page sauvegardée est accessible pour le rôle de l'utilisateur
   const getValidPage = (savedPage, u) => {
@@ -487,7 +514,7 @@ export default function App() {
     if (type === "nonfunctional") {
       const tool = tools.find(tool => String(tool.id) === String(toolId));
       if (tool) {
-        const firstEntry = { id: Date.now(), type: "thread", status: "suivi-cours", note: note || "Signalé non fonctionnel.", by: currentUser.name, datetime: today, timestamp: Date.now() };
+        const firstEntry = { id: Date.now(), type: "thread", status: "suivi-cours", note: note || "Signalé non fonctionnel.", by: effectiveUser.name, datetime: today, timestamp: Date.now() };
         await setDoc(doc(db, "tools", String(toolId)), { ...tool, status: "nonfunctional", obsolete: false, obsoleteDate: new Date().toISOString().slice(0,10), obsoleteType: "suivi-cours", obsoleteThread: [firstEntry], history: [...tool.history, { date: new Date().toLocaleDateString("fr-MU"), action: `🔴 Signalé non fonctionnel par ${currentUser.name}${note ? ` — "${note}"` : ""}`, by: currentUser.name }] });
       }
       await setDoc(doc(db, "messages", id), { id, from: currentUser.id, to: null, type: "push", text: `⚠️ ${currentUser.name} a signalé "${toolName}" NON FONCTIONNEL.${note ? ` — "${note}"` : ""}`, toolId: String(toolId), date: new Date().toISOString(), read: false });
@@ -496,7 +523,7 @@ export default function App() {
     const reqText = type === "transfer"
       ? `🔄 ${currentUser.name} demande de transférer "${toolName}" (${toolLocation}) → ${targetViewerName} — ${targetChantier}${note ? ` — "${note}"` : ""}`
       : `🏠 ${currentUser.name} demande le retour au store de "${toolName}" (${toolLocation})${note ? ` — "${note}"` : ""}`;
-    await setDoc(doc(db, "requests", id), { id, type, status: "pending", from: currentUser.id, fromName: currentUser.name, toolId: String(toolId), toolName, toolLocation, targetViewerId: targetViewerId ? String(targetViewerId) : null, targetViewerName: targetViewerName || null, targetChantier: targetChantier || null, note: note || "", text: reqText, date: new Date().toISOString(), companyId: myCompanyId || null });
+    await setDoc(doc(db, "requests", id), { id, type, status: "pending", from: effectiveUser.id, fromName: effectiveUser.name, toolId: String(toolId), toolName, toolLocation, targetViewerId: targetViewerId ? String(targetViewerId) : null, targetViewerName: targetViewerName || null, targetChantier: targetChantier || null, note: note || "", text: reqText, date: new Date().toISOString(), companyId: myCompanyId || null });
     showToast("📨 Demande envoyée aux admins !");
   };
 
@@ -504,7 +531,7 @@ export default function App() {
   const displayedTools = filteredTools.filter(tool => {
     const matchStatus = filterStatus === "all" || tool.status === filterStatus;
     const matchSearch = !search || tool.name.toLowerCase().includes(search.toLowerCase()) || (tool.ref || "").toLowerCase().includes(search.toLowerCase());
-    if (!isAdmin) return String(tool.assignedTo) === String(currentUser.id) || tool.status === "store";
+    if (!isAdmin) return String(tool.assignedTo) === String(effectiveUser.id) || tool.status === "store";
     if (filterUser !== "all") {
       const matchEmploye = String(tool.assignedTo) === filterUser || (filterUser === "none" && !tool.assignedTo);
       return matchStatus && matchEmploye && matchSearch;
@@ -539,8 +566,17 @@ export default function App() {
         </div>
       )}
 
+      {/* BANDEAU SUPERVISION */}
+      {isSupervising && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999, background: "#f5a623", color: "#000", padding: "8px 20px", display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 700 }}>
+          <span style={{ fontSize: 18 }}>👁</span>
+          <span style={{ flex: 1 }}>Mode supervision — vous voyez l'app comme <strong>{supervisedUser.fakeUser.name}</strong> ({supervisedUser.fakeUser.role})</span>
+          <button onClick={stopSupervision} style={{ background: "#000", color: "#f5a623", border: "none", borderRadius: 8, padding: "4px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>✕ Quitter la supervision</button>
+        </div>
+      )}
+
       {/* SIDEBAR */}
-      <aside className="sidebar">
+      <aside className="sidebar" style={{ marginTop: isSupervising ? 36 : 0 }}>
         <div className="sidebar-logo"><h1>TOOL<br/>TRACK</h1><p>Gestion d'outils</p></div>
         <nav className="sidebar-nav">
           {navItems.map(item => (
@@ -552,10 +588,10 @@ export default function App() {
         </nav>
         <div className="sidebar-user">
           <div className="user-pill">
-            <div className="avatar">{currentUser.avatar}</div>
-            <div className="user-info"><div className="name">{currentUser.name.split(" ")[0]}</div><div className="role">{currentUser.role}</div></div>
+            <div className="avatar">{effectiveUser.avatar}</div>
+            <div className="user-info"><div className="name">{effectiveUser.name.split(" ")[0]}</div><div className="role">{isSupervising ? "👁 supervision" : effectiveUser.role}</div></div>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={logoutUser}>⇄ {tx.profile}</button>
+          <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={isSupervising ? stopSupervision : logoutUser}>{isSupervising ? "✕ Quitter supervision" : `⇄ ${tx.profile}`}</button>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             <button onClick={() => setLanguage("fr")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "fr" ? "var(--accent)" : "var(--border)"}`, background: lang === "fr" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "fr" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇫🇷 FR</button>
             <button onClick={() => setLanguage("en")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "en" ? "var(--accent)" : "var(--border)"}`, background: lang === "en" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "en" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇬🇧 EN</button>
@@ -565,7 +601,7 @@ export default function App() {
 
       {/* MAIN */}
       <main className="main">
-        {page === "companies" && isSuperAdmin && <CompaniesPage companies={companies} users={users} tools={tools} chantiers={chantiers} requests={requests} db={db} currentUser={currentUser} showToast={showToast} onAdminCreated={(admin) => setModal({ type: "whatsappInvite", data: admin })} />}
+        {page === "companies" && isSuperAdmin && <CompaniesPage companies={companies} users={users} tools={tools} chantiers={chantiers} requests={requests} db={db} currentUser={currentUser} showToast={showToast} onAdminCreated={(admin) => setModal({ type: "whatsappInvite", data: admin })} onSupervise={startSupervision} />}
         {page === "dashboard" && isAdmin && <DashboardPage isSuperAdmin={isSuperAdmin} companies={companies} tools={tools} users={users} chantiers={chantiers} requests={requests} filteredTools={filteredTools} filteredUsers={filteredUsers} filteredRequests={filteredRequests} openTool={openTool} />}
         {page === "tools" && isAdmin && <ToolsPage displayedTools={displayedTools} filteredTools={filteredTools} filteredChantiers={filteredChantiers} viewers={viewers} users={users} filterStatus={filterStatus} setFilterStatus={setFilterStatus} filterUser={filterUser} setFilterUser={setFilterUser} filterChantier={filterChantier} setFilterChantier={setFilterChantier} search={search} setSearch={setSearch} selectedTools={selectedTools} setSelectedTools={setSelectedTools} showMovePanel={showMovePanel} setShowMovePanel={setShowMovePanel} openTool={openTool} setModal={setModal} assignTool={assignTool} showToast={showToast} currentUser={currentUser} db={db} />}
         {page === "mytools" && !isAdmin && <MyToolsPage myTools={myTools} currentUser={currentUser} users={users} viewers={viewers} chantiers={chantiers} db={db} openTool={openTool} sendRequest={sendRequest} />}
@@ -574,7 +610,7 @@ export default function App() {
         {page === "requests" && <RequestsPage isSuperAdmin={isSuperAdmin} isAdmin={isAdmin} filteredRequests={filteredRequests} requests={requests} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} />}
         {/* FIX #10 — page messages rendue */}
         {page === "messages" && <MessagesPage currentUser={currentUser} users={users} tools={tools} myTools={myTools} db={db} showToast={showToast} />}
-        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} setModal={setModal} />}
+        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} />}
       </main>
     </div>
 
@@ -1134,7 +1170,7 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
   );
 }
 
-function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, db, showToast, setModal }) {
+function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, db, showToast, setModal, onSupervise }) {
   return (
     <>
       <div className="topbar"><h2>Équipe</h2>{!isSuperAdmin && <button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ Ajouter un profil</button>}</div>
@@ -1165,10 +1201,13 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                             <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, color: "var(--accent)", letterSpacing: 6 }}>{u.pin}</div>
                           </div>
                           {u.phone && <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>📞 {u.phone}</div>}
-                          <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={() => {
-                            if (assignedTools.length > 0) { showToast("⚠️ Ce profil a des outils confiés !", "warn"); return; }
-                            if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast("🗑 Profil supprimé"); }
-                          }}>🗑 Supprimer</button>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            {onSupervise && <button className="btn btn-blue btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => onSupervise(u)}>👁 Voir</button>}
+                            <button className="btn btn-danger btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => {
+                              if (assignedTools.length > 0) { showToast("⚠️ Ce profil a des outils confiés !", "warn"); return; }
+                              if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast("🗑 Profil supprimé"); }
+                            }}>🗑</button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1194,6 +1233,8 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                     const assignedTools = filteredTools.filter(t => String(t.assignedTo) === String(u.id));
                     const isSelf = String(u.id) === String(currentUser.id);
                     const canDelete = !isSelf && (u.role === "viewer" || (u.role === "admin" && ["superadmin","director"].includes(currentUser.role)) || (u.role === "director" && currentUser.role === "superadmin"));
+                    const hierarchy = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
+                    const canSupervise = onSupervise && !isSelf && (hierarchy[currentUser.role] || 0) > (hierarchy[u.role] || 0);
                     return (
                       <div key={u.id} style={{ background: "var(--surface)", border: `1px solid ${isSelf ? roleColor : "var(--border)"}`, borderRadius: 12, overflow: "hidden" }}>
                         <div style={{ height: 6, background: roleColor }} />
@@ -1725,7 +1766,7 @@ function ParcToolRow({ tool, assignee, isMyTool, currentUser, db, onAsk }) {
     if (!msg.trim()) return;
     const id = String(Date.now());
     // FIX #3 — db disponible via props
-    await setDoc(doc(db, "requests", id), { id, type: "employe-ask", status: "pending", from: currentUser.id, fromName: currentUser.name, toolId: String(tool.id), toolName: tool.name, toolLocation: tool.location, targetViewerId: String(tool.assignedTo), targetViewerName: assignee?.name, note: msg, text: `💬 ${currentUser.name} → ${assignee?.name} : "${msg}" (${tool.name})`, date: new Date().toISOString() });
+    await setDoc(doc(db, "requests", id), { id, type: "employe-ask", status: "pending", from: effectiveUser.id, fromName: effectiveUser.name, toolId: String(tool.id), toolName: tool.name, toolLocation: tool.location, targetViewerId: String(tool.assignedTo), targetViewerName: assignee?.name, note: msg, text: `💬 ${currentUser.name} → ${assignee?.name} : "${msg}" (${tool.name})`, date: new Date().toISOString() });
     setMsg(""); setAsking(false);
   };
   return (
@@ -1818,7 +1859,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
   const createConversation = async () => {
     if (!newText.trim() || !newSubject.trim()) return;
     const id = String(Date.now());
-    const msg = { id: String(Date.now() + 1), from: currentUser.id, fromName: currentUser.name, fromAvatar: currentUser.avatar, fromRole: currentUser.role, text: newText, date: new Date().toISOString(), readBy: [String(currentUser.id)] };
+    const msg = { id: String(Date.now() + 1), from: effectiveUser.id, fromName: effectiveUser.name, fromAvatar: currentUser.avatar, fromRole: currentUser.role, text: newText, date: new Date().toISOString(), readBy: [String(currentUser.id)] };
     // FIX #E — companyId stocké pour que le filtre #D fonctionne sur les nouvelles conversations
     await setDoc(doc(db, "conversations", id), { id, subject: newSubject, type: tab === "annonces" ? "annonce" : "admin", createdBy: currentUser.id, createdByName: currentUser.name, companyId: currentUser.companyId || null, messages: [msg], lastDate: new Date().toISOString(), lastText: newText });
     setNewSubject(""); setNewText(""); setNewConvOpen(false); setSelected(id);
@@ -1833,7 +1874,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
   const sendReply = async () => {
     if (!replyText.trim() && !photoData) return;
     if (!selectedConv || (selectedConv.type === "annonce" && !isAdmin)) return;
-    const msg = { id: String(Date.now()), from: currentUser.id, fromName: currentUser.name, fromAvatar: currentUser.avatar, fromRole: currentUser.role, text: replyText, photo: photoData || null, replyTo: replyTo ? { id: replyTo.id, fromName: replyTo.fromName, text: replyTo.text?.slice(0, 60) } : null, date: new Date().toISOString(), readBy: [String(currentUser.id)] };
+    const msg = { id: String(Date.now()), from: effectiveUser.id, fromName: effectiveUser.name, fromAvatar: currentUser.avatar, fromRole: currentUser.role, text: replyText, photo: photoData || null, replyTo: replyTo ? { id: replyTo.id, fromName: replyTo.fromName, text: replyTo.text?.slice(0, 60) } : null, date: new Date().toISOString(), readBy: [String(currentUser.id)] };
     await setDoc(doc(db, "conversations", selectedConv.id), { ...selectedConv, messages: [...(selectedConv.messages || []), msg], lastDate: new Date().toISOString(), lastText: replyText || "📷 Photo" });
     setReplyText(""); setPhotoData(null); setReplyTo(null);
     setTimeout(() => threadRef.current?.scrollTo({ top: 99999, behavior: "smooth" }), 100);
@@ -1969,7 +2010,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
 }
 
 // ─── COMPANIES PAGE ───────────────────────────────────────────────────────────
-function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated }) {
+function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated, onSupervise }) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState(""), [newColor, setNewColor] = useState("#f5a623"), [newExpiry, setNewExpiry] = useState(""), [newContactEmail, setNewContactEmail] = useState(currentUser.email || "");
   const [formSubmitted, setFormSubmitted] = useState(false);
