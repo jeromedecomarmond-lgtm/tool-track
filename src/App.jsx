@@ -648,7 +648,7 @@ export default function App() {
         {page === "chantiers" && isAdmin && <ChantierPage chantiers={filteredChantiers} tools={filteredTools} users={filteredUsers} addChantier={addChantier} deleteChantier={deleteChantier} />}
         {page === "requests" && <RequestsPage isSuperAdmin={isSuperAdmin} isAdmin={isAdmin} filteredRequests={filteredRequests} requests={requests} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} />}
         {/* FIX #10 — page messages rendue */}
-        {page === "messages" && <MessagesPage currentUser={currentUser} users={users} tools={tools} myTools={myTools} db={db} showToast={showToast} />}
+        {page === "messages" && <MessagesPage currentUser={effectiveUser} users={users} tools={tools} myTools={myTools} db={db} showToast={showToast} />}
         {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} />}
       </main>
     </div>
@@ -1958,7 +1958,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
         <div className="topbar">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button className="btn btn-ghost btn-sm" onClick={() => setSelected(null)}>← Retour</button>
-            <div><h2 style={{ fontSize: 17 }}>{selectedConv.subject}</h2><div style={{ fontSize: 11, color: "var(--muted)" }}>{selectedConv.type === "annonce" ? "📢 Annonce" : "🔑 Admins"}</div></div>
+            <div><h2 style={{ fontSize: 17 }}>{selectedConv.subject}</h2><div style={{ fontSize: 11, color: "var(--muted)" }}>{selectedConv.type === "annonce" ? "📢 Annonce — visible par toute l'équipe" : "🔑 Messages Directeurs & Admins uniquement"}</div></div>
           </div>
         </div>
         <div className="content" style={{ display: "flex", flexDirection: "column", height: "calc(100% - 70px)" }}>
@@ -2000,7 +2000,10 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
               <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4 }}>Entrée pour envoyer · Shift+Entrée pour saut de ligne</div>
             </div>
           ) : (
-            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, textAlign: "center", fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>👁 Lecture seule — seuls les admins peuvent répondre</div>
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, textAlign: "center", fontSize: 12, color: "var(--muted)", fontStyle: "italic", padding: 16 }}>
+              📢 Annonce officielle — lecture seule<br/>
+              <span style={{ fontSize: 11 }}>Pour toute question, contactez votre Directeur ou Admin</span>
+            </div>
           )}
         </div>
       </>
