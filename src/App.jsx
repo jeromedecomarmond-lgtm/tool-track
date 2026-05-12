@@ -632,7 +632,7 @@ export default function App() {
       ))}
     </nav>
 
-    {modal && <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} addTool={addTool} addUser={addUser} assignTool={assignTool} deleteTool={deleteTool} updateTool={updateTool} myCompany={myCompany} />}
+    {modal && <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} effectiveUser={effectiveUser} addTool={addTool} addUser={addUser} assignTool={assignTool} deleteTool={deleteTool} updateTool={updateTool} myCompany={myCompany} />}
     {toast && <div className={`toast ${toast.type === "warn" ? "warn" : ""}`}><div className="toast-text">{toast.text}</div></div>}
     </>
   );
@@ -1284,7 +1284,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
 }
 
 // ─── MODAL ROUTER ─────────────────────────────────────────────────────────────
-function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool, myCompany }) {
+function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, effectiveUser, addTool, addUser, assignTool, deleteTool, updateTool, myCompany }) {
   const isAdmin = ["admin","director","superadmin"].includes(currentUser.role);
   if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
   if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={effectiveUser} myCompany={myCompany} />;
