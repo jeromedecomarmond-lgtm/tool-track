@@ -279,13 +279,24 @@ export default function App() {
   const startSupervision = (targetUser) => {
     if (!canSupervise(currentUser, targetUser)) return;
     setSupervisedUser({ realUser: currentUser, fakeUser: targetUser });
-    const targetCompany = companies.find(c => c.id === targetUser.companyId);
+    // Reset tous les filtres pour éviter les conflits
+    setFilterUser("all");
+    setFilterChantier("all");
+    setFilterStatus("all");
+    setSearch("");
+    setSelectedTools([]);
     showToast(`👁 Mode supervision : ${targetUser.name}`);
     setPage(["admin","director"].includes(targetUser.role) ? "tools" : "mytools");
   };
 
   const stopSupervision = () => {
     setSupervisedUser(null);
+    // Reset tous les filtres
+    setFilterUser("all");
+    setFilterChantier("all");
+    setFilterStatus("all");
+    setSearch("");
+    setSelectedTools([]);
     showToast("✅ Retour à votre profil");
     setPage(currentUser.role === "superadmin" ? "dashboard" : "tools");
   };
