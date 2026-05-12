@@ -1393,7 +1393,7 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
 // ─── TOOL DETAIL MODAL ────────────────────────────────────────────────────────
 function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, currentUser, deleteTool, updateTool }) {
   const [assignForm, setAssignForm] = useState({ viewerId: "", chantier: "" });
-  const [moveForm, setMoveForm] = useState({ destination: "", newViewerId: "" });
+
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ name: tool.name || "", ref: tool.ref || "", description: tool.description || "", price: tool.price ? tool.price.toLocaleString("fr-MU") : "", purchaseDate: tool.purchaseDate || "" });
   // FIX #12 — confirmDelete masqué automatiquement quand editing=true
@@ -1401,7 +1401,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
   const fileRef = useRef();
   const [newPhoto, setNewPhoto] = useState(null);
   const [loadingAssign, triggerAssign] = useLoadingBtn();
-  const [loadingMove, triggerMove] = useLoadingBtn();
+
   const [loadingSave, triggerSave] = useLoadingBtn();
   const [loadingDelete, triggerDelete] = useLoadingBtn();
   const [loadingDeclare, triggerDeclare] = useLoadingBtn();
@@ -1531,15 +1531,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             </div>
           )}
 
-          {isAdmin && tool.status === "assigned" && (
-            <div className="assign-section"><h4>🔄 Mouvement de l'outil</h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <select className="form-input" value={moveForm.destination} onChange={e => setMoveForm(p => ({ ...p, destination: e.target.value }))}><option value="">— Destination —</option><option value="Store">🏠 Retour Store</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
-                <select className="form-input" value={moveForm.newViewerId} onChange={e => setMoveForm(p => ({ ...p, newViewerId: e.target.value }))}><option value="">— Retour store (ou nouveau employé) —</option>{viewers.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
-                <button className={`btn btn-green btn-sm ${loadingMove ? "loading" : ""}`} disabled={!moveForm.destination || loadingMove} onClick={() => triggerMove(() => assignTool(tool.id, moveForm.newViewerId || null, moveForm.destination === "Store" ? null : moveForm.destination, moveForm.newViewerId ? "out" : "in"))}>{loadingMove ? "⏳..." : moveForm.newViewerId ? "Transférer" : "Récupérer → Store"}</button>
-              </div>
-            </div>
-          )}
+
 
           {isAdmin && (
             <div style={{ background: "rgba(120,120,140,.07)", border: "1px solid rgba(120,120,140,.25)", borderRadius: 12, padding: 14 }}>
