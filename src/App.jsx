@@ -1287,7 +1287,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
 function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantiers, currentUser, addTool, addUser, assignTool, deleteTool, updateTool, myCompany }) {
   const isAdmin = ["admin","director","superadmin"].includes(currentUser.role);
   if (modal.type === "addTool") return <AddToolModal onClose={() => setModal(null)} onSave={addTool} />;
-  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={currentUser} myCompany={myCompany} />;
+  if (modal.type === "addUser") return <AddUserModal onClose={() => setModal(null)} onSave={addUser} currentUser={effectiveUser} myCompany={myCompany} />;
   // FIX #7 — on relit le tool depuis le state tools (mis à jour par onSnapshot) au lieu du snapshot figé modal.data
   if (modal.type === "tool") {
     const liveTool = tools.find(t => String(t.id) === String(modal.data?.id)) || modal.data;
@@ -1606,11 +1606,11 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
               <div className="form-group"><label className="form-label">Nom complet <span style={{ color: "var(--red)" }}>*</span></label><input className="form-input" style={fieldStyle(form.name)} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="ex: Jean Dupont" />{submitted && !form.name.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Nom obligatoire</div>}</div>
               <div className="form-group"><label className="form-label">Rôle *</label>
                 <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
-                  {/* Règle : on ne peut créer que des rôles INFÉRIEURS au sien */}
+                  {/* Règle stricte : on ne crée que des rôles STRICTEMENT inférieurs */}
                   {["admin","director","superadmin"].includes(currentUser?.role) && <option value="viewer">👷 Employé</option>}
                   {["director","superadmin"].includes(currentUser?.role) && <option value="admin">🔑 Admin</option>}
                   {currentUser?.role === "superadmin" && <option value="director">🏢 Directeur</option>}
-                  {/* Personne ne peut créer un SuperAdmin depuis ce modal */}
+                  {/* Admin → Employé seulement | Directeur → Admin + Employé | SuperAdmin → tous sauf SuperAdmin */}
                 </select>
               </div>
               <div className="form-row">
