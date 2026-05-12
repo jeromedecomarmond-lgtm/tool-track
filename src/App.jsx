@@ -649,7 +649,7 @@ export default function App() {
         {page === "requests" && <RequestsPage isSuperAdmin={isSuperAdmin} isAdmin={isAdmin} filteredRequests={filteredRequests} requests={requests} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} />}
         {/* FIX #10 — page messages rendue */}
         {page === "messages" && <MessagesPage currentUser={currentUser} users={users} tools={tools} myTools={myTools} db={db} showToast={showToast} />}
-        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} />}
+        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} />}
       </main>
     </div>
 
