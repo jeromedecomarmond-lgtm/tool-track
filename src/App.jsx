@@ -642,7 +642,7 @@ export default function App() {
       <main className="main" style={{ marginTop: isSupervising ? 36 : 0 }}>
         {page === "companies" && isSuperAdmin && <CompaniesPage companies={companies} users={users} tools={tools} chantiers={chantiers} requests={requests} db={db} currentUser={currentUser} showToast={showToast} onAdminCreated={(admin) => setModal({ type: "whatsappInvite", data: admin })} onSupervise={startSupervision} />}
         {page === "dashboard" && isAdmin && <DashboardPage isSuperAdmin={isSuperAdmin} companies={companies} tools={tools} users={users} chantiers={chantiers} requests={requests} filteredTools={filteredTools} filteredUsers={filteredUsers} filteredRequests={filteredRequests} openTool={openTool} />}
-        {page === "tools" && isAdmin && <ToolsPage displayedTools={displayedTools} filteredTools={filteredTools} filteredChantiers={filteredChantiers} viewers={viewers} users={users} filterStatus={filterStatus} setFilterStatus={setFilterStatus} filterUser={filterUser} setFilterUser={setFilterUser} filterChantier={filterChantier} setFilterChantier={setFilterChantier} search={search} setSearch={setSearch} selectedTools={selectedTools} setSelectedTools={setSelectedTools} showMovePanel={showMovePanel} setShowMovePanel={setShowMovePanel} openTool={openTool} setModal={setModal} assignTool={assignTool} showToast={showToast} currentUser={currentUser} db={db} />}
+        {page === "tools" && isAdmin && <ToolsPage displayedTools={displayedTools} filteredTools={filteredTools} filteredChantiers={filteredChantiers} viewers={viewers} users={users} filterStatus={filterStatus} setFilterStatus={setFilterStatus} filterUser={filterUser} setFilterUser={setFilterUser} filterChantier={filterChantier} setFilterChantier={setFilterChantier} search={search} setSearch={setSearch} selectedTools={selectedTools} setSelectedTools={setSelectedTools} showMovePanel={showMovePanel} setShowMovePanel={setShowMovePanel} openTool={openTool} setModal={setModal} assignTool={assignTool} showToast={showToast} currentUser={effectiveUser} db={db} sendRequest={sendRequest} />}
         {page === "mytools" && !isAdmin && <MyToolsPage myTools={myTools} currentUser={currentUser} users={users} viewers={viewers} chantiers={chantiers} db={db} openTool={openTool} sendRequest={sendRequest} />}
         {page === "parc" && !isAdmin && <ParcPage filteredTools={filteredTools} myTools={myTools} users={users} currentUser={currentUser} db={db} sendRequest={sendRequest} />}
         {page === "chantiers" && isAdmin && <ChantierPage chantiers={filteredChantiers} tools={filteredTools} users={filteredUsers} addChantier={addChantier} deleteChantier={deleteChantier} />}
@@ -815,7 +815,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
   );
 }
 
-function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, users, filterStatus, setFilterStatus, filterUser, setFilterUser, filterChantier, setFilterChantier, search, setSearch, selectedTools, setSelectedTools, showMovePanel, setShowMovePanel, openTool, setModal, assignTool, showToast, currentUser, db }) {
+function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, users, filterStatus, setFilterStatus, filterUser, setFilterUser, filterChantier, setFilterChantier, search, setSearch, selectedTools, setSelectedTools, showMovePanel, setShowMovePanel, openTool, setModal, assignTool, showToast, currentUser, db, sendRequest }) {
   return (
     <>
       <div className="topbar">
@@ -882,7 +882,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
           })}
         </div>
       </div>
-      {showMovePanel && <MovePanelModal selectedIds={selectedTools} tools={filteredTools} viewers={viewers} chantiers={filteredChantiers} currentUser={currentUser} db={db} onClose={() => { setShowMovePanel(false); setSelectedTools([]); }} assignTool={assignTool} showToast={showToast} />}
+      {showMovePanel && <MovePanelModal selectedIds={selectedTools} tools={filteredTools} viewers={viewers} chantiers={filteredChantiers} currentUser={currentUser} db={db} onClose={() => { setShowMovePanel(false); setSelectedTools([]); }} assignTool={assignTool} showToast={showToast} sendRequest={sendRequest} isAdminUser={true} />}
     </>
   );
 }
@@ -1748,49 +1748,115 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) 
 }
 
 // ─── MOVE PANEL MODAL — FIX #1 db en props ───────────────────────────────────
-function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, db, onClose, assignTool, showToast }) {
-  const [action, setAction] = useState(""), [viewerId, setViewerId] = useState(""), [chantier, setChantier] = useState(""), [loading, setLoading] = useState(false);
+function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, db, onClose, assignTool, showToast, sendRequest, isAdminUser }) {
+  const [action, setAction] = useState(""), [viewerId, setViewerId] = useState(""), [chantier, setChantier] = useState(""), [note, setNote] = useState(""), [loading, setLoading] = useState(false), [done, setDone] = useState(false);
   const selectedTools = tools.filter(t => selectedIds.includes(t.id));
+  const isAdmin = isAdminUser || ["admin","director","superadmin"].includes(currentUser?.role);
+
   const handleMove = async () => {
     if (!action || (action === "out" && (!viewerId || !chantier))) return;
     setLoading(true);
-    for (const tool of selectedTools) {
-      if (action === "out") await assignTool(tool.id, viewerId, chantier, "out");
-      else if (action === "in") await assignTool(tool.id, null, null, "in");
-      else if (action === "nonfunctional") {
-        // FIX #1 — db disponible via props
-        await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "nonfunctional", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `🔴 Déclaré non fonctionnel — par ${currentUser.name}`, by: currentUser.name }] });
+    if (isAdmin) {
+      // Admin/Directeur — transfert direct immédiat
+      for (const tool of selectedTools) {
+        if (action === "out") await assignTool(tool.id, viewerId, chantier, "out");
+        else if (action === "in") await assignTool(tool.id, null, null, "in");
+        else if (action === "nonfunctional") {
+          await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "nonfunctional", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `🔴 Déclaré non fonctionnel — par ${currentUser.name}`, by: currentUser.name }] });
+        }
       }
+      showToast(`✅ ${selectedIds.length} outil${selectedIds.length > 1 ? "s" : ""} transféré${selectedIds.length > 1 ? "s" : ""} !`);
+    } else {
+      // Employé — envoie une demande pour chaque outil
+      for (const tool of selectedTools) {
+        await sendRequest({
+          type: action === "out" ? "transfer" : action === "in" ? "return" : "nonfunctional",
+          toolId: tool.id, toolName: tool.name, toolLocation: tool.location,
+          targetViewerId: action === "out" ? viewerId : null,
+          targetViewerName: action === "out" ? (viewers.find(v => v.id === viewerId)?.name || "") : null,
+          targetChantier: action === "out" ? chantier : null,
+          note: note || "",
+        });
+      }
+      showToast(`📨 ${selectedIds.length} demande${selectedIds.length > 1 ? "s" : ""} envoyée${selectedIds.length > 1 ? "s" : ""} !`);
     }
-    showToast(`✅ ${selectedIds.length} outil${selectedIds.length > 1 ? "s" : ""} déplacé${selectedIds.length > 1 ? "s" : ""} !`);
-    setLoading(false); onClose();
+    setDone(true);
+    setLoading(false);
+    setTimeout(() => onClose(), 1500);
   };
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 420 }}>
-        <div className="modal-header"><h3>↗ Déplacer {selectedIds.length} outil{selectedIds.length > 1 ? "s" : ""}</h3><button className="close-btn" onClick={onClose}>×</button></div>
+        <div className="modal-header">
+          <h3>{isAdmin ? "↗ Transférer" : "📋 Demande de transfert"} — {selectedIds.length} outil{selectedIds.length > 1 ? "s" : ""}</h3>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
         <div className="modal-body">
-          <div style={{ background: "var(--surface2)", borderRadius: 10, padding: "10px 14px", marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>Outils sélectionnés</div>
-            {selectedTools.map(t => <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><span>{t.photo}</span><span style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</span><span style={{ fontSize: 11, color: "var(--muted)" }}>— 📍 {t.location}</span></div>)}
-          </div>
-          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "var(--muted)" }}>Choisissez l'action :</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-            {[{ val: "out", label: "↗ Sortir & Confier à un employé", color: "var(--blue)" }, { val: "in", label: "↙ Retourner au Store", color: "var(--green)" }, { val: "nonfunctional", label: "🔴 Déclarer non fonctionnel", color: "#f07030" }].map(a => (
-              <button key={a.val} onClick={() => setAction(a.val)} style={{ padding: "12px 16px", borderRadius: 10, border: `2px solid ${action === a.val ? a.color : "var(--border)"}`, background: action === a.val ? a.color + "22" : "var(--surface)", color: action === a.val ? a.color : "var(--text)", fontWeight: 700, fontSize: 13, textAlign: "left", cursor: "pointer" }}>{a.label}</button>
-            ))}
-          </div>
-          {action === "out" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <select className="form-input" value={viewerId} onChange={e => setViewerId(e.target.value)}><option value="">— Choisir un employé —</option>{viewers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</select>
-              <select className="form-input" value={chantier} onChange={e => setChantier(e.target.value)}><option value="">— Choisir un chantier —</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
+          {done ? (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>{isAdmin ? "✅" : "📨"}</div>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800, color: isAdmin ? "var(--green)" : "var(--accent)" }}>
+                {isAdmin ? "Transfert effectué !" : "Demande envoyée !"}
+              </div>
+              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
+                {isAdmin ? "Les outils ont été déplacés." : "Un admin va traiter votre demande."}
+              </div>
             </div>
+          ) : (
+            <>
+              {/* Info rôle */}
+              <div style={{ background: isAdmin ? "rgba(58,142,246,.1)" : "rgba(245,166,35,.1)", border: `1px solid ${isAdmin ? "rgba(58,142,246,.3)" : "rgba(245,166,35,.3)"}`, borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 12, color: isAdmin ? "var(--blue)" : "var(--accent)", fontWeight: 600 }}>
+                {isAdmin ? "🔑 Transfert direct — aucune approbation requise" : "👷 Votre demande sera soumise à approbation par un admin"}
+              </div>
+
+              {/* Outils sélectionnés */}
+              <div style={{ background: "var(--surface2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
+                <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>Outils ({selectedIds.length})</div>
+                {selectedTools.map(t => <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><span style={{ fontSize: 18 }}>{t.photo}</span><div><div style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>📍 {t.location}</div></div></div>)}
+              </div>
+
+              {/* Actions */}
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "var(--muted)" }}>Type d'action :</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+                {[
+                  { val: "out", label: "🔄 Transfert vers un employé", color: "var(--blue)" },
+                  { val: "in", label: "🏠 Retour au Store", color: "var(--green)" },
+                  { val: "nonfunctional", label: "🔴 Déclarer non fonctionnel", color: "#f07030" }
+                ].map(a => (
+                  <button key={a.val} onClick={() => setAction(a.val)} style={{ padding: "12px 16px", borderRadius: 10, border: `2px solid ${action === a.val ? a.color : "var(--border)"}`, background: action === a.val ? a.color + "22" : "var(--surface)", color: action === a.val ? a.color : "var(--text)", fontWeight: 700, fontSize: 13, textAlign: "left", cursor: "pointer" }}>{a.label}</button>
+                ))}
+              </div>
+
+              {action === "out" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
+                  <select className="form-input" value={viewerId} onChange={e => setViewerId(e.target.value)}>
+                    <option value="">— Choisir un employé —</option>
+                    {viewers.filter(v => v.id !== currentUser?.id).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                  </select>
+                  <select className="form-input" value={chantier} onChange={e => setChantier(e.target.value)}>
+                    <option value="">— Choisir un chantier —</option>
+                    {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {/* Note */}
+              <div className="form-group">
+                <label className="form-label">Note {!isAdmin && "(recommandé)"}</label>
+                <textarea className="form-input" rows={2} placeholder="Raison du transfert..." value={note} onChange={e => setNote(e.target.value)} />
+              </div>
+            </>
           )}
         </div>
-        <div className="modal-footer">
-          <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-          <button className="btn btn-primary" disabled={!action || (action === "out" && (!viewerId || !chantier)) || loading} onClick={handleMove}>{loading ? "⏳ En cours..." : `✅ Confirmer (${selectedIds.length})`}</button>
-        </div>
+        {!done && (
+          <div className="modal-footer">
+            <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
+            <button className="btn btn-primary" disabled={!action || (action === "out" && (!viewerId || !chantier)) || loading} onClick={handleMove}>
+              {loading ? "⏳ En cours..." : isAdmin ? `✅ Transférer (${selectedIds.length})` : `📨 Envoyer la demande (${selectedIds.length})`}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
