@@ -735,7 +735,11 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
     <>
       <div className="topbar">
         <h2>📊 Dashboard</h2>
-        {onReset && <button onClick={onReset} style={{ background: "rgba(232,40,40,.15)", color: "var(--red)", border: "1px solid rgba(232,40,40,.4)", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑 Reset données test</button>}
+        {isSuperAdmin && onReset && (
+          <button onClick={onReset} style={{ background: "rgba(232,40,40,.15)", color: "var(--red)", border: "2px solid rgba(232,40,40,.5)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+            🗑 Reset données test
+          </button>
+        )}
       </div>
       <div className="content">
         {isSuperAdmin ? (
