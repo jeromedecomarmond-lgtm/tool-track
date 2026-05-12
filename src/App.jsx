@@ -289,6 +289,34 @@ export default function App() {
     setPage(["admin","director"].includes(targetUser.role) ? "tools" : "mytools");
   };
 
+  // ⚠️ RESET TEMPORAIRE — À SUPPRIMER AVANT MISE EN PRODUCTION
+  const resetAllData = async () => {
+    const confirm1 = window.confirm("⚠️ ATTENTION — Cette action va supprimer TOUTES les données de test (compagnies, outils, employés, chantiers, demandes, messages).
+
+Votre compte SuperAdmin sera conservé.
+
+Êtes-vous sûr ?");
+    if (!confirm1) return;
+    const confirm2 = window.confirm("🔴 DERNIÈRE CONFIRMATION — Toutes les données seront supprimées définitivement. Continuer ?");
+    if (!confirm2) return;
+    showToast("⏳ Reset en cours...");
+    try {
+      const collections = ["companies", "tools", "chantiers", "requests", "messages", "conversations"];
+      for (const col of collections) {
+        const snap = await getDocs(collection(db, col));
+        for (const d of snap.docs) await deleteDoc(doc(db, col, d.id));
+      }
+      // Supprimer tous les users sauf le SuperAdmin
+      const usersSnap = await getDocs(collection(db, "users"));
+      for (const d of usersSnap.docs) {
+        if (d.data().role !== "superadmin") await deleteDoc(doc(db, "users", d.id));
+      }
+      showToast("✅ Reset complet — repartez de zéro !");
+    } catch(e) {
+      showToast("❌ Erreur : " + e.message);
+    }
+  };
+
   const stopSupervision = () => {
     setSupervisedUser(null);
     // Reset tous les filtres
@@ -671,7 +699,7 @@ export default function App() {
       {/* MAIN */}
       <main className="main" style={{ marginTop: isSupervising ? 36 : 0 }}>
         {page === "companies" && isSuperAdmin && <CompaniesPage companies={companies} users={users} tools={tools} chantiers={chantiers} requests={requests} db={db} currentUser={currentUser} showToast={showToast} onAdminCreated={(admin) => setModal({ type: "whatsappInvite", data: admin })} onSupervise={startSupervision} />}
-        {page === "dashboard" && isAdmin && <DashboardPage isSuperAdmin={isSuperAdmin} companies={companies} tools={tools} users={users} chantiers={chantiers} requests={requests} filteredTools={filteredTools} filteredUsers={filteredUsers} filteredRequests={filteredRequests} openTool={openTool} />}
+        {page === "dashboard" && isAdmin && <DashboardPage isSuperAdmin={isSuperAdmin} companies={companies} tools={tools} users={users} chantiers={chantiers} requests={requests} filteredTools={filteredTools} filteredUsers={filteredUsers} filteredRequests={filteredRequests} openTool={openTool} onReset={resetAllData} />}
         {page === "tools" && isAdmin && <ToolsPage displayedTools={displayedTools} filteredTools={filteredTools} filteredChantiers={filteredChantiers} viewers={viewers} users={users} filterStatus={filterStatus} setFilterStatus={setFilterStatus} filterUser={filterUser} setFilterUser={setFilterUser} filterChantier={filterChantier} setFilterChantier={setFilterChantier} search={search} setSearch={setSearch} selectedTools={selectedTools} setSelectedTools={setSelectedTools} showMovePanel={showMovePanel} setShowMovePanel={setShowMovePanel} openTool={openTool} setModal={setModal} assignTool={assignTool} showToast={showToast} currentUser={effectiveUser} db={db} sendRequest={sendRequest} />}
         {page === "mytools" && !isAdmin && <MyToolsPage myTools={myTools} currentUser={currentUser} users={users} viewers={viewers} chantiers={chantiers} db={db} openTool={openTool} sendRequest={sendRequest} />}
         {page === "parc" && !isAdmin && <ParcPage filteredTools={filteredTools} myTools={myTools} users={users} currentUser={currentUser} db={db} sendRequest={sendRequest} />}
@@ -702,10 +730,13 @@ export default function App() {
 
 // ─── PAGES EXTRAITES ─────────────────────────────────────────────────────────
 
-function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, requests, filteredTools, filteredUsers, filteredRequests, openTool }) {
+function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, requests, filteredTools, filteredUsers, filteredRequests, openTool, onReset }) {
   return (
     <>
-      <div className="topbar"><h2>📊 Dashboard</h2></div>
+      <div className="topbar">
+        <h2>📊 Dashboard</h2>
+        {onReset && <button onClick={onReset} style={{ background: "rgba(232,40,40,.15)", color: "var(--red)", border: "1px solid rgba(232,40,40,.4)", borderRadius: 8, padding: "6px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑 Reset données test</button>}
+      </div>
       <div className="content">
         {isSuperAdmin ? (
           <>
