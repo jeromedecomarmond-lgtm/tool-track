@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs } from "firebase/firestore";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from "firebase/auth";
 
 const T = {
   fr: {
@@ -282,7 +283,8 @@ export default function App() {
     try { localStorage.setItem("tooltrack_user_id", u.id); } catch(e) {}
   };
 
-  const logoutUser = () => {
+  const logoutUser = async () => {
+    try { await signOut(auth); } catch(e) {}
     setCurrentUser(null);
     try { localStorage.removeItem("tooltrack_user_id"); localStorage.removeItem("tooltrack_last_page"); } catch(e) {}
   };
@@ -434,11 +436,30 @@ export default function App() {
   };
 
   const addUser = async (form) => {
-    const id = String(Date.now());
     const initials = form.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-    const newUser = { id, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email || "", pin: form.pin, companyId: myCompanyId || null };
-    await setDoc(doc(db, "users", id), newUser);
-    showToast("✅ Profil créé"); return newUser;
+    if (form.role === "viewer") {
+      const id = String(Date.now());
+      const newUser = { id, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email || "", pin: form.pin, companyId: myCompanyId || null, authUid: null };
+      await setDoc(doc(db, "users", id), newUser);
+      showToast("✅ Profil employé créé");
+      return newUser;
+    }
+    if (!form.email?.trim() || !form.password || form.password.length < 6) {
+      showToast("❌ Email et mot de passe (6+ car.) requis pour un admin");
+      return null;
+    }
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
+      const uid = cred.user.uid;
+      const newUser = { id: uid, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email.trim(), pin: form.pin, companyId: myCompanyId || null, authUid: uid };
+      await setDoc(doc(db, "users", uid), newUser);
+      showToast("✅ Profil admin créé");
+      return newUser;
+    } catch(e) {
+      if (e.code === "auth/email-already-in-use") showToast("❌ Cet email est déjà utilisé");
+      else showToast("❌ Erreur : " + e.message);
+      return null;
+    }
   };
 
   const addChantier = async (name, color) => {
@@ -2005,6 +2026,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
   const [step, setStep] = useState("company"), [selectedCompany, setSelectedCompany] = useState(null), [companyPin, setCompanyPin] = useState(""), [pinError, setPinError] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false), [adminEmail, setAdminEmail] = useState(""), [adminPassword, setAdminPassword] = useState(""), [adminLoading, setAdminLoading] = useState(false), [adminError, setAdminError] = useState(""), [resetSent, setResetSent] = useState(false);
   const superAdmins = users.filter(u => u.role === "superadmin");
 
   const handleCompanyPin = (digit) => {
@@ -2017,6 +2039,29 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
     }
   };
 
+  const handleAdminEmailLogin = async () => {
+    if (!adminEmail.trim() || !adminPassword) return;
+    setAdminLoading(true); setAdminError("");
+    try {
+      const cred = await signInWithEmailAndPassword(auth, adminEmail.trim(), adminPassword);
+      const uid = cred.user.uid;
+      const userProfile = users.find(u => u.authUid === uid || u.id === uid);
+      if (!userProfile) { await signOut(auth); setAdminError("❌ Profil introuvable. Contactez votre administrateur."); setAdminLoading(false); return; }
+      if (!["superadmin", "director", "admin"].includes(userProfile.role)) { await signOut(auth); setAdminError("❌ Ce compte n'a pas accès à la connexion email."); setAdminLoading(false); return; }
+      onLogin(userProfile);
+    } catch(e) {
+      if (e.code === "auth/user-not-found" || e.code === "auth/wrong-password" || e.code === "auth/invalid-credential") setAdminError("❌ Email ou mot de passe incorrect.");
+      else setAdminError("❌ Erreur : " + e.message);
+      setAdminLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!adminEmail.trim()) { setAdminError("Entrez votre email d'abord."); return; }
+    try { await sendPasswordResetEmail(auth, adminEmail.trim()); setResetSent(true); setAdminError(""); }
+    catch(e) { setAdminError("❌ Impossible d'envoyer le reset. Vérifiez l'email."); }
+  };
+
   if (users.length === 0) {
     return (
       <div className="login-screen"><div className="login-card"><div className="login-title">TOOL TRACK</div><div className="login-sub">Bienvenue ! Créez le premier administrateur.</div>
@@ -2025,18 +2070,61 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
     );
   }
 
+  if (showAdminLogin) {
+    return (
+      <div className="login-screen"><div className="login-card">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, width: "100%" }}>
+          <button onClick={() => { setShowAdminLogin(false); setAdminError(""); setResetSent(false); }} style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 22, cursor: "pointer", padding: 0 }}>←</button>
+          <div className="login-title" style={{ fontSize: 22, marginBottom: 0 }}>TOOL TRACK</div>
+        </div>
+        <div style={{ fontSize: 13, color: "var(--accent)", fontWeight: 700, marginBottom: 16, textAlign: "center" }}>👑 Connexion Administrateur</div>
+        {resetSent ? (
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>📧</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--green)", marginBottom: 8 }}>Email envoyé !</div>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>Vérifiez votre boîte mail pour réinitialiser votre mot de passe.</div>
+            <button className="btn btn-ghost btn-sm" onClick={() => setResetSent(false)}>Retour</button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+            <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" placeholder="admin@email.com" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdminEmailLogin()} /></div>
+            <div className="form-group"><label className="form-label">Mot de passe</label><input className="form-input" type="password" placeholder="••••••••" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdminEmailLogin()} /></div>
+            {adminError && <div style={{ fontSize: 12, color: "var(--red)", fontWeight: 700 }}>{adminError}</div>}
+            <button className={`btn btn-primary ${adminLoading ? "loading" : ""}`} disabled={!adminEmail.trim() || !adminPassword || adminLoading} onClick={handleAdminEmailLogin} style={{ justifyContent: "center" }}>{adminLoading ? "⏳ Connexion..." : "🔑 Se connecter"}</button>
+            <button className="btn btn-ghost btn-sm" onClick={handleResetPassword} style={{ justifyContent: "center", fontSize: 11 }}>Mot de passe oublié ?</button>
+          </div>
+        )}
+      </div></div>
+    );
+  }
+
   if (step === "profile" && selectedCompany) {
     const companyUsers = users.filter(u => u.companyId === selectedCompany.id);
+    const viewerUsers = companyUsers.filter(u => u.role === "viewer");
+    const adminUsers = companyUsers.filter(u => ["admin", "director"].includes(u.role));
     return (
       <div className="login-screen"><div className="login-card">
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, width: "100%" }}>
           <button onClick={() => { setStep("company"); setSelectedCompany(null); }} style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 22, cursor: "pointer", padding: 0 }}>←</button>
           <div style={{ flex: 1 }}><div className="login-title" style={{ fontSize: 22, marginBottom: 0 }}>TOOL TRACK</div><div style={{ fontSize: 13, color: selectedCompany.color || "var(--accent)", fontWeight: 700 }}>🏢 {selectedCompany.name}</div></div>
         </div>
-        <div className="login-sub">Choisissez votre profil</div>
-        <div className="user-select-list">
-          {companyUsers.map(u => <PinLogin key={u.id} user={u} onSuccess={onLogin} />)}
-        </div>
+        {adminUsers.length > 0 && (
+          <div style={{ width: "100%", marginBottom: 16 }}>
+            <div style={{ fontSize: 11, color: "var(--accent)", textAlign: "center", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🔑 Admins</div>
+            {adminUsers.map(u => (
+              <div key={u.id} className="user-select-item" onClick={() => { setAdminEmail(u.email || ""); setShowAdminLogin(true); }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: u.role === "director" ? "#9b59b6" : "var(--accent)", color: u.role === "director" ? "#fff" : "#000" }}>{u.avatar}</div>
+                <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{u.role === "director" ? "🏢 Directeur" : "🔑 Admin"} · Email + mot de passe</div></div>
+                <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
+              </div>
+            ))}
+            {viewerUsers.length > 0 && <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />}
+          </div>
+        )}
+        {viewerUsers.length > 0 && (
+          <><div className="login-sub">👷 Employés — Choisissez votre profil</div>
+          <div className="user-select-list">{viewerUsers.map(u => <PinLogin key={u.id} user={u} onSuccess={onLogin} />)}</div></>
+        )}
         {companyUsers.length === 0 && <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: "20px 0" }}>Aucun profil dans cette compagnie</div>}
       </div></div>
     );
@@ -2052,7 +2140,13 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
       {superAdmins.length > 0 && (
         <div style={{ width: "100%", marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: "#e84040", textAlign: "center", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>👑 Administration</div>
-          {superAdmins.map(u => <PinLogin key={u.id} user={u} onSuccess={onLogin} />)}
+          {superAdmins.map(u => (
+            <div key={u.id} className="user-select-item" onClick={() => { setAdminEmail(u.email || ""); setShowAdminLogin(true); }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: "#e84040", color: "#fff" }}>{u.avatar}</div>
+              <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>👑 Super Admin · Email + mot de passe</div></div>
+              <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
+            </div>
+          ))}
           <div style={{ borderTop: "1px solid var(--border)", marginTop: 16, marginBottom: 16 }} />
         </div>
       )}
@@ -2119,20 +2213,32 @@ function PinLogin({ user, onSuccess }) {
 
 // ─── FIRST ADMIN FORM ─────────────────────────────────────────────────────────
 function FirstAdminForm({ onSave }) {
-  const [name, setName] = useState(""), [phone, setPhone] = useState(""), [email, setEmail] = useState(""), [pin, setPin] = useState(String(Math.floor(1000 + Math.random() * 9000)));
-  const handleCreate = () => {
-    if (!name.trim()) return;
-    const initials = name.trim().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-    const id = String(Date.now());
-    onSave({ id, name: name.trim(), role: "superadmin", avatar: initials, phone, email, pin, companyId: null });
+  const [name, setName] = useState(""), [phone, setPhone] = useState(""), [email, setEmail] = useState(""), [password, setPassword] = useState(""), [pin, setPin] = useState(String(Math.floor(1000 + Math.random() * 9000)));
+  const [loading, setLoading] = useState(false), [error, setError] = useState("");
+  const handleCreate = async () => {
+    if (!name.trim() || !email.trim() || password.length < 6 || pin.length !== 4) return;
+    setLoading(true); setError("");
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const uid = cred.user.uid;
+      const initials = name.trim().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+      await onSave({ id: uid, name: name.trim(), role: "superadmin", avatar: initials, phone, email: email.trim(), pin, companyId: null, authUid: uid });
+    } catch(e) {
+      if (e.code === "auth/email-already-in-use") setError("❌ Cet email est déjà utilisé.");
+      else if (e.code === "auth/invalid-email") setError("❌ Email invalide.");
+      else setError("❌ Erreur : " + e.message);
+      setLoading(false);
+    }
   };
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
       <div className="form-group"><label className="form-label">Votre nom *</label><input className="form-input" placeholder="ex: Jean Dupont" value={name} onChange={e => setName(e.target.value)} /></div>
       <div className="form-group"><label className="form-label">Téléphone</label><input className="form-input" placeholder="+230 ..." value={phone} onChange={e => setPhone(e.target.value)} /></div>
-      <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" placeholder="vous@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
-      <div className="form-group"><label className="form-label">🔑 Code PIN *</label><input className="form-input" style={{ fontSize: 22, fontWeight: 800, letterSpacing: 8, textAlign: "center" }} maxLength={4} placeholder="4 chiffres" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,"").slice(0,4))} /><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Retenez ce PIN — il vous servira à vous connecter</div></div>
-      <button className="btn btn-primary" disabled={!name.trim() || pin.length !== 4} onClick={handleCreate} style={{ justifyContent: "center", marginTop: 4 }}>🚀 Créer et démarrer</button>
+      <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" placeholder="vous@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
+      <div className="form-group"><label className="form-label">Mot de passe * (min. 6 caractères)</label><input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} /></div>
+      <div className="form-group"><label className="form-label">🔑 Code PIN * (pour mobile)</label><input className="form-input" style={{ fontSize: 22, fontWeight: 800, letterSpacing: 8, textAlign: "center" }} maxLength={4} placeholder="4 chiffres" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,"").slice(0,4))} /><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Le PIN sert à la connexion rapide sur mobile</div></div>
+      {error && <div style={{ fontSize: 12, color: "var(--red)", fontWeight: 700 }}>{error}</div>}
+      <button className={`btn btn-primary ${loading ? "loading" : ""}`} disabled={!name.trim() || !email.trim() || password.length < 6 || pin.length !== 4 || loading} onClick={handleCreate} style={{ justifyContent: "center", marginTop: 4 }}>{loading ? "⏳ Création..." : "🚀 Créer et démarrer"}</button>
     </div>
   );
 }
