@@ -591,7 +591,7 @@ export default function App() {
             <div className="avatar">{effectiveUser.avatar}</div>
             <div className="user-info"><div className="name">{effectiveUser.name.split(" ")[0]}</div><div className="role">{isSupervising ? "👁 supervision" : effectiveUser.role}</div></div>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={isSupervising ? stopSupervision : logoutUser}>{isSupervising ? "✕ Quitter supervision" : `⇄ ${tx.profile}`}</button>
+          <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={isSupervising ? stopSupervision : logoutUser}>{isSupervising ? "✕ Quitter supervision" : "⇄ Déconnexion"}</button>
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             <button onClick={() => setLanguage("fr")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "fr" ? "var(--accent)" : "var(--border)"}`, background: lang === "fr" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "fr" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇫🇷 FR</button>
             <button onClick={() => setLanguage("en")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "en" ? "var(--accent)" : "var(--border)"}`, background: lang === "en" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "en" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇬🇧 EN</button>
