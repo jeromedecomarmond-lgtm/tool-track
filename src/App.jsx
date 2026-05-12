@@ -813,13 +813,41 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
 }
 
 function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, openTool, sendRequest }) {
-  // FIX #4 — bannière statique, plus de toast en boucle
   const hasOldTools = myTools.some(tool => { const d = daysSince(tool.lastReminder); return d !== null && d >= 3; });
+  const [selected, setSelected] = useState([]);
+  const [showGroupModal, setShowGroupModal] = useState(false);
+  const [groupType, setGroupType] = useState("return");
+  const [groupTargetViewer, setGroupTargetViewer] = useState("");
+  const [groupChantier, setGroupChantier] = useState("");
+  const [groupNote, setGroupNote] = useState("");
+  const [groupSent, setGroupSent] = useState(false);
+
+  const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const allSelected = myTools.length > 0 && selected.length === myTools.length;
+
+  const handleGroupRequest = async () => {
+    const selectedTools = myTools.filter(t => selected.includes(t.id));
+    for (const tool of selectedTools) {
+      await sendRequest({
+        type: groupType,
+        toolId: tool.id,
+        toolName: tool.name,
+        toolLocation: tool.location,
+        targetViewerId: groupType === "transfer" ? groupTargetViewer : null,
+        targetViewerName: groupType === "transfer" ? (viewers.find(v => v.id === groupTargetViewer)?.name || "") : null,
+        targetChantier: groupType === "transfer" ? groupChantier : null,
+        note: groupNote,
+      });
+    }
+    setGroupSent(true);
+    setTimeout(() => { setShowGroupModal(false); setSelected([]); setGroupSent(false); setGroupNote(""); setGroupTargetViewer(""); setGroupChantier(""); }, 1500);
+  };
+
   return (
     <>
       <div className="topbar">
         <h2>📦 Mes outils</h2>
-        <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>{myTools.length === 0 ? "Aucun outil confié" : `${myTools.length} outil${myTools.length > 1 ? "s" : ""} sous ma responsabilité`}</span>
+        <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>{myTools.length === 0 ? "Aucun outil confié" : `${myTools.length} outil${myTools.length > 1 ? "s" : ""}`}</span>
       </div>
       <div className="content">
         {hasOldTools && (
@@ -835,11 +863,123 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
             <div style={{ fontSize: 13 }}>Un admin vous assignera un outil bientôt.</div>
           </div>
         ) : (
-          <div className="cards-grid">
-            {myTools.map(tool => <ViewerToolCard key={tool.id} tool={tool} currentUser={currentUser} users={users} viewers={viewers} chantiers={chantiers} db={db} onOpen={() => openTool(tool)} onRequest={sendRequest} />)}
-          </div>
+          <>
+            {/* Barre de sélection */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, padding: "10px 14px", background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border)" }}>
+              <input type="checkbox" checked={allSelected} onChange={e => setSelected(e.target.checked ? myTools.map(t => t.id) : [])} style={{ width: 18, height: 18, cursor: "pointer", accentColor: "var(--accent)" }} />
+              <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600, flex: 1 }}>
+                {selected.length === 0 ? "Tout sélectionner" : `${selected.length} outil${selected.length > 1 ? "s" : ""} sélectionné${selected.length > 1 ? "s" : ""}`}
+              </span>
+              {selected.length > 0 && (
+                <button className="btn btn-primary btn-sm" onClick={() => setShowGroupModal(true)}>
+                  📋 Demande groupée ({selected.length})
+                </button>
+              )}
+              {selected.length > 0 && (
+                <button className="btn btn-ghost btn-sm" onClick={() => setSelected([])}>✕</button>
+              )}
+            </div>
+
+            {/* Liste des outils avec checkbox */}
+            <div className="cards-grid">
+              {myTools.map(tool => (
+                <div key={tool.id} style={{ position: "relative" }}>
+                  <div style={{ position: "absolute", top: 10, left: 10, zIndex: 10 }}
+                    onClick={e => { e.stopPropagation(); toggleSelect(tool.id); }}>
+                    <input type="checkbox" checked={selected.includes(tool.id)} readOnly
+                      style={{ width: 20, height: 20, cursor: "pointer", accentColor: "var(--accent)" }} />
+                  </div>
+                  <div style={{ border: selected.includes(tool.id) ? "2px solid var(--accent)" : undefined, borderRadius: 12 }}>
+                    <ViewerToolCard tool={tool} currentUser={currentUser} users={users} viewers={viewers} chantiers={chantiers} db={db} onOpen={() => openTool(tool)} onRequest={sendRequest} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
+
+      {/* Modal demande groupée */}
+      {showGroupModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowGroupModal(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h3>📋 Demande groupée</h3>
+              <button className="close-btn" onClick={() => setShowGroupModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              {groupSent ? (
+                <div style={{ textAlign: "center", padding: "20px 0" }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+                  <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, color: "var(--green)" }}>Demandes envoyées !</div>
+                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 8 }}>L'admin va traiter vos demandes.</div>
+                </div>
+              ) : (
+                <>
+                  {/* Outils sélectionnés */}
+                  <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12 }}>
+                    <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Outils concernés ({selected.length})</div>
+                    {myTools.filter(t => selected.includes(t.id)).map(t => (
+                      <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontSize: 18 }}>{t.photo}</span>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 13, fontWeight: 700 }}>{t.name}</div>
+                          <div style={{ fontSize: 11, color: "var(--muted)" }}>📍 {t.location}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Type de demande */}
+                  <div className="form-group">
+                    <label className="form-label">Type de demande</label>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className={`btn ${groupType === "return" ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1, justifyContent: "center" }} onClick={() => setGroupType("return")}>🏠 Retour store</button>
+                      <button className={`btn ${groupType === "transfer" ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1, justifyContent: "center" }} onClick={() => setGroupType("transfer")}>🔄 Transfert</button>
+                    </div>
+                  </div>
+
+                  {/* Champs transfert */}
+                  {groupType === "transfer" && (
+                    <>
+                      <div className="form-group">
+                        <label className="form-label">Transférer à</label>
+                        <select className="form-input" value={groupTargetViewer} onChange={e => setGroupTargetViewer(e.target.value)}>
+                          <option value="">— Choisir un employé —</option>
+                          {viewers.filter(v => v.id !== currentUser.id).map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Chantier</label>
+                        <select className="form-input" value={groupChantier} onChange={e => setGroupChantier(e.target.value)}>
+                          <option value="">— Choisir un chantier —</option>
+                          {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Note */}
+                  <div className="form-group">
+                    <label className="form-label">Note (optionnel)</label>
+                    <textarea className="form-input" rows={2} placeholder="Raison de la demande..." value={groupNote} onChange={e => setGroupNote(e.target.value)} />
+                  </div>
+                </>
+              )}
+            </div>
+            {!groupSent && (
+              <div className="modal-footer">
+                <button className="btn btn-ghost" onClick={() => setShowGroupModal(false)}>Annuler</button>
+                <button className="btn btn-primary"
+                  disabled={groupType === "transfer" && (!groupTargetViewer || !groupChantier)}
+                  onClick={handleGroupRequest}>
+                  📨 Envoyer {selected.length} demande{selected.length > 1 ? "s" : ""}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
