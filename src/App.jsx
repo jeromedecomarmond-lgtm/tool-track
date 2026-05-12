@@ -73,7 +73,9 @@ function useLang() {
     setLang(l);
     try { localStorage.setItem("tooltrack_lang", l); } catch {}
   };
-  return [T[lang], lang, setLanguage];
+  // On retourne T[lang] directement — React re-render quand lang change
+  const tx = T[lang] || T["fr"];
+  return [tx, lang, setLanguage];
 }
 
 function useLoadingBtn() {
@@ -291,7 +293,7 @@ export default function App() {
 
   // RESET TEMPORAIRE - A SUPPRIMER AVANT MISE EN PRODUCTION
   const resetAllData = async () => {
-   const confirm1 = window.confirm("ATTENTION - Supprimer TOUTES les donnees de test ?\n\nVotre compte SuperAdmin sera conserve.\n\nEtes-vous sur ?");
+    const confirm1 = window.confirm("ATTENTION - Supprimer TOUTES les donnees de test ?\n\nVotre compte SuperAdmin sera conserve.\n\nEtes-vous sur ?");
     if (!confirm1) return;
     const confirm2 = window.confirm("DERNIERE CONFIRMATION - Toutes les donnees seront supprimees. Continuer ?");
     if (!confirm2) return;
