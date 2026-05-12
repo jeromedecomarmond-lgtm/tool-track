@@ -471,6 +471,13 @@ export default function App() {
       showToast("✅ Profil employé créé");
       return newUser;
     }
+    // Vérification hiérarchique — on ne peut pas créer un rôle >= au sien
+    const hierarchy = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
+    const currentRole = effectiveUser?.role || currentUser?.role;
+    if ((hierarchy[form.role] || 0) >= (hierarchy[currentRole] || 0)) {
+      showToast("❌ Vous ne pouvez pas créer un rôle égal ou supérieur au vôtre");
+      return null;
+    }
     if (!form.email?.trim() || !form.password || form.password.length < 6) {
       showToast("❌ Email et mot de passe (6+ car.) requis pour un admin");
       return null;
@@ -1576,7 +1583,7 @@ function AddToolModal({ onClose, onSave }) {
 function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
   const APP_URL = "tool-track-rosy.vercel.app";
   const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
-  const defaultRole = currentUser?.role === "director" ? "admin" : "viewer";
+  const defaultRole = currentUser?.role === "superadmin" ? "director" : currentUser?.role === "director" ? "admin" : "viewer";
   const [form, setForm] = useState({ name: "", role: defaultRole, phone: "", email: "", pin: generatePin() });
   const [saved, setSaved] = useState(false);
   const [savedUser, setSavedUser] = useState(null);
@@ -1599,9 +1606,11 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
               <div className="form-group"><label className="form-label">Nom complet <span style={{ color: "var(--red)" }}>*</span></label><input className="form-input" style={fieldStyle(form.name)} value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="ex: Jean Dupont" />{submitted && !form.name.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Nom obligatoire</div>}</div>
               <div className="form-group"><label className="form-label">Rôle *</label>
                 <select className="form-input" value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}>
-                  {currentUser?.role === "admin" && <option value="viewer">👷 Employé</option>}
-                  {currentUser?.role === "director" && <><option value="admin">🔑 Admin</option><option value="viewer">👷 Employé</option></>}
-                  {currentUser?.role === "superadmin" && <><option value="viewer">👷 Employé</option><option value="admin">🔑 Admin</option><option value="director">🏢 Directeur</option><option value="superadmin">👑 Super Admin</option></>}
+                  {/* Règle : on ne peut créer que des rôles INFÉRIEURS au sien */}
+                  {["admin","director","superadmin"].includes(currentUser?.role) && <option value="viewer">👷 Employé</option>}
+                  {["director","superadmin"].includes(currentUser?.role) && <option value="admin">🔑 Admin</option>}
+                  {currentUser?.role === "superadmin" && <option value="director">🏢 Directeur</option>}
+                  {/* Personne ne peut créer un SuperAdmin depuis ce modal */}
                 </select>
               </div>
               <div className="form-row">
