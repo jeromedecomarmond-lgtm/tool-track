@@ -592,7 +592,7 @@ export default function App() {
 
   return (
     <><style>{css}</style>
-    <div className="app">
+    <div className="app" style={{ paddingTop: isSupervising ? 40 : 0 }}>
       {showExpiryWarning && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 999, background: "rgba(245,166,35,.95)", color: "#000", padding: "10px 20px", display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 600 }}>
           <span style={{ fontSize: 20 }}>⚠️</span>
@@ -602,7 +602,7 @@ export default function App() {
 
       {/* BANDEAU SUPERVISION */}
       {isSupervising && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999, background: "#f5a623", color: "#000", padding: "8px 20px", display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 700 }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999, height: 40, background: "#f5a623", color: "#000", padding: "0 20px", display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 700 }}>
           <span style={{ fontSize: 18 }}>👁</span>
           <span style={{ flex: 1 }}>Mode supervision — vous voyez l'app comme <strong>{supervisedUser.fakeUser.name}</strong> ({supervisedUser.fakeUser.role})</span>
           <button onClick={stopSupervision} style={{ background: "#000", color: "#f5a623", border: "none", borderRadius: 8, padding: "4px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>✕ Quitter la supervision</button>
