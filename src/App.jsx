@@ -289,13 +289,9 @@ export default function App() {
     setPage(["admin","director"].includes(targetUser.role) ? "tools" : "mytools");
   };
 
-  // ⚠️ RESET TEMPORAIRE — À SUPPRIMER AVANT MISE EN PRODUCTION
+  // RESET TEMPORAIRE - A SUPPRIMER AVANT MISE EN PRODUCTION
   const resetAllData = async () => {
-    const confirm1 = window.confirm("⚠️ ATTENTION — Cette action va supprimer TOUTES les données de test (compagnies, outils, employés, chantiers, demandes, messages).
-
-Votre compte SuperAdmin sera conservé.
-
-Êtes-vous sûr ?");
+    const confirm1 = window.confirm("ATTENTION - Supprimer TOUTES les donnees de test ?\n\nVotre compte SuperAdmin sera conserve.\n\nEtes-vous sur ?");
     if (!confirm1) return;
     const confirm2 = window.confirm("DERNIERE CONFIRMATION - Toutes les donnees seront supprimees. Continuer ?");
     if (!confirm2) return;
