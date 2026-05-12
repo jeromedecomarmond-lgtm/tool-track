@@ -610,7 +610,7 @@ export default function App() {
       )}
 
       {/* SIDEBAR */}
-      <aside className="sidebar" style={{ marginTop: isSupervising ? 36 : 0 }}>
+      <aside className="sidebar" style={{ marginTop: isSupervising ? 36 : 0, paddingTop: isSupervising ? 0 : undefined }}>
         <div className="sidebar-logo"><h1>TOOL<br/>TRACK</h1><p>Gestion d'outils</p></div>
         <nav className="sidebar-nav">
           {navItems.map(item => (
@@ -639,7 +639,7 @@ export default function App() {
       </aside>
 
       {/* MAIN */}
-      <main className="main">
+      <main className="main" style={{ marginTop: isSupervising ? 36 : 0 }}>
         {page === "companies" && isSuperAdmin && <CompaniesPage companies={companies} users={users} tools={tools} chantiers={chantiers} requests={requests} db={db} currentUser={currentUser} showToast={showToast} onAdminCreated={(admin) => setModal({ type: "whatsappInvite", data: admin })} onSupervise={startSupervision} />}
         {page === "dashboard" && isAdmin && <DashboardPage isSuperAdmin={isSuperAdmin} companies={companies} tools={tools} users={users} chantiers={chantiers} requests={requests} filteredTools={filteredTools} filteredUsers={filteredUsers} filteredRequests={filteredRequests} openTool={openTool} />}
         {page === "tools" && isAdmin && <ToolsPage displayedTools={displayedTools} filteredTools={filteredTools} filteredChantiers={filteredChantiers} viewers={viewers} users={users} filterStatus={filterStatus} setFilterStatus={setFilterStatus} filterUser={filterUser} setFilterUser={setFilterUser} filterChantier={filterChantier} setFilterChantier={setFilterChantier} search={search} setSearch={setSearch} selectedTools={selectedTools} setSelectedTools={setSelectedTools} showMovePanel={showMovePanel} setShowMovePanel={setShowMovePanel} openTool={openTool} setModal={setModal} assignTool={assignTool} showToast={showToast} currentUser={currentUser} db={db} />}
