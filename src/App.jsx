@@ -297,7 +297,7 @@ Votre compte SuperAdmin sera conservé.
 
 Êtes-vous sûr ?");
     if (!confirm1) return;
-    const confirm2 = window.confirm("🔴 DERNIÈRE CONFIRMATION — Toutes les données seront supprimées définitivement. Continuer ?");
+    const confirm2 = window.confirm("DERNIERE CONFIRMATION - Toutes les donnees seront supprimees. Continuer ?");
     if (!confirm2) return;
     showToast("⏳ Reset en cours...");
     try {
