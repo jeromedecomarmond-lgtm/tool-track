@@ -2512,10 +2512,7 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
   return (
     <div className="login-screen"><div className="login-card">
       <div className="login-title">TOOL TRACK</div>
-      <div style={{ display: "flex", gap: 8, width: "100%", marginBottom: 8 }}>
-        <button onClick={() => setLanguage("fr")} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `2px solid ${lang === "fr" ? "var(--accent)" : "var(--border)"}`, background: lang === "fr" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "fr" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇫🇷 Français</button>
-        <button onClick={() => setLanguage("en")} style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `2px solid ${lang === "en" ? "var(--accent)" : "var(--border)"}`, background: lang === "en" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "en" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇬🇧 English</button>
-      </div>
+
       {superAdmins.length > 0 && (
         <div style={{ width: "100%", marginBottom: 16 }}>
           <div style={{ fontSize: 11, color: "#e84040", textAlign: "center", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>👑 Administration</div>
