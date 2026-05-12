@@ -1245,8 +1245,8 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                             <button className="btn btn-danger btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => {
                               if (assignedTools.length > 0) { showToast("⚠️ Ce profil a des outils confiés !", "warn"); return; }
                               if (String(u.id) === String(currentUser.id)) { showToast("❌ Vous ne pouvez pas vous supprimer vous-même"); return; }
-                              const hier = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
-                              if ((hier[u.role] || 0) >= (hier[currentUser.role] || 0)) { showToast("❌ Vous ne pouvez pas supprimer ce profil"); return; }
+                              const deleteRules = { superadmin: ["director","admin","viewer"], director: ["admin","viewer"], admin: ["viewer"], viewer: [] };
+                              if (!(deleteRules[currentUser.role] || []).includes(u.role)) { showToast("❌ Vous ne pouvez pas supprimer ce profil"); return; }
                               if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast("🗑 Profil supprimé"); }
                             }}>🗑</button>
                           </div>
@@ -1274,9 +1274,19 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                   {roleUsers.map(u => {
                     const assignedTools = filteredTools.filter(t => String(t.assignedTo) === String(u.id));
                     const isSelf = String(u.id) === String(currentUser.id);
-                    // Règle : on ne peut supprimer que vers le bas, jamais soi-même, jamais égal ou supérieur
-                    const hier = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
-                    const canDelete = !isSelf && (hier[currentUser.role] || 0) > (hier[u.role] || 0);
+                    // Règle stricte de suppression :
+                    // - Jamais soi-même
+                    // - SuperAdmin → peut supprimer Directeur, Admin, Employé
+                    // - Directeur → peut supprimer Admin et Employé seulement
+                    // - Admin → peut supprimer Employé seulement
+                    // - Employé → personne
+                    const deleteRules = {
+                      superadmin: ["director", "admin", "viewer"],
+                      director: ["admin", "viewer"],
+                      admin: ["viewer"],
+                      viewer: []
+                    };
+                    const canDelete = !isSelf && (deleteRules[currentUser.role] || []).includes(u.role);
                     const hierarchy = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
                     const canSupervise = onSupervise && !isSelf && (hierarchy[currentUser.role] || 0) > (hierarchy[u.role] || 0);
                     return (
@@ -2223,8 +2233,8 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                                   {onSupervise && <button className="btn btn-blue btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => onSupervise(u)}>👁 Voir</button>}
                                   <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px" }} onClick={() => {
                                     if (String(u.id) === String(currentUser.id)) { showToast("❌ Vous ne pouvez pas vous supprimer vous-même"); return; }
-                                    const hier = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
-                                    if ((hier[u.role] || 0) >= (hier[currentUser.role] || 0)) { showToast("❌ Vous ne pouvez pas supprimer ce profil"); return; }
+                                    const deleteRules = { superadmin: ["director","admin","viewer"], director: ["admin","viewer"], admin: ["viewer"], viewer: [] };
+                                    if (!(deleteRules[currentUser.role] || []).includes(u.role)) { showToast("❌ Vous ne pouvez pas supprimer ce profil"); return; }
                                     if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${u.name} supprimé`); }
                                   }}>🗑</button>
                                 </div>
