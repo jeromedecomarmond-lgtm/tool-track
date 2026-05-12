@@ -310,6 +310,33 @@ export default function App() {
     try { localStorage.setItem("tooltrack_user_id", u.id); } catch(e) {}
   };
 
+  // Auto-suppression Directeur — suspend la compagnie automatiquement
+  const deleteDirectorSelf = async () => {
+    const company = companies.find(c => c.id === currentUser.companyId);
+    const companyName = company?.name || "votre compagnie";
+    const confirmed = window.confirm(
+      `⚠️ ATTENTION — Suppression d'un compte clé\n\n` +
+      `Votre compagnie "${companyName}" sera automatiquement suspendue TEMPORAIREMENT jusqu'à la création d'un nouveau compte Directeur.\n\n` +
+      `Une notification sera envoyée au SuperAdmin pour assurer le suivi et rétablir votre compagnie dans les plus brefs délais.\n\n` +
+      `Si nécessaire, contactez directement : jdecomarmond.profile@intnet.mu\n\n` +
+      `Êtes-vous sûr de vouloir continuer ?`
+    );
+    if (!confirmed) return;
+    try {
+      // Suspendre la compagnie
+      if (company) await setDoc(doc(db, "companies", company.id), { ...company, active: false, suspendedReason: "Directeur supprimé", suspendedAt: Date.now() });
+      // Supprimer le compte Auth
+      try { await signOut(auth); } catch(e) {}
+      // Supprimer le profil Firestore
+      await deleteDoc(doc(db, "users", String(currentUser.id)));
+      setCurrentUser(null);
+      try { localStorage.removeItem("tooltrack_user_id"); localStorage.removeItem("tooltrack_last_page"); } catch(e) {}
+      showToast("🗑 Compte supprimé — compagnie suspendue");
+    } catch(e) {
+      showToast("❌ Erreur lors de la suppression : " + e.message);
+    }
+  };
+
   const logoutUser = async () => {
     try { await signOut(auth); } catch(e) {}
     setCurrentUser(null);
@@ -599,6 +626,11 @@ export default function App() {
             <div className="user-info"><div className="name">{effectiveUser.name.split(" ")[0]}</div><div className="role">{isSupervising ? "👁 supervision" : effectiveUser.role}</div></div>
           </div>
           <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={isSupervising ? stopSupervision : logoutUser}>{isSupervising ? "✕ Quitter supervision" : "⇄ Déconnexion"}</button>
+          {!isSupervising && effectiveUser?.role === "director" && (
+            <button className="btn btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center", background: "rgba(232,64,40,.1)", color: "var(--red)", border: "1px solid rgba(232,64,40,.3)", fontSize: 11 }} onClick={deleteDirectorSelf}>
+              🗑 Supprimer mon compte
+            </button>
+          )}
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             <button onClick={() => setLanguage("fr")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "fr" ? "var(--accent)" : "var(--border)"}`, background: lang === "fr" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "fr" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇫🇷 FR</button>
             <button onClick={() => setLanguage("en")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "en" ? "var(--accent)" : "var(--border)"}`, background: lang === "en" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "en" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇬🇧 EN</button>
@@ -1212,6 +1244,9 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                             {onSupervise && <button className="btn btn-blue btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => onSupervise(u)}>👁 Voir</button>}
                             <button className="btn btn-danger btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => {
                               if (assignedTools.length > 0) { showToast("⚠️ Ce profil a des outils confiés !", "warn"); return; }
+                              if (String(u.id) === String(currentUser.id)) { showToast("❌ Vous ne pouvez pas vous supprimer vous-même"); return; }
+                              const hier = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
+                              if ((hier[u.role] || 0) >= (hier[currentUser.role] || 0)) { showToast("❌ Vous ne pouvez pas supprimer ce profil"); return; }
                               if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast("🗑 Profil supprimé"); }
                             }}>🗑</button>
                           </div>
@@ -1239,7 +1274,9 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                   {roleUsers.map(u => {
                     const assignedTools = filteredTools.filter(t => String(t.assignedTo) === String(u.id));
                     const isSelf = String(u.id) === String(currentUser.id);
-                    const canDelete = !isSelf && (u.role === "viewer" || (u.role === "admin" && ["superadmin","director"].includes(currentUser.role)) || (u.role === "director" && currentUser.role === "superadmin"));
+                    // Règle : on ne peut supprimer que vers le bas, jamais soi-même, jamais égal ou supérieur
+                    const hier = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
+                    const canDelete = !isSelf && (hier[currentUser.role] || 0) > (hier[u.role] || 0);
                     const hierarchy = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
                     const canSupervise = onSupervise && !isSelf && (hierarchy[currentUser.role] || 0) > (hierarchy[u.role] || 0);
                     return (
@@ -1268,7 +1305,11 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                               {assignedTools.length === 0 ? <div style={{ fontSize: 11, color: "var(--muted)" }}>Aucun outil confié</div> : assignedTools.map(t => <div key={t.id} style={{ fontSize: 12, color: "var(--blue)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}><span>{t.photo}</span>{t.name}</div>)}
                             </div>
                           )}
-                          {canDelete && <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={() => { if (assignedTools.length > 0) { showToast("⚠️ Des outils sont encore confiés !", "warn"); return; } deleteDoc(doc(db, "users", String(u.id))); showToast("🗑 Profil supprimé"); }}>🗑 Supprimer</button>}
+                          {canDelete && <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={() => {
+                            if (String(u.id) === String(currentUser.id)) { showToast("❌ Vous ne pouvez pas vous supprimer vous-même"); return; }
+                            if (assignedTools.length > 0) { showToast("⚠️ Des outils sont encore confiés !", "warn"); return; }
+                            if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast("🗑 Profil supprimé"); }
+                          }}>🗑 Supprimer</button>}
                         </div>
                       </div>
                     );
@@ -2180,7 +2221,12 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                                 <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>🔑 {u.pin}{u.phone ? ` · 📞 ${u.phone}` : ""}</div></div>
                                 <div style={{ display: "flex", gap: 6 }}>
                                   {onSupervise && <button className="btn btn-blue btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => onSupervise(u)}>👁 Voir</button>}
-                                  <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px" }} onClick={() => { if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${u.name} supprimé`); } }}>🗑</button>
+                                  <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px" }} onClick={() => {
+                                    if (String(u.id) === String(currentUser.id)) { showToast("❌ Vous ne pouvez pas vous supprimer vous-même"); return; }
+                                    const hier = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
+                                    if ((hier[u.role] || 0) >= (hier[currentUser.role] || 0)) { showToast("❌ Vous ne pouvez pas supprimer ce profil"); return; }
+                                    if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${u.name} supprimé`); }
+                                  }}>🗑</button>
                                 </div>
                               </div>
                             ))}
@@ -2226,7 +2272,13 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
     const newPin = companyPin + digit;
     setCompanyPin(newPin); setPinError(false);
     if (newPin.length === 4) {
-      const found = companies.find(c => c.companyPin === newPin && c.active !== false);
+      const found = companies.find(c => c.companyPin === newPin);
+      if (found && found.active === false) {
+        setPinError(true);
+        setTimeout(() => { setCompanyPin(""); setPinError(false); }, 3000);
+        alert(`⚠️ La compagnie "${found.name}" est temporairement suspendue.\n\nUn nouveau Directeur doit être créé pour rétablir l'accès.\n\nContactez le SuperAdmin : jdecomarmond.profile@intnet.mu`);
+        return;
+      }
       if (found) { setSelectedCompany(found); setStep("profile"); setCompanyPin(""); }
       else { setPinError(true); setTimeout(() => { setCompanyPin(""); setPinError(false); }, 1000); }
     }
