@@ -2169,7 +2169,10 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                               <div key={u.id} style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                                 <div style={{ width: 32, height: 32, borderRadius: 8, background: color, color: role === "viewer" ? "#fff" : "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>{u.avatar}</div>
                                 <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>🔑 {u.pin}{u.phone ? ` · 📞 ${u.phone}` : ""}</div></div>
-                                <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px" }} onClick={() => { if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${u.name} supprimé`); } }}>🗑</button>
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  {onSupervise && <button className="btn btn-blue btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => onSupervise(u)}>👁 Voir</button>}
+                                  <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px" }} onClick={() => { if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${u.name} supprimé`); } }}>🗑</button>
+                                </div>
                               </div>
                             ))}
                           </div>
