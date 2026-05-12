@@ -347,6 +347,25 @@ export default function App() {
     const unsubs = [];
     let loaded = 0;
     const checkLoaded = () => { loaded++; if (loaded >= 2) setLoading(false); };
+    // Auto-suppression des demandes approuvées/refusées après 30 jours
+    const cleanOldRequests = async () => {
+      try {
+        const snap = await getDocs(collection(db, "requests"));
+        const now = Date.now();
+        const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+        for (const d of snap.docs) {
+          const r = d.data();
+          if (["approved","refused"].includes(r.status) && r.date) {
+            const age = now - new Date(r.date).getTime();
+            if (age > thirtyDays) {
+              await deleteDoc(doc(db, "requests", d.id));
+            }
+          }
+        }
+      } catch(e) { console.log("cleanup:", e); }
+    };
+    cleanOldRequests();
+
     unsubs.push(onSnapshot(collection(db, "users"), snap => {
       const loadedUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setUsers(loadedUsers);
