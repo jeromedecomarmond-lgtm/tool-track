@@ -524,7 +524,7 @@ export default function App() {
       <><style>{css}</style>
       <div className="login-screen">
         <div className="login-card" style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 56, marginBottom: 12 }}>⏸</div>
+          <div style={{ fontSize: 56, marginBottom: 12 }}>⏸️</div>
           <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, color: "var(--red)", marginBottom: 8 }}>Compte suspendu</div>
           <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 16, lineHeight: 1.6 }}>
             L'accès à <strong>{myCompany.name}</strong> a été suspendu.
@@ -666,7 +666,7 @@ export default function App() {
       window.alert(`⚠️ Impossible de supprimer "${c?.name}"\n\n${toolsOnSite.length} outil(s) encore sur ce chantier:\n${toolsOnSite.map(t => `• ${t.name}`).join("\n")}\n\nRetournez-les au store d'abord.`);
       return;
     }
-    if (!window.confirm(`Supprimer le chantier "${c?.name}" ?`)) return;
+    if (!window.confirm(`${tx.deleteConfirm || "Supprimer"} "${c?.name}" ?`)) return;
     await deleteDoc(doc(db, "chantiers", String(id)));
     showToast("🗑 Chantier supprimé");
   };
@@ -826,7 +826,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                 { label: "👷 " + tx.totalTeam, value: users.filter(u => u.role !== "superadmin").length, color: "var(--green)" },
                 { label: "🏗 " + tx.chantiers, value: chantiers.length, color: "var(--blue)" },
                 { label: "⏳ " + tx.pendingReq, value: requests.filter(r => r.status === "pending").length, color: "var(--accent)" },
-                { label: "⏸ " + tx.suspended, value: companies.filter(c => c.active === false).length, color: "var(--red)" },
+                { label: "⏸️ " + tx.suspended, value: companies.filter(c => c.active === false).length, color: "var(--red)" },
               ].map(s => (
                 <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
                   <div style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -879,7 +879,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                           <div>
                             <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800 }}>{company.name}</div>
                             <div style={{ fontSize: 10, color: isActive ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
-                              {isActive ? "🟢 Active" : "⏸ Suspendue"}
+                              {isActive ? `🟢 ${tx.active2}` : `⏸️ ${tx.suspended2}`}
                               {dLeft !== null && isActive && dLeft <= 10 && <span style={{ color: dLeft <= 3 ? "var(--red)" : "var(--accent)", marginLeft: 8 }}>⚠️ {dLeft}j</span>}
                             </div>
                           </div>
@@ -1584,7 +1584,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
 
         {confirmDelete && (
           <div style={{ background: "rgba(232,82,10,.1)", border: "1px solid var(--red)", borderRadius: 10, margin: "12px 24px", padding: 14 }}>
-            <div style={{ fontWeight: 700, marginBottom: 8, color: "var(--red)" }}>⚠️ Supprimer "{tool.name}" ?</div>
+            <div style={{ fontWeight: 700, marginBottom: 8, color: "var(--red)" }}>{`⚠️ ${tx.deleteBtn} "${tool.name}" ?`}</div>
             <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Action irréversible.</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)}>Annuler</button>
@@ -1606,7 +1606,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
               <label className="form-label">📷 Changer la photo</label>
               <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setNewPhoto(ev.target.result); r.readAsDataURL(f); }} />
               <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} id="cameraEditInput" onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setNewPhoto(ev.target.result); r.readAsDataURL(f); }} />
-              {newPhoto ? (<div><img src={newPhoto} alt="aperçu" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8 }} /><button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setNewPhoto(null)}>🗑 Supprimer</button></div>) : (
+              {newPhoto ? (<div><img src={newPhoto} alt="aperçu" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8 }} /><button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setNewPhoto(null)}>{`🗑 ${tx.deleteBtn}`}</button></div>) : (
                 <div style={{ display: "flex", gap: 8 }}>
                   <button className="btn btn-ghost btn-sm" style={{ flex: 1, flexDirection: "column", gap: 4, padding: "12px 0" }} onClick={() => document.getElementById("cameraEditInput").click()}><span style={{ fontSize: 22 }}>📸</span><span style={{ fontSize: 11 }}>Caméra</span></button>
                   <button className="btn btn-ghost btn-sm" style={{ flex: 1, flexDirection: "column", gap: 4, padding: "12px 0" }} onClick={() => fileRef.current.click()}><span style={{ fontSize: 22 }}>🖼</span><span style={{ fontSize: 11 }}>Galerie</span></button>
@@ -1741,7 +1741,7 @@ function AddToolModal({ onClose, onSave }) {
             <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} style={{ display: "none" }} />
             <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: "none" }} />
             {form.photoUrl ? (
-              <div><img src={form.photoUrl} alt="aperçu" style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 10, background: "var(--surface2)" }} /><button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setForm(p => ({ ...p, photoUrl: null }))}>🗑 Supprimer</button></div>
+              <div><img src={form.photoUrl} alt="aperçu" style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 10, background: "var(--surface2)" }} /><button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setForm(p => ({ ...p, photoUrl: null }))}>{`🗑 ${tx.deleteBtn}`}</button></div>
             ) : (
               <div style={{ display: "flex", gap: 10 }}>
                 <button className="btn btn-ghost" style={{ flex: 1, flexDirection: "column", gap: 6, padding: "16px 0", fontSize: 13 }} onClick={() => cameraRef.current.click()}><span style={{ fontSize: 28 }}>📸</span>Prendre une photo</button>
@@ -2317,7 +2317,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
     setEditingExpiry(null); showToast("✅ Mise à jour !");
   };
 
-  const toggleCompany = async (company) => { await setDoc(doc(db, "companies", company.id), { ...company, active: !company.active }); showToast(company.active ? "⏸ Suspendue" : "✅ Réactivée"); };
+  const toggleCompany = async (company) => { await setDoc(doc(db, "companies", company.id), { ...company, active: !company.active }); showToast(company.active ? `⏸️ ${tx.suspended2}` : `✅ ${tx.reactivate2}`); };
 
   // FIX #8 — deleteCompany supprime aussi les conversations
   const deleteCompany = async (company) => {
@@ -2354,7 +2354,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
       <div className="topbar"><h2>🏢 {tx.companies}</h2><button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>{tx.newCompany2}</button></div>
       <div className="content">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
-          {[{ label: tx.total, count: companies.length, color: "var(--accent)" }, { label: "🟢 " + tx.actives, count: companies.filter(c => c.active !== false).length, color: "var(--green)" }, { label: "⏸ " + tx.suspended, count: companies.filter(c => c.active === false).length, color: "var(--red)" }].map(s => (
+          {[{ label: tx.total, count: companies.length, color: "var(--accent)" }, { label: "🟢 " + tx.actives, count: companies.filter(c => c.active !== false).length, color: "var(--green)" }, { label: "⏸️ " + tx.suspended, count: companies.filter(c => c.active === false).length, color: "var(--red)" }].map(s => (
             <div key={s.label} style={{ background: "var(--surface)", borderRadius: 12, padding: "12px 14px", border: "1px solid var(--border)" }}>
               <div style={{ fontFamily: "var(--font-head)", fontSize: 26, fontWeight: 800, color: s.color }}>{s.count}</div>
               <div style={{ fontSize: 11, color: "var(--muted)" }}>{s.label}</div>
@@ -2395,7 +2395,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                       <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span>👷 {compUsers.length} · 🔧 {compTools.length}</span>
                         {company.companyPin && <span style={{ background: "var(--surface2)", padding: "1px 8px", borderRadius: 20, fontFamily: "var(--font-head)", fontWeight: 800, color: "var(--accent)", letterSpacing: 3 }}>🔐 {company.companyPin}</span>}
-                        {!isActive && <span style={{ color: "var(--red)", fontWeight: 700 }}>⏸ {tx.suspended2}</span>}
+                        {!isActive && <span style={{ color: "var(--red)", fontWeight: 700 }}>⏸️ {tx.suspended2}</span>}
                         {company.expiryDate && days !== null && (days < 0 ? <span style={{ background: "rgba(232,82,10,.2)", color: "var(--red)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>{`❌ ${tx.expiredLabel}`}</span> : days <= 5 ? <span style={{ background: "rgba(245,166,35,.2)", color: "var(--accent)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>⚠️ {days}j</span> : <span style={{ background: "rgba(39,201,122,.15)", color: "var(--green)", fontWeight: 600, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>📅 {new Date(company.expiryDate).toLocaleDateString("fr-MU")}</span>)}
                       </div>
                       {days !== null && days <= 5 && compUsers.filter(u => u.role === "director").length > 0 && (
@@ -2461,8 +2461,8 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                       </div>
                       <div style={{ marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button className={`btn btn-sm ${isActive ? "btn-danger" : "btn-green"}`} onClick={() => toggleCompany(company)}>{isActive ? `⏸ ${tx.suspend2}` : `✅ ${tx.reactivate2}`}</button>
-                          <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "var(--red)", border: "1px solid rgba(232,82,10,.4)", fontWeight: 700 }} onClick={() => { if (window.confirm(`⚠️ Supprimer "${company.name}" et toutes ses données ?`)) deleteCompany(company); }}>🏚 Supprimer</button>
+                          <button className={`btn btn-sm ${isActive ? "btn-danger" : "btn-green"}`} onClick={() => toggleCompany(company)}>{isActive ? `⏸️ ${tx.suspend2}` : `✅ ${tx.reactivate2}`}</button>
+                          <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "var(--red)", border: "1px solid rgba(232,82,10,.4)", fontWeight: 700 }} onClick={() => { if (window.confirm(`⚠️ ${tx.deleteBtn} "${company.name}" ?`)) deleteCompany(company); }}>{`🏚 ${tx.deleteBtn}`}</button>
                         </div>
                       </div>
                     </div>
