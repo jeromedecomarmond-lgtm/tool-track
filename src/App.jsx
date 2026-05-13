@@ -31,7 +31,7 @@ const T = {
     chooseProfile: "Choisissez votre profil", administration: "Administration",
     noTools: "Aucun outil", noRequests: "Aucune demande", noTeam: "Aucun membre",
     required: "obligatoire", optional: "optionnel",
-    language: "Langue", french: "Français", english: "English",
+    language: "Langue", french: "Français", english: "English", all: "Tous", selectAll: "Tout sélectionner", addProfile: "Ajouter un profil", search: "Chercher...", details: "Détails",
   },
   en: {
     dashboard: "Dashboard", tools: "Tools", chantiers: "Job Sites",
@@ -60,7 +60,7 @@ const T = {
     chooseProfile: "Choose your profile", administration: "Administration",
     noTools: "No tools", noRequests: "No requests", noTeam: "No members",
     required: "required", optional: "optional",
-    language: "Language", french: "Français", english: "English",
+    language: "Language", french: "Français", english: "English", all: "All", selectAll: "Select all", addProfile: "Add a profile", search: "Search...", details: "Details",
   }
 };
 
@@ -634,16 +634,15 @@ export default function App() {
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
   const navItems = [
-    isAdmin && { key: "dashboard", icon: "📊", label: "Stats" },
-    isSuperAdmin && { key: "companies", icon: "🏢", label: "Compagnies" },
-    isAdmin && !isSuperAdmin && { key: "tools", icon: "🔧", label: "Outils" },
-    isAdmin && !isSuperAdmin && { key: "chantiers", icon: "🏗", label: "Chantiers" },
-    !isAdmin && { key: "mytools", icon: "📦", label: "Mes outils" },
-    !isAdmin && { key: "parc", icon: "🔧", label: "Parc" },
-    { key: "requests", icon: "🔔", label: "Demandes", badge: pendingRequests },
-    // FIX #10 — Messages accessible dans la nav
-    { key: "messages", icon: "💬", label: "Messages", badge: unreadMessages },
-    isAdmin && !isSuperAdmin && { key: "users", icon: "👷", label: "Équipe" },
+    isAdmin && { key: "dashboard", icon: "📊", label: tx.dashboard },
+    isSuperAdmin && { key: "companies", icon: "🏢", label: tx.companies },
+    isAdmin && !isSuperAdmin && { key: "tools", icon: "🔧", label: tx.tools },
+    isAdmin && !isSuperAdmin && { key: "chantiers", icon: "🏗", label: tx.chantiers },
+    !isAdmin && { key: "mytools", icon: "📦", label: tx.mytools },
+    !isAdmin && { key: "parc", icon: "🔧", label: tx.parc },
+    { key: "requests", icon: "🔔", label: tx.requests, badge: pendingRequests },
+    { key: "messages", icon: "💬", label: tx.messages, badge: unreadMessages },
+    isAdmin && !isSuperAdmin && { key: "users", icon: "👷", label: tx.team },
   ].filter(Boolean);
 
   return (
@@ -696,16 +695,16 @@ export default function App() {
 
       {/* MAIN */}
       <main className="main" style={{ marginTop: isSupervising ? 36 : 0 }}>
-        {page === "companies" && isSuperAdmin && <CompaniesPage companies={companies} users={users} tools={tools} chantiers={chantiers} requests={requests} db={db} currentUser={currentUser} showToast={showToast} onAdminCreated={(admin) => setModal({ type: "whatsappInvite", data: admin })} onSupervise={startSupervision} />}
-        {page === "dashboard" && isAdmin && <DashboardPage isSuperAdmin={isSuperAdmin} companies={companies} tools={tools} users={users} chantiers={chantiers} requests={requests} filteredTools={filteredTools} filteredUsers={filteredUsers} filteredRequests={filteredRequests} openTool={openTool} onReset={resetAllData} />}
-        {page === "tools" && isAdmin && <ToolsPage displayedTools={displayedTools} filteredTools={filteredTools} filteredChantiers={filteredChantiers} viewers={viewers} users={users} filterStatus={filterStatus} setFilterStatus={setFilterStatus} filterUser={filterUser} setFilterUser={setFilterUser} filterChantier={filterChantier} setFilterChantier={setFilterChantier} search={search} setSearch={setSearch} selectedTools={selectedTools} setSelectedTools={setSelectedTools} showMovePanel={showMovePanel} setShowMovePanel={setShowMovePanel} openTool={openTool} setModal={setModal} assignTool={assignTool} showToast={showToast} currentUser={effectiveUser} db={db} sendRequest={sendRequest} />}
-        {page === "mytools" && !isAdmin && <MyToolsPage myTools={myTools} currentUser={currentUser} users={users} viewers={viewers} chantiers={chantiers} db={db} openTool={openTool} sendRequest={sendRequest} />}
-        {page === "parc" && !isAdmin && <ParcPage filteredTools={filteredTools} myTools={myTools} users={users} currentUser={currentUser} db={db} sendRequest={sendRequest} />}
-        {page === "chantiers" && isAdmin && <ChantierPage chantiers={filteredChantiers} tools={filteredTools} users={filteredUsers} addChantier={addChantier} deleteChantier={deleteChantier} />}
-        {page === "requests" && <RequestsPage isSuperAdmin={isSuperAdmin} isAdmin={isAdmin} filteredRequests={filteredRequests} requests={requests} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} />}
+        {page === "companies" && isSuperAdmin && <CompaniesPage companies={companies} users={users} tools={tools} chantiers={chantiers} requests={requests} db={db} currentUser={currentUser} showToast={showToast} onAdminCreated={(admin) => setModal({ type: "whatsappInvite", data: admin })} onSupervise={startSupervision} tx={tx} />}
+        {page === "dashboard" && isAdmin && <DashboardPage isSuperAdmin={isSuperAdmin} companies={companies} tools={tools} users={users} chantiers={chantiers} requests={requests} filteredTools={filteredTools} filteredUsers={filteredUsers} filteredRequests={filteredRequests} openTool={openTool} onReset={resetAllData} tx={tx} />}
+        {page === "tools" && isAdmin && <ToolsPage displayedTools={displayedTools} filteredTools={filteredTools} filteredChantiers={filteredChantiers} viewers={viewers} users={users} filterStatus={filterStatus} setFilterStatus={setFilterStatus} filterUser={filterUser} setFilterUser={setFilterUser} filterChantier={filterChantier} setFilterChantier={setFilterChantier} search={search} setSearch={setSearch} selectedTools={selectedTools} setSelectedTools={setSelectedTools} showMovePanel={showMovePanel} setShowMovePanel={setShowMovePanel} openTool={openTool} setModal={setModal} assignTool={assignTool} showToast={showToast} currentUser={effectiveUser} db={db} sendRequest={sendRequest} tx={tx} />}
+        {page === "mytools" && !isAdmin && <MyToolsPage myTools={myTools} currentUser={currentUser} users={users} viewers={viewers} chantiers={chantiers} db={db} openTool={openTool} sendRequest={sendRequest} tx={tx} />}
+        {page === "parc" && !isAdmin && <ParcPage filteredTools={filteredTools} myTools={myTools} users={users} currentUser={currentUser} db={db} sendRequest={sendRequest} tx={tx} />}
+        {page === "chantiers" && isAdmin && <ChantierPage chantiers={filteredChantiers} tools={filteredTools} users={filteredUsers} addChantier={addChantier} deleteChantier={deleteChantier} tx={tx} />}
+        {page === "requests" && <RequestsPage isSuperAdmin={isSuperAdmin} isAdmin={isAdmin} filteredRequests={filteredRequests} requests={requests} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} tx={tx} />}
         {/* FIX #10 — page messages rendue */}
-        {page === "messages" && <MessagesPage currentUser={effectiveUser} users={users} tools={tools} myTools={myTools} db={db} showToast={showToast} />}
-        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} />}
+        {page === "messages" && <MessagesPage currentUser={effectiveUser} users={users} tools={tools} myTools={myTools} db={db} showToast={showToast} tx={tx} />}
+        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} tx={tx} />}
       </main>
     </div>
 
@@ -733,11 +732,11 @@ export default function App() {
 
 // ─── PAGES EXTRAITES ─────────────────────────────────────────────────────────
 
-function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, requests, filteredTools, filteredUsers, filteredRequests, openTool, onReset }) {
+function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, requests, filteredTools, filteredUsers, filteredRequests, openTool, onReset, tx }) {
   return (
     <>
       <div className="topbar">
-        <h2>📊 Dashboard</h2>
+        <h2>📊 {tx.dashboard}</h2>
         {isSuperAdmin && onReset && (
           <button onClick={onReset} style={{ background: "rgba(232,40,40,.15)", color: "var(--red)", border: "2px solid rgba(232,40,40,.5)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
             🗑 Reset données test
@@ -883,19 +882,19 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
   );
 }
 
-function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, users, filterStatus, setFilterStatus, filterUser, setFilterUser, filterChantier, setFilterChantier, search, setSearch, selectedTools, setSelectedTools, showMovePanel, setShowMovePanel, openTool, setModal, assignTool, showToast, currentUser, db, sendRequest }) {
+function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, users, filterStatus, setFilterStatus, filterUser, setFilterUser, filterChantier, setFilterChantier, search, setSearch, selectedTools, setSelectedTools, showMovePanel, setShowMovePanel, openTool, setModal, assignTool, showToast, currentUser, db, sendRequest, tx }) {
   return (
     <>
       <div className="topbar">
-        <h2>Outils</h2>
+        <h2>{tx.tools}</h2>
         <div style={{ display: "flex", gap: 8 }}>
-          {selectedTools.length > 0 && <button className="btn btn-blue btn-sm" onClick={() => setShowMovePanel(true)}>↗ Déplacer ({selectedTools.length})</button>}
-          <button className="btn btn-primary" onClick={() => setModal({ type: "addTool" })}>+ Ajouter</button>
+          {selectedTools.length > 0 && <button className="btn btn-blue btn-sm" onClick={() => setShowMovePanel(true)}>↗ {tx.transfer} ({selectedTools.length})</button>}
+          <button className="btn btn-primary" onClick={() => setModal({ type: "addTool" })}>+ {tx.add}</button>
         </div>
       </div>
       <div className="content">
         <div className="filters">
-          <div className="search-bar"><span className="search-icon">🔍</span><input placeholder="Chercher un outil..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+          <div className="search-bar"><span className="search-icon">🔍</span><input placeholder={tx.lang === 'en' ? 'Search a tool...' : 'Chercher un outil...'} value={search} onChange={e => setSearch(e.target.value)} /></div>
           {[{ val: "all", label: "Tous" }, { val: "store", label: "🟢 Store" }, { val: "assigned", label: "🔵 Chantier" }, { val: "nonfunctional", label: "🔴 Non fonctionnel" }, { val: "obsolete", label: "⚫ Obsolète" }].map(s => (
             <button key={s.val} className={`filter-btn ${filterStatus === s.val ? "active" : ""}`} onClick={() => { setFilterStatus(s.val); setFilterUser("all"); setFilterChantier("all"); }}>{s.label}</button>
           ))}
@@ -940,7 +939,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
                   <div className="tool-card-top"><div className="tool-meta" style={{ width: "100%" }}><div className="tool-name">{tool.name}</div>{tool.ref && <div className="tool-ref">🏭 {tool.ref}</div>}</div></div>
                   <div className="tool-card-body"><div className="tool-desc">{tool.description}</div><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>📍 {tool.location}</div></div>
                   <div className="tool-card-footer">
-                    {{ store: <span className="status-badge status-store">🟢 Store</span>, assigned: <span className="status-badge status-assigned">🔵 Chantier</span>, nonfunctional: <span className="status-badge status-nonfunctional">🔴 Non fonctionnel</span>, obsolete: <span className="status-badge">⚫ Obsolète</span> }[tool.status]}
+                    {{ store: <span className="status-badge status-store">{tx.store}</span>, assigned: <span className="status-badge status-assigned">🔵 {tx.assigned}</span>, nonfunctional: <span className="status-badge status-nonfunctional">🔴 Non fonctionnel</span>, obsolete: <span className="status-badge">⚫ Obsolète</span> }[tool.status]}
                     {tool.price && <span className="price-tag">🇲🇺 Rs {tool.price.toLocaleString("fr-MU")}</span>}
                     {assignee && <span className="assignee-chip"><div style={{ width: 20, height: 20, fontSize: 9, borderRadius: 5, background: "var(--blue)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{assignee.avatar}</div>{assignee.name.split(" ")[0]}</span>}
                   </div>
@@ -955,7 +954,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
   );
 }
 
-function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, openTool, sendRequest }) {
+function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, openTool, sendRequest, tx }) {
   const hasOldTools = myTools.some(tool => { const d = daysSince(tool.lastReminder); return d !== null && d >= 3; });
   const [selected, setSelected] = useState([]);
   const [showGroupModal, setShowGroupModal] = useState(false);
@@ -989,7 +988,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
   return (
     <>
       <div className="topbar">
-        <h2>📦 Mes outils</h2>
+        <h2>📦 {tx.mytools}</h2>
         <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>{myTools.length === 0 ? "Aucun outil confié" : `${myTools.length} outil${myTools.length > 1 ? "s" : ""}`}</span>
       </div>
       <div className="content">
@@ -1127,10 +1126,10 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
   );
 }
 
-function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest }) {
+function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest, tx }) {
   return (
     <>
-      <div className="topbar"><h2>🔧 Parc outils</h2></div>
+      <div className="topbar"><h2>🔧 {tx.parc}</h2></div>
       <div className="content">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
           {[
@@ -1184,10 +1183,10 @@ function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest 
   );
 }
 
-function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools, users, companies, currentUser, db, showToast }) {
+function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools, users, companies, currentUser, db, showToast, tx }) {
   return (
     <>
-      <div className="topbar"><h2>🔔 Demandes</h2><span style={{ fontSize: 12, color: "var(--muted)" }}>{filteredRequests.filter(r => r.status === "pending").length} en attente</span></div>
+      <div className="topbar"><h2>🔔 {tx.requests}</h2><span style={{ fontSize: 12, color: "var(--muted)" }}>{filteredRequests.filter(r => r.status === "pending").length} en attente</span></div>
       <div className="content">
         {filteredRequests.length === 0 && <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🔔</div><div>Aucune demande pour le moment</div></div>}
         {isSuperAdmin ? (
@@ -1277,10 +1276,10 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
   );
 }
 
-function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, db, showToast, setModal, onSupervise }) {
+function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, db, showToast, setModal, onSupervise, tx }) {
   return (
     <>
-      <div className="topbar"><h2>Équipe</h2>{!isSuperAdmin && <button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ Ajouter un profil</button>}</div>
+      <div className="topbar"><h2>{tx.team}</h2>{!isSuperAdmin && <button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ {tx.addProfile}</button>}</div>
       <div className="content">
         {isSuperAdmin ? (
           companies.length === 0 ? <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}><div style={{ fontSize: 40 }}>🏢</div><div>Créez d'abord des compagnies</div></div> :
@@ -1756,11 +1755,11 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
 
 // ─── CHANTIER PAGE ────────────────────────────────────────────────────────────
 const CHANTIER_COLORS = ["#3a8ef6","#27c97a","#f5a623","#e84040","#9b59b6","#e67e22","#1abc9c","#e91e8c"];
-function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier }) {
+function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx }) {
   const [newName, setNewName] = useState(""), [newColor, setNewColor] = useState(CHANTIER_COLORS[0]);
   return (
     <>
-      <div className="topbar"><h2>Chantiers</h2></div>
+      <div className="topbar"><h2>{tx.chantiers}</h2></div>
       <div className="content">
         <div style={{ background: "var(--surface)", border: "1px dashed var(--accent)", borderRadius: 12, padding: 20, marginBottom: 24 }}>
           <div style={{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800, color: "var(--accent)", marginBottom: 12 }}>🏗 Nouveau chantier</div>
@@ -1939,8 +1938,8 @@ function RequestActions({ request: r, tool, onApprove, onRefuse }) {
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
       <input className="form-input" style={{ flex: 1, fontSize: 12 }} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
-      <button className={`btn btn-green btn-sm ${loadingApprove ? "loading" : ""}`} disabled={loadingApprove} onClick={() => triggerApprove(() => onApprove(note))}>{loadingApprove ? "⏳..." : "✅ Approuver"}</button>
-      <button className="btn btn-danger btn-sm" onClick={() => setMode("refuse")}>❌ Refuser</button>
+      <button className={`btn btn-green btn-sm ${loadingApprove ? "loading" : ""}`} disabled={loadingApprove} onClick={() => triggerApprove(() => onApprove(note))}>{loadingApprove ? "⏳..." : `✅ ${tx.approve}`}</button>
+      <button className="btn btn-danger btn-sm" onClick={() => setMode("refuse")}>{`❌ ${tx.refuse}`}</button>
     </div>
   );
 }
@@ -2015,7 +2014,7 @@ function ViewerToolCard({ tool, currentUser, users, viewers, chantiers, db, onOp
 }
 
 // ─── MESSAGES PAGE ────────────────────────────────────────────────────────────
-function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
+function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx }) {
   const [tab, setTab] = useState("annonces");
   const [conversations, setConversations] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -2138,7 +2137,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
 
   return (
     <>
-      <div className="topbar"><h2>💬 Messages</h2>{isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setNewConvOpen(true)}>+ Nouveau</button>}</div>
+      <div className="topbar"><h2>💬 {tx.messages}</h2>{isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setNewConvOpen(true)}>+ Nouveau</button>}</div>
       <div className="content">
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           <button className={`filter-btn ${tab === "annonces" ? "active" : ""}`} onClick={() => { setTab("annonces"); setSelected(null); setNewConvOpen(false); }}>
@@ -2199,7 +2198,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast }) {
 }
 
 // ─── COMPANIES PAGE ───────────────────────────────────────────────────────────
-function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated, onSupervise }) {
+function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated, onSupervise, tx }) {
   const [showForm, setShowForm] = useState(false);
   const [newName, setNewName] = useState(""), [newColor, setNewColor] = useState("#f5a623"), [newExpiry, setNewExpiry] = useState(""), [newContactEmail, setNewContactEmail] = useState(currentUser.email || "");
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -2275,7 +2274,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 
   return (
     <>
-      <div className="topbar"><h2>🏢 Compagnies</h2><button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>+ Nouvelle</button></div>
+      <div className="topbar"><h2>🏢 {tx.companies}</h2><button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>+ Nouvelle</button></div>
       <div className="content">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
           {[{ label: "Total", count: companies.length, color: "var(--accent)" }, { label: "🟢 Actives", count: companies.filter(c => c.active !== false).length, color: "var(--green)" }, { label: "⏸ Suspendues", count: companies.filter(c => c.active === false).length, color: "var(--red)" }].map(s => (
