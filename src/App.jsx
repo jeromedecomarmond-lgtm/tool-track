@@ -2396,6 +2396,9 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
   const createFirstAdmin = async (company) => {
     if (!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.phone.trim()) return;
     const initials = adminForm.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
+    // Récupérer le companyPin frais depuis la liste companies
+    const freshCompany = companies.find(c => c.id === company.id) || company;
+    const companyPin = freshCompany.companyPin || company.companyPin || "";
 
     try {
       // On crée uniquement le profil Firestore
@@ -2411,7 +2414,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
         pin: "",
         companyId: company.id,
         companyName: company.name,
-        companyPin: company.companyPin || "",
+        companyPin: companyPin,
         authUid: null,
         pendingAuth: true  // Le Directeur doit créer son mot de passe à la 1ère connexion
       };
