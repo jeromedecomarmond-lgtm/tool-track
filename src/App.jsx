@@ -854,7 +854,7 @@ export default function App() {
         {page === "requests" && <RequestsPage isSuperAdmin={isSuperAdmin} isAdmin={isAdmin} filteredRequests={filteredRequests} requests={requests} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} tx={tx} />}
         {/* FIX #10 — page messages rendue */}
         {page === "messages" && <MessagesPage currentUser={effectiveUser} users={users} tools={tools} myTools={myTools} db={db} showToast={showToast} tx={tx} />}
-        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} tx={tx} deleteDirectorSelf={deleteDirectorSelf} isSupervising={isSupervising} />}
+        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} realUser={currentUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} tx={tx} deleteDirectorSelf={deleteDirectorSelf} isSupervising={isSupervising} />}
       </main>
     </div>
 
@@ -1447,7 +1447,7 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
   );
 }
 
-function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, db, showToast, setModal, onSupervise, tx, deleteDirectorSelf, isSupervising }) {
+function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, realUser, db, showToast, setModal, onSupervise, tx, deleteDirectorSelf, isSupervising }) {
   return (
     <>
       <div className="topbar"><h2>{tx.team}</h2>{!isSuperAdmin && <button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ {tx.addProfile}</button>}</div>
@@ -1524,7 +1524,8 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                       admin: ["viewer"],
                       viewer: []
                     };
-                    const canDelete = !isSelf && (deleteRules[currentUser.role] || []).includes(u.role);
+                    const effectiveRole = (realUser || currentUser)?.role;
+                    const canDelete = !isSelf && (deleteRules[effectiveRole] || []).includes(u.role);
                     const hierarchy = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
                     const canSupervise = onSupervise && !isSelf && (hierarchy[currentUser.role] || 0) > (hierarchy[u.role] || 0);
                     return (
@@ -1542,10 +1543,21 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                             {u.phone && <div style={{ fontSize: 12, color: "var(--muted)" }}>📞 {u.phone}</div>}
                             {u.email && <div style={{ fontSize: 12, color: "var(--muted)" }}>✉️ {u.email}</div>}
                           </div>
+                          {/* Bouton auto-suppression pour le Directeur lui-même */}
                           {isSelf && u.role === "director" && !isSupervising && (
                             <button className="btn btn-sm" style={{ width: "100%", justifyContent: "center", background: "rgba(232,64,40,.1)", color: "var(--red)", border: "1px solid rgba(232,64,40,.3)", fontSize: 11, marginBottom: 8 }} onClick={deleteDirectorSelf}>
                               🗑 {tx.deleteAccount}
                             </button>
+                          )}
+                          {/* Bouton suppression par SuperAdmin en supervision */}
+                          {isSupervising && u.role === "director" && (realUser || currentUser)?.role === "superadmin" && (
+                            <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }} onClick={() => {
+                              if (assignedTools.length > 0) { showToast("⚠️ Des outils sont encore confiés !", "warn"); return; }
+                              if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { 
+                                deleteDoc(doc(db, "users", String(u.id))); 
+                                showToast(`🗑 ${tx.profileDeleted}`); 
+                              }
+                            }}>{`🗑 ${tx.deleteBtn}`}</button>
                           )}
                           {canSeePins && u.pin && (
                             <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
