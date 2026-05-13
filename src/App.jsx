@@ -72,7 +72,7 @@ const T = {
     requests: "Requests", team: "Team", companies: "Companies",
     mytools: "My Tools", parc: "Tool Park", profile: "Profile", messages: "Messages",
     add: "Add", save: "Save", cancel: "Cancel", delete: "Delete",
-    edit: "Edit", confirm: "Confirm", send: "Send", create: "Create",
+    edit: "Edit", confirm: "Confirm", send: "Send", create: "Add",
     approve: "Approve", refuse: "Refuse", close: "Close",
     addTool: "Add a tool", toolName: "Name", supplier: "Supplier",
     purchaseDate: "Purchase date", price: "Purchase price (Rs)", description: "Description",
