@@ -868,6 +868,11 @@ export default function App() {
       <button className="bottom-nav-item" onClick={() => setLanguage(lang === "fr" ? "en" : "fr")}>
         <span className="bn-icon">{lang === "fr" ? "🇬🇧" : "🇫🇷"}</span>{lang === "fr" ? "EN" : "FR"}
       </button>
+      {!isSupervising && (currentUser?.role === "director" || effectiveUser?.role === "director") && (
+        <button className="bottom-nav-item" onClick={deleteDirectorSelf} style={{ color: "var(--red)" }}>
+          <span className="bn-icon">🗑</span>{tx.deleteAccount}
+        </button>
+      )}
     </nav>
 
     {modal && <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} effectiveUser={effectiveUser} addTool={addTool} addUser={addUser} assignTool={assignTool} deleteTool={deleteTool} updateTool={updateTool} myCompany={myCompany} />}
