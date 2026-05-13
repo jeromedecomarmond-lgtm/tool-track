@@ -424,69 +424,102 @@ export default function App() {
   const deleteDirectorSelf = async () => {
     const company = companies.find(c => c.id === currentUser.companyId);
     const companyName = company?.name || "votre compagnie";
+    const superAdmin = users.find(u => u.role === "superadmin");
+    const superAdminEmail = superAdmin?.email || "jdecomarmond.profile@intnet.mu";
+    const superAdminPhone = superAdmin?.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
 
     // Vérifier s'il y a d'autres directeurs dans la compagnie
-    const otherDirectors = users.filter(u => u.companyId === currentUser.companyId && u.role === "director" && String(u.id) !== String(currentUser.id));
+    const otherDirectors = users.filter(u => 
+      u.companyId === currentUser.companyId && 
+      u.role === "director" && 
+      String(u.id) !== String(currentUser.id)
+    );
 
-    if (otherDirectors.length > 0) {
-      // Il y a d'autres directeurs — suppression simple avec avertissement
-      const confirmed = window.confirm(
-        `⚠️ Supprimer votre compte Directeur ?\n\n` +
-        `La compagnie "${companyName}" continuera avec les ${otherDirectors.length} autre(s) directeur(s).\n\n` +
-        `Êtes-vous sûr de vouloir continuer ?`
-      );
-      if (!confirmed) return;
-    } else {
-      // Dernier directeur — avertissement fort + suspension compagnie
-      const confirmed = window.confirm(
-        `⚠️ ATTENTION — Vous êtes le seul Directeur de "${companyName}"\n\n` +
+    const isLastDirector = otherDirectors.length === 0;
+
+    // ÉTAPE 1 — Message d'avertissement AVANT toute confirmation
+    if (isLastDirector) {
+      alert(
+        `⚠️ AVERTISSEMENT IMPORTANT\n\n` +
+        `Vous êtes le DERNIER Directeur de "${companyName}".\n\n` +
         `Si vous supprimez votre compte :\n` +
         `• La compagnie sera automatiquement SUSPENDUE\n` +
-        `• Les employés ne pourront plus accéder à l'app\n` +
-        `• Un nouveau Directeur devra être créé par le SuperAdmin\n\n` +
-        `Une alerte sera envoyée au SuperAdmin pour rétablir la compagnie.\n` +
-        `Contact : jdecomarmond.profile@intnet.mu\n\n` +
-        `Êtes-vous sûr de vouloir continuer ?`
+        `• Tous les employés et admins perdront l'accès\n` +
+        `• Un message d'alerte sera envoyé au SuperAdmin\n` +
+        `• Seul le SuperAdmin pourra rétablir la compagnie\n\n` +
+        `Contact SuperAdmin : ${superAdminEmail}`
       );
-      if (!confirmed) return;
+    } else {
+      alert(
+        `ℹ️ Information\n\n` +
+        `Vous êtes sur le point de supprimer votre compte Directeur.\n\n` +
+        `La compagnie "${companyName}" continuera avec les ${otherDirectors.length} autre(s) directeur(s) en place.\n\n` +
+        `Cette action est irréversible.`
+      );
     }
 
+    // ÉTAPE 2 — Confirmation finale
+    const confirmed = window.confirm(
+      isLastDirector
+        ? `🔴 CONFIRMATION FINALE\n\nSupprimer définitivement votre compte et SUSPENDRE la compagnie "${companyName}" ?\n\nCette action est IRRÉVERSIBLE.`
+        : `Confirmer la suppression de votre compte Directeur ?`
+    );
+    if (!confirmed) return;
+
     try {
-      if (otherDirectors.length === 0) {
-        // Suspendre la compagnie si dernier directeur
+      if (isLastDirector) {
+        // Suspendre la compagnie
         if (company) {
           await setDoc(doc(db, "companies", company.id), {
             ...company,
             active: false,
-            suspendedReason: "Directeur supprimé — aucun remplaçant",
+            suspendedReason: `Dernier Directeur (${currentUser.name}) supprimé le ${new Date().toLocaleDateString("fr-FR")}`,
             suspendedAt: Date.now()
           });
         }
-        // Envoyer un message WhatsApp au SuperAdmin
-        const superAdmin = users.find(u => u.role === "superadmin");
+
+        // Envoyer WhatsApp au SuperAdmin
         const waMsg = encodeURIComponent(
-          `🚨 *TOOL TRACK — Alerte SuperAdmin*\n\n` +
-          `Le Directeur *${currentUser.name}* a supprimé son compte.\n\n` +
+          `🚨 *TOOL TRACK — ALERTE URGENTE*\n\n` +
+          `Le Directeur *${currentUser.name}* vient de supprimer son compte.\n\n` +
           `🏢 Compagnie : *${companyName}*\n` +
-          `⚠️ Statut : *SUSPENDUE*\n\n` +
-          `Un nouveau Directeur doit être créé pour rétablir l'accès.\n\n` +
+          `📧 Email : ${currentUser.email || "non renseigné"}\n` +
+          `⚠️ Statut compagnie : *SUSPENDUE*\n` +
+          `📅 Date : ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR")}\n\n` +
+          `👉 Un nouveau Directeur doit être créé pour rétablir l'accès.\n` +
           `🔗 https://tool-track-rosy.vercel.app`
         );
-        const superAdminPhone = superAdmin?.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
         if (superAdminPhone) {
           window.open(`https://wa.me/${superAdminPhone}?text=${waMsg}`, "_blank");
         } else {
           window.open(`https://wa.me/?text=${waMsg}`, "_blank");
         }
+
+        // Envoyer email au SuperAdmin via mailto
+        const mailSubject = encodeURIComponent(`🚨 TOOL TRACK — Compagnie ${companyName} suspendue`);
+        const mailBody = encodeURIComponent(
+          `Bonjour,\n\n` +
+          `Le Directeur ${currentUser.name} (${currentUser.email || "email non renseigné"}) a supprimé son compte le ${new Date().toLocaleDateString("fr-FR")}.\n\n` +
+          `Compagnie concernée : ${companyName}\n` +
+          `Statut : SUSPENDUE\n\n` +
+          `Action requise : Créer un nouveau Directeur pour rétablir l'accès.\n\n` +
+          `Lien : https://tool-track-rosy.vercel.app\n\n` +
+          `— Tool Track`
+        );
+        window.open(`mailto:${superAdminEmail}?subject=${mailSubject}&body=${mailBody}`, "_blank");
       }
 
       // Supprimer le profil Firestore
       await deleteDoc(doc(db, "users", String(currentUser.id)));
-      // Déconnexion Auth
+      // Déconnexion Firebase Auth
       try { await signOut(auth); } catch(e) {}
       setCurrentUser(null);
-      try { localStorage.removeItem("tooltrack_user_id"); localStorage.removeItem("tooltrack_last_page"); } catch(e) {}
-      showToast(otherDirectors.length === 0 ? "🗑 Compte supprimé — compagnie suspendue" : "🗑 Compte supprimé");
+      try { 
+        localStorage.removeItem("tooltrack_user_id"); 
+        localStorage.removeItem("tooltrack_last_page"); 
+      } catch(e) {}
+      
+      showToast(isLastDirector ? "🗑 Compte supprimé — compagnie suspendue" : "🗑 Compte supprimé");
     } catch(e) {
       showToast("❌ Erreur lors de la suppression : " + e.message);
     }
