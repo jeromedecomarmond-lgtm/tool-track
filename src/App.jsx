@@ -1049,8 +1049,8 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
         {myTools.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>📦</div>
-            <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 700, marginBottom: 6 }>{tx.noToolAssigned}</div>
-            <div style={{ fontSize: 13 }}>Un admin vous assignera un outil bientôt.</div>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>{tx.noToolAssigned}</div>
+            <div style={{ fontSize: 13 }}>{tx.toolAssignedSoon}</div>
           </div>
         ) : (
           <>
@@ -1427,7 +1427,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                           )}
                           {role === "viewer" && (
                             <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
-                              {assignedTools.length === 0 ? <div style={{ fontSize: 11, color: "var(--muted)" }>{tx.noToolAssigned}</div> : assignedTools.map(t => <div key={t.id} style={{ fontSize: 12, color: "var(--blue)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}><span>{t.photo}</span>{t.name}</div>)}
+                              {assignedTools.length === 0 ? <div style={{ fontSize: 11, color: "var(--muted)" }}>{tx.noToolAssigned}</div> : assignedTools.map(t => <div key={t.id} style={{ fontSize: 12, color: "var(--blue)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}><span>{t.photo}</span>{t.name}</div>)}
                             </div>
                           )}
                           {canDelete && <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={() => {
