@@ -34,7 +34,7 @@ const T = {
     language: "Langue", french: "Français", english: "English",
     all: "Tous", selectAll: "Tout sélectionner", addProfile: "Ajouter un profil", search: "Chercher un outil...", details: "Détails",
     globalView: "Vue globale", byCompany: "Par compagnie", totalValue: "Valeur totale du parc",
-    totalTools: "Outils total", inStore2: "En store", onSite2: "Sur chantier", nonFunctional2: "Non fonctionnels", obsolete2: "Obsolètes", pendingReq: "Demandes en attente",
+    totalTools: "Outils total", inStore2: "En store", onSite2: "Sur chantier", nonFunctional2: "Non fonctionnels", obsolete2: "Obsolètes", pendingReq: "Demandes en attente", pendingLabel: "en attente", pendingAdmin: "En attente d'un admin", approvedBy: "Approuvé par", refusedBy: "Refusé par",
     toolsOnSite: "Outils sur chantiers", resetTest: "Reset données test",
     totalTeam: "Équipes total", deselect: "Désélectionner", selected2: "sélectionné",
     allEmployees: "Tous les employés", allSites: "Tous les chantiers", notAssigned: "Non assigné",
@@ -97,7 +97,7 @@ const T = {
     language: "Language", french: "Français", english: "English",
     all: "All", selectAll: "Select all", addProfile: "Add a profile", search: "Search a tool...", details: "Details",
     globalView: "Global view", byCompany: "By company", totalValue: "Total fleet value",
-    totalTools: "Total tools", inStore2: "In store", onSite2: "On site", nonFunctional2: "Not functional", obsolete2: "Obsolete", pendingReq: "Pending requests",
+    totalTools: "Total tools", inStore2: "In store", onSite2: "On site", nonFunctional2: "Not functional", obsolete2: "Obsolete", pendingReq: "Pending requests", pendingLabel: "pending", pendingAdmin: "Waiting for admin", approvedBy: "Approved by", refusedBy: "Refused by",
     toolsOnSite: "Tools on site", resetTest: "Reset test data",
     totalTeam: "Total teams", deselect: "Deselect", selected2: "selected",
     allEmployees: "All employees", allSites: "All job sites", notAssigned: "Not assigned",
@@ -1259,7 +1259,7 @@ function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest,
 function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools, users, companies, currentUser, db, showToast, tx }) {
   return (
     <>
-      <div className="topbar"><h2>🔔 {tx.requests}</h2><span style={{ fontSize: 12, color: "var(--muted)" }}>{filteredRequests.filter(r => r.status === "pending").length} en attente</span></div>
+      <div className="topbar"><h2>🔔 {tx.requests}</h2><span style={{ fontSize: 12, color: "var(--muted)" }}>{filteredRequests.filter(r => r.status === "pending").length} {tx.pendingLabel}</span></div>
       <div className="content">
         {filteredRequests.length === 0 && <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🔔</div><div>{tx.noRequest}</div></div>}
         {isSuperAdmin ? (
@@ -1271,7 +1271,7 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
               <div key={company.id} style={{ marginBottom: 24 }}>
                 <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: company.color || "var(--accent)", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
                   🏢 {company.name}
-                  <span style={{ fontSize: 11, background: (company.color || "var(--accent)") + "22", color: company.color || "var(--accent)", padding: "2px 8px", borderRadius: 20 }}>{companyRequests.filter(r => r.status === "pending").length} en attente</span>
+                  <span style={{ fontSize: 11, background: (company.color || "var(--accent)") + "22", color: company.color || "var(--accent)", padding: "2px 8px", borderRadius: 20 }}>{companyRequests.filter(r => r.status === "pending").length} {tx.pendingLabel}</span>
                 </div>
                 {companyRequests.map(r => {
                   const tool = tools.find(t => String(t.id) === String(r.toolId));
@@ -1317,7 +1317,7 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
                 <div key={r.id} style={{ background: "var(--surface)", borderRadius: 12, padding: 16, border: `1px solid ${isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)"}`, opacity: isPending ? 1 : 0.7 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <div>
-                      <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: isPending ? "rgba(245,166,35,.2)" : r.status === "approved" ? "rgba(39,201,122,.2)" : "rgba(232,82,10,.2)", color: isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)" }}>{isPending ? "⏳ En attente" : r.status === "approved" ? "✅ Approuvé" : "❌ Refusé"}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: isPending ? "rgba(245,166,35,.2)" : r.status === "approved" ? "rgba(39,201,122,.2)" : "rgba(232,82,10,.2)", color: isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)" }}>{isPending ? `⏳ ${tx.pending}` : r.status === "approved" ? `✅ ${tx.approved}` : `❌ ${tx.refused}`}</span>
                       <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{new Date(r.date).toLocaleString("fr-MU")}</div>
                     </div>
                     {tool && <span style={{ fontSize: 20 }}>{tool.photo}</span>}
@@ -1338,7 +1338,7 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
                       }}
                     />
                   )}
-                  {!isAdmin && <div style={{ fontSize: 11, color: "var(--muted)" }}>{isPending ? "⏳ En attente d'un admin" : r.status === "approved" ? `✅ Approuvé par ${r.approvedBy}` : `❌ Refusé par ${r.refusedBy}`}</div>}
+                  {!isAdmin && <div style={{ fontSize: 11, color: "var(--muted)" }}>{isPending ? `⏳ ${tx.pendingAdmin}` : r.status === "approved" ? `✅ ${tx.approvedBy} ${r.approvedBy}` : `❌ ${tx.refusedBy} ${r.refusedBy}`}</div>}
                 </div>
               );
             })}
