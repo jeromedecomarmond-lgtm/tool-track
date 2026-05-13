@@ -2558,7 +2558,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 // ─── LOGIN SCREEN ─────────────────────────────────────────────────────────────
 function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
   const [step, setStep] = useState("company"), [selectedCompany, setSelectedCompany] = useState(null), [companyPin, setCompanyPin] = useState(""), [pinError, setPinError] = useState(false);
-  const [showAdminLogin, setShowAdminLogin] = useState(false), [adminEmail, setAdminEmail] = useState(""), [adminPassword, setAdminPassword] = useState(""), [adminLoading, setAdminLoading] = useState(false), [adminError, setAdminError] = useState(""), [resetSent, setResetSent] = useState(false);
+  const [showAdminLogin, setShowAdminLogin] = useState(false), [adminEmail, setAdminEmail] = useState(""), [adminPassword, setAdminPassword] = useState(""), [adminLoading, setAdminLoading] = useState(false), [adminError, setAdminError] = useState(""), [resetSent, setResetSent] = useState(false), [showPwd, setShowPwd] = useState(false);
   const superAdmins = users.filter(u => u.role === "superadmin");
 
   const handleCompanyPin = (digit) => {
@@ -2654,7 +2654,7 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
             <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" placeholder="admin@email.com" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdminEmailLogin()} /></div>
-            <div className="form-group"><label className="form-label">Mot de passe</label><input className="form-input" type="password" placeholder="Choisissez un mot de passe (6+ car.)" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdminEmailLogin()} /></div>
+            <div className="form-group"><label className="form-label">Mot de passe</label><div style={{ position: "relative" }}><input className="form-input" type={showPwd ? "text" : "password"} placeholder="Choisissez un mot de passe (6+ car.)" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdminEmailLogin()} style={{ paddingRight: 40 }} /><button type="button" onClick={() => setShowPwd(p => !p)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted)", padding: 0 }}>{showPwd ? "🙈" : "👁"}</button></div></div>
             {adminError && <div style={{ fontSize: 12, color: "var(--red)", fontWeight: 700 }}>{adminError}</div>}
             <button className={`btn btn-primary ${adminLoading ? "loading" : ""}`} disabled={!adminEmail.trim() || !adminPassword || adminLoading} onClick={handleAdminEmailLogin} style={{ justifyContent: "center" }}>{adminLoading ? "⏳ Connexion..." : "🔑 Se connecter"}</button>
             <button className="btn btn-ghost btn-sm" onClick={handleResetPassword} style={{ justifyContent: "center", fontSize: 11 }}>Mot de passe oublié ?</button>
@@ -2776,7 +2776,7 @@ function PinLogin({ user, onSuccess }) {
 
 // ─── FIRST ADMIN FORM ─────────────────────────────────────────────────────────
 function FirstAdminForm({ onSave }) {
-  const [name, setName] = useState(""), [phone, setPhone] = useState(""), [email, setEmail] = useState(""), [password, setPassword] = useState("");
+  const [name, setName] = useState(""), [phone, setPhone] = useState(""), [email, setEmail] = useState(""), [password, setPassword] = useState(""), [showSuperPwd, setShowSuperPwd] = useState(false);
   const [loading, setLoading] = useState(false), [error, setError] = useState("");
   const handleCreate = async () => {
     if (!name.trim() || !email.trim() || password.length < 6) return;
@@ -2798,7 +2798,7 @@ function FirstAdminForm({ onSave }) {
       <div className="form-group"><label className="form-label">Votre nom *</label><input className="form-input" placeholder="ex: Jean Dupont" value={name} onChange={e => setName(e.target.value)} /></div>
       <div className="form-group"><label className="form-label">Téléphone</label><input className="form-input" placeholder="+230 ..." value={phone} onChange={e => setPhone(e.target.value)} /></div>
       <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" placeholder="vous@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
-      <div className="form-group"><label className="form-label">Mot de passe * (min. 6 caractères)</label><input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} /></div>
+      <div className="form-group"><label className="form-label">Mot de passe * (min. 6 caractères)</label><div style={{ position: "relative" }}><input className="form-input" type={showSuperPwd ? "text" : "password"} placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} style={{ paddingRight: 40 }} /><button type="button" onClick={() => setShowSuperPwd(p => !p)} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "var(--muted)", padding: 0 }}>{showSuperPwd ? "🙈" : "👁"}</button></div></div>
       
       {error && <div style={{ fontSize: 12, color: "var(--red)", fontWeight: 700 }}>{error}</div>}
       <button className={`btn btn-primary ${loading ? "loading" : ""}`} disabled={!name.trim() || !email.trim() || password.length < 6 || loading} onClick={handleCreate} style={{ justifyContent: "center", marginTop: 4 }}>{loading ? "⏳ Création..." : "🚀 Créer et démarrer"}</button>
