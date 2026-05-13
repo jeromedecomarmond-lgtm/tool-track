@@ -54,7 +54,7 @@ const T = {
     readOnly: "Lecture seule — contactez votre Directeur ou Admin pour toute question",
     writeAnnouncement: "Écrire une annonce...",
     newCompany2: "+ Nouvelle", addDirector: "+ Ajouter un Directeur",
-    deleteAccount: "Supprimer mon compte", toolsOnSiteLabel: "Outils sur chantiers",
+    deleteAccount: "Supprimer mon compte", toolsOnSiteLabel: "Outils sur chantiers", deleteBtn: "Supprimer", directors: "Directeurs", admins: "Admins", director: "Directeur", directorCreated: "Directeur créé", profileDeleted: "Profil supprimé", deleteConfirm: "Supprimer", cannotDeleteSelf: "Vous ne pouvez pas vous supprimer vous-même", cannotDeleteRole: "Vous ne pouvez pas supprimer ce profil",
     active2: "Active", suspended2: "Suspendue",
     noCompany: "Aucune compagnie — créez-en une !", toolManagement: "Gestion d'outils",
     disconnect: "Déconnexion", actives: "Actives", total: "Total",
@@ -117,7 +117,7 @@ const T = {
     readOnly: "Read only — contact your Director or Admin for any question",
     writeAnnouncement: "Write an announcement...",
     newCompany2: "+ New", addDirector: "+ Add a Director",
-    deleteAccount: "Delete my account", toolsOnSiteLabel: "Tools on job sites",
+    deleteAccount: "Delete my account", toolsOnSiteLabel: "Tools on job sites", deleteBtn: "Delete", directors: "Directors", admins: "Admins", director: "Director", directorCreated: "Director created", profileDeleted: "Profile deleted", deleteConfirm: "Delete", cannotDeleteSelf: "You cannot delete your own account", cannotDeleteRole: "You cannot delete this profile",
     active2: "Active", suspended2: "Suspended",
     noCompany: "No companies yet — create one!", toolManagement: "Tool management",
     disconnect: "Disconnect", actives: "Active", total: "Total",
@@ -1384,10 +1384,10 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                             {onSupervise && <button className="btn btn-blue btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => onSupervise(u)}>👁 Voir</button>}
                             <button className="btn btn-danger btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => {
                               if (assignedTools.length > 0) { showToast("⚠️ Ce profil a des outils confiés !", "warn"); return; }
-                              if (String(u.id) === String(currentUser.id)) { showToast("❌ Vous ne pouvez pas vous supprimer vous-même"); return; }
+                              if (String(u.id) === String(currentUser.id)) { showToast(`❌ ${tx.cannotDeleteSelf}`); return; }
                               const deleteRules = { superadmin: ["director","admin","viewer"], director: ["admin","viewer"], admin: ["viewer"], viewer: [] };
-                              if (!(deleteRules[currentUser.role] || []).includes(u.role)) { showToast("❌ Vous ne pouvez pas supprimer ce profil"); return; }
-                              if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast("🗑 Profil supprimé"); }
+                              if (!(deleteRules[currentUser.role] || []).includes(u.role)) { showToast(`❌ ${tx.cannotDeleteRole}`); return; }
+                              if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${tx.profileDeleted}`); }
                             }}>🗑</button>
                           </div>
                         </div>
@@ -1403,7 +1403,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
             const roleUsers = filteredUsers.filter(u => u.role === role);
             if (roleUsers.length === 0) return null;
             const roleColor = role === "director" ? "#9b59b6" : role === "admin" ? "var(--accent)" : "var(--blue)";
-            const roleLabel = role === "director" ? "🏢 Directeurs" : role === "admin" ? "🔑 Admins" : "👷 " + tx.employee;
+            const roleLabel = role === "director" ? `🏢 ${tx.directors}` : role === "admin" ? `🔑 ${tx.admins}` : "👷 " + tx.employee;
             const canSeePins = ["superadmin","admin","director"].includes(currentUser.role);
             return (
               <div key={role} style={{ marginBottom: 28 }}>
@@ -1437,7 +1437,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                             <div style={{ width: 52, height: 52, borderRadius: 12, background: roleColor, color: role === "viewer" ? "#fff" : "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, flexShrink: 0 }}>{u.avatar}</div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800 }}>{u.name}{isSelf && <span style={{ fontSize: 10, background: "rgba(245,166,35,.2)", color: "var(--accent)", padding: "1px 6px", borderRadius: 8, marginLeft: 6 }}>Moi</span>}</div>
-                              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: roleColor + "22", color: roleColor, marginTop: 3, display: "inline-block" }}>{role === "director" ? "🏢 Directeur" : role === "admin" ? "🔑 Admin" : "👷 Employé"}</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: roleColor + "22", color: roleColor, marginTop: 3, display: "inline-block" }}>{role === "director" ? `🏢 ${tx.director}` : role === "admin" ? "🔑 Admin" : `👷 ${tx.employee}`}</span>
                             </div>
                           </div>
                           <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 10 }}>
@@ -1456,10 +1456,10 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                             </div>
                           )}
                           {canDelete && <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={() => {
-                            if (String(u.id) === String(currentUser.id)) { showToast("❌ Vous ne pouvez pas vous supprimer vous-même"); return; }
+                            if (String(u.id) === String(currentUser.id)) { showToast(`❌ ${tx.cannotDeleteSelf}`); return; }
                             if (assignedTools.length > 0) { showToast("⚠️ Des outils sont encore confiés !", "warn"); return; }
-                            if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast("🗑 Profil supprimé"); }
-                          }}>🗑 Supprimer</button>}
+                            if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${tx.profileDeleted}`); }
+                          }}>{`🗑 ${tx.deleteBtn}`}</button>}
                         </div>
                       </div>
                     );
@@ -2425,7 +2425,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                           </div>
                         )}
                       </div>
-                      {[{ role: "director", label: "🏢 Directeurs", color: "#9b59b6" }, { role: "admin", label: "🔑 Admins", color: "var(--accent)" }, { role: "viewer", label: "👷 " + tx.employee, color: "var(--blue)" }].map(({ role, label, color }) => {
+                      {[{ role: "director", label: `🏢 ${tx.directors}`, color: "#9b59b6" }, { role: "admin", label: `🔑 ${tx.admins}`, color: "var(--accent)" }, { role: "viewer", label: "👷 " + tx.employee, color: "var(--blue)" }].map(({ role, label, color }) => {
                         const roleUsers = compUsers.filter(u => u.role === role);
                         return (
                           <div key={role} style={{ marginBottom: 8 }}>
@@ -2437,10 +2437,10 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                                 <div style={{ display: "flex", gap: 6 }}>
                                   {onSupervise && <button className="btn btn-blue btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => onSupervise(u)}>👁 Voir</button>}
                                   <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px" }} onClick={() => {
-                                    if (String(u.id) === String(currentUser.id)) { showToast("❌ Vous ne pouvez pas vous supprimer vous-même"); return; }
+                                    if (String(u.id) === String(currentUser.id)) { showToast(`❌ ${tx.cannotDeleteSelf}`); return; }
                                     const deleteRules = { superadmin: ["director","admin","viewer"], director: ["admin","viewer"], admin: ["viewer"], viewer: [] };
-                                    if (!(deleteRules[currentUser.role] || []).includes(u.role)) { showToast("❌ Vous ne pouvez pas supprimer ce profil"); return; }
-                                    if (window.confirm(`Supprimer ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${u.name} supprimé`); }
+                                    if (!(deleteRules[currentUser.role] || []).includes(u.role)) { showToast(`❌ ${tx.cannotDeleteRole}`); return; }
+                                    if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${u.name} ${tx.profileDeleted}`); }
                                   }}>🗑</button>
                                 </div>
                               </div>
@@ -2449,7 +2449,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         );
                       })}
                       <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 8 }}>Ajouter un Directeur ({compAdmins.length}/30)</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 8 }}>{`${tx.addDirector2} (${compAdmins.length}/30)`}</div>
                         {compAdmins.length >= 30 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>{tx.maxReached}</div> : creatingAdmin === company.id ? (
                           <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                             <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
@@ -2457,7 +2457,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                             <div style={{ display: "flex", gap: 8, alignItems: "center" }}><input className="form-input" style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, letterSpacing: 8, textAlign: "center" }} maxLength={4} value={adminForm.pin} onChange={e => setAdminForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} /><button className="btn btn-ghost btn-sm" onClick={() => setAdminForm(p => ({ ...p, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>🔄</button></div>
                             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
                           </div>
-                        ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>}
+                        ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>
                       </div>
                       <div style={{ marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
