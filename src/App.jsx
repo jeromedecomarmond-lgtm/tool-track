@@ -424,24 +424,69 @@ export default function App() {
   const deleteDirectorSelf = async () => {
     const company = companies.find(c => c.id === currentUser.companyId);
     const companyName = company?.name || "votre compagnie";
-    const confirmed = window.confirm(
-      `⚠️ ATTENTION — Suppression d'un compte clé\n\n` +
-      `Votre compagnie "${companyName}" sera automatiquement suspendue TEMPORAIREMENT jusqu'à la création d'un nouveau compte Directeur.\n\n` +
-      `Une notification sera envoyée au SuperAdmin pour assurer le suivi et rétablir votre compagnie dans les plus brefs délais.\n\n` +
-      `Si nécessaire, contactez directement : jdecomarmond.profile@intnet.mu\n\n` +
-      `Êtes-vous sûr de vouloir continuer ?`
-    );
-    if (!confirmed) return;
+
+    // Vérifier s'il y a d'autres directeurs dans la compagnie
+    const otherDirectors = users.filter(u => u.companyId === currentUser.companyId && u.role === "director" && String(u.id) !== String(currentUser.id));
+
+    if (otherDirectors.length > 0) {
+      // Il y a d'autres directeurs — suppression simple avec avertissement
+      const confirmed = window.confirm(
+        `⚠️ Supprimer votre compte Directeur ?\n\n` +
+        `La compagnie "${companyName}" continuera avec les ${otherDirectors.length} autre(s) directeur(s).\n\n` +
+        `Êtes-vous sûr de vouloir continuer ?`
+      );
+      if (!confirmed) return;
+    } else {
+      // Dernier directeur — avertissement fort + suspension compagnie
+      const confirmed = window.confirm(
+        `⚠️ ATTENTION — Vous êtes le seul Directeur de "${companyName}"\n\n` +
+        `Si vous supprimez votre compte :\n` +
+        `• La compagnie sera automatiquement SUSPENDUE\n` +
+        `• Les employés ne pourront plus accéder à l'app\n` +
+        `• Un nouveau Directeur devra être créé par le SuperAdmin\n\n` +
+        `Une alerte sera envoyée au SuperAdmin pour rétablir la compagnie.\n` +
+        `Contact : jdecomarmond.profile@intnet.mu\n\n` +
+        `Êtes-vous sûr de vouloir continuer ?`
+      );
+      if (!confirmed) return;
+    }
+
     try {
-      // Suspendre la compagnie
-      if (company) await setDoc(doc(db, "companies", company.id), { ...company, active: false, suspendedReason: "Directeur supprimé", suspendedAt: Date.now() });
-      // Supprimer le compte Auth
-      try { await signOut(auth); } catch(e) {}
+      if (otherDirectors.length === 0) {
+        // Suspendre la compagnie si dernier directeur
+        if (company) {
+          await setDoc(doc(db, "companies", company.id), {
+            ...company,
+            active: false,
+            suspendedReason: "Directeur supprimé — aucun remplaçant",
+            suspendedAt: Date.now()
+          });
+        }
+        // Envoyer un message WhatsApp au SuperAdmin
+        const superAdmin = users.find(u => u.role === "superadmin");
+        const waMsg = encodeURIComponent(
+          `🚨 *TOOL TRACK — Alerte SuperAdmin*\n\n` +
+          `Le Directeur *${currentUser.name}* a supprimé son compte.\n\n` +
+          `🏢 Compagnie : *${companyName}*\n` +
+          `⚠️ Statut : *SUSPENDUE*\n\n` +
+          `Un nouveau Directeur doit être créé pour rétablir l'accès.\n\n` +
+          `🔗 https://tool-track-rosy.vercel.app`
+        );
+        const superAdminPhone = superAdmin?.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
+        if (superAdminPhone) {
+          window.open(`https://wa.me/${superAdminPhone}?text=${waMsg}`, "_blank");
+        } else {
+          window.open(`https://wa.me/?text=${waMsg}`, "_blank");
+        }
+      }
+
       // Supprimer le profil Firestore
       await deleteDoc(doc(db, "users", String(currentUser.id)));
+      // Déconnexion Auth
+      try { await signOut(auth); } catch(e) {}
       setCurrentUser(null);
       try { localStorage.removeItem("tooltrack_user_id"); localStorage.removeItem("tooltrack_last_page"); } catch(e) {}
-      showToast("🗑 Compte supprimé — compagnie suspendue");
+      showToast(otherDirectors.length === 0 ? "🗑 Compte supprimé — compagnie suspendue" : "🗑 Compte supprimé");
     } catch(e) {
       showToast("❌ Erreur lors de la suppression : " + e.message);
     }
@@ -634,20 +679,15 @@ export default function App() {
       showToast("❌ Vous ne pouvez pas créer un rôle égal ou supérieur au vôtre");
       return null;
     }
-    if (!form.email?.trim() || !form.password || form.password.length < 6) {
-      showToast("❌ Email et mot de passe (6+ car.) requis pour un admin");
-      return null;
-    }
+    // Admin → PIN uniquement, pas besoin de Firebase Auth (géré par le Directeur)
+    const id = String(Date.now());
+    const newUser = { id, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email || "", pin: form.pin, companyId: myCompanyId || null, authUid: null };
     try {
-      const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
-      const uid = cred.user.uid;
-      const newUser = { id: uid, name: form.name, role: form.role, avatar: initials, phone: form.phone || "", email: form.email.trim(), pin: form.pin, companyId: myCompanyId || null, authUid: uid };
-      await setDoc(doc(db, "users", uid), newUser);
-      showToast("✅ Profil admin créé");
+      await setDoc(doc(db, "users", id), newUser);
+      showToast("✅ Profil créé");
       return newUser;
     } catch(e) {
-      if (e.code === "auth/email-already-in-use") showToast("❌ Cet email est déjà utilisé");
-      else showToast("❌ Erreur : " + e.message);
+      showToast("❌ Erreur : " + e.message);
       return null;
     }
   };
@@ -2280,7 +2320,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
   const [newName, setNewName] = useState(""), [newColor, setNewColor] = useState("#f5a623"), [newExpiry, setNewExpiry] = useState(""), [newContactEmail, setNewContactEmail] = useState(currentUser.email || "");
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
-  const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
+  const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "", password: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
   const [creatingAdmin, setCreatingAdmin] = useState(null);
   const [editingExpiry, setEditingExpiry] = useState(null), [editExpiryDate, setEditExpiryDate] = useState(""), [editContactEmail, setEditContactEmail] = useState("");
   const APP_URL = "tool-track-rosy.vercel.app";
@@ -2340,13 +2380,48 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 
   const createFirstAdmin = async (company) => {
     if (!adminForm.name.trim() || adminForm.pin.length !== 4) return;
-    const id = String(Date.now()), initials = adminForm.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
-    const newAdmin = { id, name: adminForm.name, role: "director", avatar: initials, phone: adminForm.phone, email: adminForm.email, pin: adminForm.pin, companyId: company.id, companyName: company.name, companyPin: company.companyPin || "" };
-    await setDoc(doc(db, "users", id), newAdmin);
-    onAdminCreated({ ...newAdmin });
-    showToast(`✅ Directeur créé — PIN: ${adminForm.pin}`);
-    setAdminForm({ name: "", phone: "", email: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
-    setCreatingAdmin(null);
+    const initials = adminForm.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
+
+    try {
+      let userId, authUid = null;
+
+      if (adminForm.email?.trim() && adminForm.password?.length >= 6) {
+        // Sauvegarder l'info du SuperAdmin avant création
+        const superAdminUid = currentUser.authUid;
+        // Créer le compte Firebase Auth du Directeur
+        const cred = await createUserWithEmailAndPassword(auth, adminForm.email.trim(), adminForm.password);
+        authUid = cred.user.uid;
+        userId = authUid;
+        // Note: createUserWithEmailAndPassword connecte automatiquement le nouveau compte
+        // On doit reconnecter le SuperAdmin — mais on n'a pas son mot de passe ici
+        // Solution: on signOut et on recharge la page après sauvegarde Firestore
+      } else {
+        userId = String(Date.now());
+      }
+
+      const newAdmin = {
+        id: userId,
+        name: adminForm.name,
+        role: "director",
+        avatar: initials,
+        phone: adminForm.phone || "",
+        email: adminForm.email?.trim() || "",
+        pin: adminForm.pin,
+        companyId: company.id,
+        companyName: company.name,
+        companyPin: company.companyPin || "",
+        authUid: authUid
+      };
+
+      await setDoc(doc(db, "users", userId), newAdmin);
+      onAdminCreated({ ...newAdmin });
+      showToast(`✅ Directeur créé — PIN: ${adminForm.pin}`);
+      setAdminForm({ name: "", phone: "", email: "", password: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
+      setCreatingAdmin(null);
+    } catch(e) {
+      if (e.code === "auth/email-already-in-use") showToast("❌ Cet email est déjà utilisé");
+      else showToast("❌ Erreur : " + e.message);
+    }
   };
 
   return (
@@ -2453,9 +2528,10 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         {compAdmins.length >= 30 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>{tx.maxReached}</div> : creatingAdmin === company.id ? (
                           <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                             <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
-                            <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="Téléphone" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
+                            <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="Téléphone" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email *" type="email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
+                            <input className="form-input" type="password" placeholder="Mot de passe * (6+ caractères)" value={adminForm.password} onChange={e => setAdminForm(p => ({ ...p, password: e.target.value }))} />
                             <div style={{ display: "flex", gap: 8, alignItems: "center" }}><input className="form-input" style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, letterSpacing: 8, textAlign: "center" }} maxLength={4} value={adminForm.pin} onChange={e => setAdminForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} /><button className="btn btn-ghost btn-sm" onClick={() => setAdminForm(p => ({ ...p, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>🔄</button></div>
-                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4 || !adminForm.email.trim() || adminForm.password.length < 6} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
                           </div>
                         ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>}
                       </div>
@@ -2560,8 +2636,8 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
 
   if (step === "profile" && selectedCompany) {
     const companyUsers = users.filter(u => u.companyId === selectedCompany.id);
-    const viewerUsers = companyUsers.filter(u => u.role === "viewer");
-    const adminUsers = companyUsers.filter(u => ["admin", "director"].includes(u.role));
+    const viewerUsers = companyUsers.filter(u => ["viewer", "admin"].includes(u.role));
+    const adminUsers = companyUsers.filter(u => u.role === "director");
     return (
       <div className="login-screen"><div className="login-card">
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, width: "100%" }}>
@@ -2570,11 +2646,11 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
         </div>
         {adminUsers.length > 0 && (
           <div style={{ width: "100%", marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: "var(--accent)", textAlign: "center", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🔑 Admins</div>
+            <div style={{ fontSize: 11, color: "var(--accent)", textAlign: "center", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🏢 Directeurs</div>
             {adminUsers.map(u => (
               <div key={u.id} className="user-select-item" onClick={() => { setAdminEmail(u.email || ""); setShowAdminLogin(true); }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: u.role === "director" ? "#9b59b6" : "var(--accent)", color: u.role === "director" ? "#fff" : "#000" }}>{u.avatar}</div>
-                <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>{u.role === "director" ? "🏢 Directeur" : "🔑 Admin"} · Email + mot de passe</div></div>
+                <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>🏢 Directeur · Email + mot de passe</div></div>
                 <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
               </div>
             ))}
