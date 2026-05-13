@@ -25,13 +25,37 @@ const T = {
     expiryDate: "Date d'expiration", contactEmail: "Email de contact",
     companyCode: "Code de la compagnie", suspend: "Suspendre", reactivate: "Réactiver",
     suspended: "Suspendue", active: "Active",
-    pending: "En attente", approved: "Approuvé", refused: "Refusé",
-    transfer: "Transfert", returnStore: "Retour store", nonFunctional: "Non fonctionnel",
+    pending: tx.pending, approved: tx.approved, refused: tx.refused,
+    transfer: tx.transfer, returnStore: tx.returnStore2, nonFunctional: "Non fonctionnel",
     enterCompanyCode: "Entrez le code de votre compagnie",
     chooseProfile: "Choisissez votre profil", administration: "Administration",
-    noTools: "Aucun outil", noRequests: "Aucune demande", noTeam: "Aucun membre",
+    noTools: tx.noTool, noRequests: "Aucune demande", noTeam: tx.noTeam,
     required: "obligatoire", optional: "optionnel",
-    language: "Langue", french: "Français", english: "English", all: "Tous", selectAll: "Tout sélectionner", addProfile: "Ajouter un profil", search: "Chercher...", details: "Détails",
+    language: "Langue", french: "Français", english: "English",
+    all: "Tous", selectAll: "Tout sélectionner", addProfile: "Ajouter un profil", search: "Chercher un outil...", details: "Détails",
+    globalView: {tx.globalView}, byCompany: {tx.byCompany}, totalValue: {tx.totalValue},
+    totalTools: tx.totalTools, inStore2: "En store", onSite2: "Sur chantier", nonFunctional2: "Non fonctionnels", obsolete2: "Obsolètes", pendingReq: "Demandes en attente",
+    toolsOnSite: "Outils sur chantiers", resetTest: "Reset données test",
+    totalTeam: "Équipes total", deselect: "Désélectionner", selected2: "{tx.selected2}",
+    allEmployees: tx.allEmployees, allSites: tx.allSites, notAssigned: tx.notAssigned,
+    noTool: tx.noTool, noToolSub: "Cliquez sur + Ajouter un outil pour commencer",
+    noRequest: tx.noRequest, noMember: tx.noTeam,
+    groupRequest: tx.groupRequest, requestType: tx.requestType, returnStore2: tx.returnStore2,
+    transferTo: tx.transferTo, chooseEmployee: tx.chooseEmployee, chooseSite: tx.chooseSite,
+    optNote: "Note optionnelle...", adminWillProcess: tx.adminWillProcess,
+    requestSent: tx.requestSent,
+    noToolAssigned: tx.noToolAssigned, toolAssignedSoon: tx.toolAssignedSoon,
+    reminderBanner: "Rappel : certains outils vous sont confiés depuis plus de 3 jours.",
+    directTransfer: "{tx.directTransfer}",
+    needsApproval: "{tx.needsApproval}",
+    transferNow: "Transférer maintenant", sendReq: "Envoyer la demande",
+    newSite: tx.newSite, siteName: "Nom du chantier...",
+    announcements: tx.announcements, adminMessages: tx.adminMessages,
+    readOnly: "Lecture seule — contactez votre Directeur ou Admin pour toute question",
+    writeAnnouncement: "Écrire une annonce...",
+    newCompany2: tx.newCompany2, addDirector: tx.addDirector,
+    deleteAccount: "Supprimer mon compte", toolsOnSiteLabel: "Outils sur chantiers",
+    active2: "Active", suspended2: "Suspendue",
   },
   en: {
     dashboard: "Dashboard", tools: "Tools", chantiers: "Job Sites",
@@ -60,7 +84,31 @@ const T = {
     chooseProfile: "Choose your profile", administration: "Administration",
     noTools: "No tools", noRequests: "No requests", noTeam: "No members",
     required: "required", optional: "optional",
-    language: "Language", french: "Français", english: "English", all: "All", selectAll: "Select all", addProfile: "Add a profile", search: "Search...", details: "Details",
+    language: "Language", french: "Français", english: "English",
+    all: "All", selectAll: "Select all", addProfile: "Add a profile", search: "Search a tool...", details: "Details",
+    globalView: "Global view", byCompany: "By company", totalValue: "Total fleet value",
+    totalTools: "Total tools", inStore2: "In store", onSite2: "On site", nonFunctional2: "Not functional", obsolete2: "Obsolete", pendingReq: "Pending requests",
+    toolsOnSite: "Tools on site", resetTest: "Reset test data",
+    totalTeam: "Total teams", deselect: "Deselect", selected2: "selected",
+    allEmployees: "All employees", allSites: "All job sites", notAssigned: "Not assigned",
+    noTool: "No tools", noToolSub: "Click + Add a tool to start",
+    noRequest: "No requests yet", noMember: "No members",
+    groupRequest: "Group request", requestType: "Request type", returnStore2: "Return to store",
+    transferTo: "Transfer to", chooseEmployee: "— Choose an employee —", chooseSite: "— Choose a job site —",
+    optNote: "Optional note...", adminWillProcess: "The admin will process your requests.",
+    requestSent: "Requests sent!",
+    noToolAssigned: "No tools assigned", toolAssignedSoon: "An admin will assign you a tool soon.",
+    reminderBanner: "Reminder: some tools have been assigned to you for more than 3 days.",
+    directTransfer: "Direct transfer — no approval required",
+    needsApproval: "Your request will be submitted for admin approval",
+    transferNow: "Transfer now", sendReq: "Send request",
+    newSite: "New job site", siteName: "Job site name...",
+    announcements: "Announcements", adminMessages: "Admin Messages",
+    readOnly: "Read only — contact your Director or Admin for any question",
+    writeAnnouncement: "Write an announcement...",
+    newCompany2: "+ New", addDirector: "+ Add a Director",
+    deleteAccount: "Delete my account", toolsOnSiteLabel: "Tools on job sites",
+    active2: "Active", suspended2: "Suspended",
   }
 };
 
@@ -683,7 +731,7 @@ export default function App() {
           <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={isSupervising ? stopSupervision : logoutUser}>{isSupervising ? "✕ Quitter supervision" : "⇄ Déconnexion"}</button>
           {!isSupervising && effectiveUser?.role === "director" && (
             <button className="btn btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center", background: "rgba(232,64,40,.1)", color: "var(--red)", border: "1px solid rgba(232,64,40,.3)", fontSize: 11 }} onClick={deleteDirectorSelf}>
-              🗑 Supprimer mon compte
+              {tx.deleteAccount}
             </button>
           )}
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
@@ -739,21 +787,21 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
         <h2>📊 {tx.dashboard}</h2>
         {isSuperAdmin && onReset && (
           <button onClick={onReset} style={{ background: "rgba(232,40,40,.15)", color: "var(--red)", border: "2px solid rgba(232,40,40,.5)", borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
-            🗑 Reset données test
+            {tx.resetTest}
           </button>
         )}
       </div>
       <div className="content">
         {isSuperAdmin ? (
           <>
-            <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--accent)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Vue globale</div>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--accent)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>{tx.globalView}</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 24 }}>
               {[
-                { label: "🏢 Compagnies", value: companies.length, color: "var(--accent)" },
-                { label: "👷 Équipes total", value: users.filter(u => u.role !== "superadmin").length, color: "var(--green)" },
-                { label: "🏗 Chantiers", value: chantiers.length, color: "var(--blue)" },
-                { label: "⏳ Demandes en attente", value: requests.filter(r => r.status === "pending").length, color: "var(--accent)" },
-                { label: "⏸ Suspendues", value: companies.filter(c => c.active === false).length, color: "var(--red)" },
+                { label: "🏢 " + tx.companies, value: companies.length, color: "var(--accent)" },
+                { label: "👷 " + tx.totalTeam, value: users.filter(u => u.role !== "superadmin").length, color: "var(--green)" },
+                { label: "🏗 " + tx.chantiers, value: chantiers.length, color: "var(--blue)" },
+                { label: "⏳ " + tx.pendingReq, value: requests.filter(r => r.status === "pending").length, color: "var(--accent)" },
+                { label: "⏸ " + tx.suspended, value: companies.filter(c => c.active === false).length, color: "var(--red)" },
               ].map(s => (
                 <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
                   <div style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -763,7 +811,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
             </div>
             <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 16, marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-                <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800 }}>🔧 Outils — {tools.length} au total</div>
+                <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800 }}>🔧 {tx.tools} — {tools.length}</div>
                 <div style={{ fontSize: 13, color: "var(--accent)", fontWeight: 700 }}>🇲🇺 Rs {tools.reduce((s, t) => s + (t.price || 0), 0).toLocaleString("fr-MU")}</div>
               </div>
               <div style={{ display: "flex", borderRadius: 8, overflow: "hidden", height: 12, marginBottom: 10 }}>
@@ -775,10 +823,10 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                 {[
-                  { label: "🟢 Store", value: tools.filter(t => t.status === "store").length, color: "var(--green)" },
-                  { label: "🔵 Chantiers", value: tools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
-                  { label: "🔴 Non fonct.", value: tools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
-                  { label: "⚫ Obsolètes", value: tools.filter(t => t.status === "obsolete").length, color: "#666" },
+                  { label: "🟢 " + tx.store, value: tools.filter(t => t.status === "store").length, color: "var(--green)" },
+                  { label: "🔵 " + tx.chantiers, value: tools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
+                  { label: "🔴 " + tx.nonfunctional, value: tools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+                  { label: "⚫ " + tx.obsolete2, value: tools.filter(t => t.status === "obsolete").length, color: "#666" },
                 ].map(s => (
                   <div key={s.label} style={{ textAlign: "center" }}>
                     <div style={{ fontFamily: "var(--font-head)", fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -787,7 +835,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                 ))}
               </div>
             </div>
-            <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--accent)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>Par compagnie</div>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--accent)", marginBottom: 12, textTransform: "uppercase", letterSpacing: 1 }}>{tx.byCompany}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {companies.map(company => {
                 const cTools = tools.filter(t => t.companyId === company.id);
@@ -815,14 +863,14 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                       </div>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
                         {[
-                          { label: "👷 Équipe", value: cUsers.length, color: "var(--blue)" },
-                          { label: "🔧 Outils", value: cTools.length, color: "var(--accent)" },
-                          { label: "🏗 Chantiers", value: cChantiers.length, color: "var(--green)" },
-                          { label: "🟢 Store", value: cTools.filter(t => t.status === "store").length, color: "var(--green)" },
+                          { label: "👷 " + tx.team, value: cUsers.length, color: "var(--blue)" },
+                          { label: "🔧 " + tx.tools, value: cTools.length, color: "var(--accent)" },
+                          { label: "🏗 " + tx.chantiers, value: cChantiers.length, color: "var(--green)" },
+                          { label: "🟢 " + tx.store, value: cTools.filter(t => t.status === "store").length, color: "var(--green)" },
                           { label: "🔵 Chantier", value: cTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
-                          { label: "🔴 Non fonct.", value: cTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+                          { label: "🔴 " + tx.nonfunctional, value: cTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
                           { label: "👑 Admins", value: cUsers.filter(u => u.role === "admin").length, color: "var(--accent)" },
-                          { label: "👷 Employés", value: cUsers.filter(u => u.role === "viewer").length, color: "var(--muted)" },
+                          { label: "👷 " + tx.employee, value: cUsers.filter(u => u.role === "viewer").length, color: "var(--muted)" },
                         ].map(s => (
                           <div key={s.label} style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 6px", textAlign: "center" }}>
                             <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -846,12 +894,12 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
           <>
             <div className="stats-grid">
               {[
-                { num: filteredTools.length, label: "Outils total", cls: "stat-accent" },
-                { num: filteredTools.filter(t => t.status === "store").length, label: "🟢 En store", cls: "stat-green" },
-                { num: filteredTools.filter(t => t.status === "assigned").length, label: "🔵 Chantiers", cls: "stat-blue" },
-                { num: filteredTools.filter(t => t.status === "nonfunctional").length, label: "🔴 Non fonctionnels", style: { color: "#f07030" } },
-                { num: filteredTools.filter(t => t.status === "obsolete").length, label: "⚫ Obsolètes", style: { color: "#aaa" } },
-                { num: filteredRequests.filter(r => r.status === "pending").length, label: "⏳ Demandes", cls: "stat-red" },
+                { num: filteredTools.length, label: tx.totalTools, cls: "stat-accent" },
+                { num: filteredTools.filter(t => t.status === "store").length, label: "🟢 " + tx.inStore2, cls: "stat-green" },
+                { num: filteredTools.filter(t => t.status === "assigned").length, label: "🔵 " + tx.chantiers, cls: "stat-blue" },
+                { num: filteredTools.filter(t => t.status === "nonfunctional").length, label: "🔴 " + tx.nonFunctional2, style: { color: "#f07030" } },
+                { num: filteredTools.filter(t => t.status === "obsolete").length, label: "⚫ " + tx.obsolete2, style: { color: "#aaa" } },
+                { num: filteredRequests.filter(r => r.status === "pending").length, label: "⏳ " + tx.requests, cls: "stat-red" },
               ].map((s, i) => (
                 <div key={i} className="stat-card">
                   <div className={`stat-num ${s.cls || ""}`} style={s.style || {}}>{s.num}</div>
@@ -859,7 +907,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                 </div>
               ))}
             </div>
-            <h3 style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, marginBottom: 12 }}>Outils sur chantiers</h3>
+            <h3 style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, marginBottom: 12 }}>{tx.toolsOnSiteLabel}</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {filteredTools.filter(t => t.status === "assigned").map(tool => {
                 const assignee = filteredUsers.find(u => String(u.id) === String(tool.assignedTo));
@@ -870,7 +918,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                       <div style={{ fontWeight: 600, fontSize: 14 }}>{tool.name}</div>
                       <div style={{ fontSize: 12, color: "var(--muted)" }}>📍 {tool.location} — 👷 {assignee?.name || "—"}</div>
                     </div>
-                    <button className="btn btn-ghost btn-sm" onClick={() => openTool(tool)}>Détails</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => openTool(tool)}>{tx.details}</button>
                   </div>
                 );
               })}
@@ -894,18 +942,18 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
       </div>
       <div className="content">
         <div className="filters">
-          <div className="search-bar"><span className="search-icon">🔍</span><input placeholder={tx.lang === 'en' ? 'Search a tool...' : 'Chercher un outil...'} value={search} onChange={e => setSearch(e.target.value)} /></div>
-          {[{ val: "all", label: "Tous" }, { val: "store", label: "🟢 Store" }, { val: "assigned", label: "🔵 Chantier" }, { val: "nonfunctional", label: "🔴 Non fonctionnel" }, { val: "obsolete", label: "⚫ Obsolète" }].map(s => (
+          <div className="search-bar"><span className="search-icon">🔍</span><input placeholder={tx.search} value={search} onChange={e => setSearch(e.target.value)} /></div>
+          {[{ val: "all", label: "Tous" }, { val: "store", label: "🟢 " + tx.store }, { val: "assigned", label: "🔵 Chantier" }, { val: "nonfunctional", label: "🔴 Non fonctionnel" }, { val: "obsolete", label: "⚫ Obsolète" }].map(s => (
             <button key={s.val} className={`filter-btn ${filterStatus === s.val ? "active" : ""}`} onClick={() => { setFilterStatus(s.val); setFilterUser("all"); setFilterChantier("all"); }}>{s.label}</button>
           ))}
           {/* FIX #6 — reset indépendant */}
           <select className="form-input" style={{ width: "auto", fontSize: 12 }} value={filterUser} onChange={e => { setFilterUser(e.target.value); setFilterChantier("all"); }}>
-            <option value="all">Tous les employés</option>
+            <option value="all">{tx.allEmployees}</option>
             <option value="none">Non assigné</option>
             {viewers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
           <select className="form-input" style={{ width: "auto", fontSize: 12 }} value={filterChantier} onChange={e => { setFilterChantier(e.target.value); setFilterUser("all"); }}>
-            <option value="all">Tous les chantiers</option>
+            <option value="all">{tx.allSites}</option>
             <option value="Store">Store</option>
             {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
@@ -913,15 +961,15 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
         {displayedTools.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, padding: "8px 12px", background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border)" }}>
             <input type="checkbox" checked={selectedTools.length === displayedTools.length && displayedTools.length > 0} onChange={e => setSelectedTools(e.target.checked ? displayedTools.map(t => t.id) : [])} style={{ width: 18, height: 18, cursor: "pointer", accentColor: "var(--accent)" }} />
-            <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>{selectedTools.length === 0 ? "Sélectionner tout" : `${selectedTools.length} sélectionné${selectedTools.length > 1 ? "s" : ""}`}</span>
-            {selectedTools.length > 0 && <button className="btn btn-ghost btn-sm" onClick={() => setSelectedTools([])}>✕ Désélectionner</button>}
+            <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>{selectedTools.length === 0 ? tx.selectAll : `${selectedTools.length} {tx.selected2}${selectedTools.length > 1 ? "s" : ""}`}</span>
+            {selectedTools.length > 0 && <button className="btn btn-ghost btn-sm" onClick={() => setSelectedTools([])}>{tx.deselect}</button>}
           </div>
         )}
         <div className="cards-grid">
           {displayedTools.length === 0 && (
             <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>🔧</div>
-              <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, marginBottom: 6 }}>Aucun outil</div>
+              <div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{tx.noTool}</div>
               <div style={{ fontSize: 13 }}>Cliquez sur "+ Ajouter un outil" pour commencer</div>
             </div>
           )}
@@ -989,19 +1037,19 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
     <>
       <div className="topbar">
         <h2>📦 {tx.mytools}</h2>
-        <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>{myTools.length === 0 ? "Aucun outil confié" : `${myTools.length} outil${myTools.length > 1 ? "s" : ""}`}</span>
+        <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>{myTools.length === 0 ? tx.noToolAssigned : `${myTools.length} outil${myTools.length > 1 ? "s" : ""}`}</span>
       </div>
       <div className="content">
         {hasOldTools && (
           <div className="reminder-banner">
             <span style={{ fontSize: 22 }}>⏰</span>
-            <p>Rappel : certains outils vous sont confiés depuis plus de 3 jours. Pensez à faire le point avec votre admin.</p>
+            <p>{tx.reminderBanner}</p>
           </div>
         )}
         {myTools.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--muted)" }}>
             <div style={{ fontSize: 56, marginBottom: 12 }}>📦</div>
-            <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 700, marginBottom: 6 }}>Aucun outil confié</div>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 700, marginBottom: 6 }>{tx.noToolAssigned}</div>
             <div style={{ fontSize: 13 }}>Un admin vous assignera un outil bientôt.</div>
           </div>
         ) : (
@@ -1010,7 +1058,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, padding: "10px 14px", background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border)" }}>
               <input type="checkbox" checked={allSelected} onChange={e => setSelected(e.target.checked ? myTools.map(t => t.id) : [])} style={{ width: 18, height: 18, cursor: "pointer", accentColor: "var(--accent)" }} />
               <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600, flex: 1 }}>
-                {selected.length === 0 ? "Tout sélectionner" : `${selected.length} outil${selected.length > 1 ? "s" : ""} sélectionné${selected.length > 1 ? "s" : ""}`}
+                {selected.length === 0 ? "Tout sélectionner" : `${selected.length} outil${selected.length > 1 ? "s" : ""} {tx.selected2}${selected.length > 1 ? "s" : ""}`}
               </span>
               {selected.length > 0 && (
                 <button className="btn btn-primary btn-sm" onClick={() => setShowGroupModal(true)}>
@@ -1058,7 +1106,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
                 </div>
               ) : (
                 <>
-                  {/* Outils sélectionnés */}
+                  {/* Outils {tx.selected2}s */}
                   <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12 }}>
                     <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, textTransform: "uppercase", marginBottom: 8 }}>Outils concernés ({selected.length})</div>
                     {myTools.filter(t => selected.includes(t.id)).map(t => (
@@ -1133,7 +1181,7 @@ function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest,
       <div className="content">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
           {[
-            { label: "🟢 En store", count: filteredTools.filter(t => t.status === "store").length, color: "var(--green)" },
+            { label: "🟢 " + tx.inStore2, count: filteredTools.filter(t => t.status === "store").length, color: "var(--green)" },
             { label: "🔵 Sur chantiers", count: filteredTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
             { label: "🔴 Non fonctionnel", count: filteredTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
             { label: "📦 Mes outils", count: myTools.length, color: "var(--accent)" },
@@ -1188,7 +1236,7 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
     <>
       <div className="topbar"><h2>🔔 {tx.requests}</h2><span style={{ fontSize: 12, color: "var(--muted)" }}>{filteredRequests.filter(r => r.status === "pending").length} en attente</span></div>
       <div className="content">
-        {filteredRequests.length === 0 && <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🔔</div><div>Aucune demande pour le moment</div></div>}
+        {filteredRequests.length === 0 && <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}><div style={{ fontSize: 40, marginBottom: 8 }}>🔔</div><div>{tx.noRequest}</div></div>}
         {isSuperAdmin ? (
           companies.map(company => {
             const companyRequests = requests.filter(r => r.companyId === company.id);
@@ -1210,7 +1258,7 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
                     <div key={r.id} style={{ background: "var(--surface)", borderRadius: 10, padding: 14, border: `1px solid ${isPending ? "var(--border)" : "var(--surface2)"}`, opacity: isPending ? 1 : 0.6, marginBottom: 8 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: isPending ? "rgba(245,166,35,.2)" : r.status === "approved" ? "rgba(39,201,122,.2)" : "rgba(232,82,10,.2)", color: isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)" }}>{isPending ? "⏳" : r.status === "approved" ? "✅" : "❌"} {isPending ? "En attente" : r.status === "approved" ? "Approuvé" : "Refusé"}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: isPending ? "rgba(245,166,35,.2)" : r.status === "approved" ? "rgba(39,201,122,.2)" : "rgba(232,82,10,.2)", color: isPending ? "var(--accent)" : r.status === "approved" ? "var(--green)" : "var(--red)" }}>{isPending ? "⏳" : r.status === "approved" ? "✅" : "❌"} {isPending ? tx.pending : r.status === "approved" ? tx.approved : tx.refused}</span>
                           {isPending && <span style={{ fontSize: 11, fontWeight: 700, color: timeColor, background: timeColor + "22", padding: "2px 8px", borderRadius: 20 }}>⏱ {timeLabel}</span>}
                         </div>
                         {tool && <span style={{ fontSize: 18 }}>{tool.photo}</span>}
@@ -1330,7 +1378,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
             const roleUsers = filteredUsers.filter(u => u.role === role);
             if (roleUsers.length === 0) return null;
             const roleColor = role === "director" ? "#9b59b6" : role === "admin" ? "var(--accent)" : "var(--blue)";
-            const roleLabel = role === "director" ? "🏢 Directeurs" : role === "admin" ? "🔑 Admins" : "👷 Employés";
+            const roleLabel = role === "director" ? "🏢 Directeurs" : role === "admin" ? "🔑 Admins" : "👷 " + tx.employee;
             const canSeePins = ["superadmin","admin","director"].includes(currentUser.role);
             return (
               <div key={role} style={{ marginBottom: 28 }}>
@@ -1379,7 +1427,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                           )}
                           {role === "viewer" && (
                             <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 10px", marginBottom: 10 }}>
-                              {assignedTools.length === 0 ? <div style={{ fontSize: 11, color: "var(--muted)" }}>Aucun outil confié</div> : assignedTools.map(t => <div key={t.id} style={{ fontSize: 12, color: "var(--blue)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}><span>{t.photo}</span>{t.name}</div>)}
+                              {assignedTools.length === 0 ? <div style={{ fontSize: 11, color: "var(--muted)" }>{tx.noToolAssigned}</div> : assignedTools.map(t => <div key={t.id} style={{ fontSize: 12, color: "var(--blue)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}><span>{t.photo}</span>{t.name}</div>)}
                             </div>
                           )}
                           {canDelete && <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={() => {
@@ -1551,7 +1599,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
           <div className="detail-grid">
             <div className="detail-item"><div className="detail-key">Fournisseur</div><div className="detail-val">{tool.ref || "—"}</div></div>
             <div className="detail-item"><div className="detail-key">Achat</div><div className="detail-val">{tool.purchaseDate ? new Date(tool.purchaseDate).toLocaleDateString("fr-MU") : "—"}</div></div>
-            <div className="detail-item"><div className="detail-key">Statut</div><div className="detail-val">{{ store: "🟢 En store", assigned: "🔵 Sur chantier", nonfunctional: "🔴 Non fonctionnel", obsolete: "⚫ Obsolète" }[tool.status] || tool.status}</div></div>
+            <div className="detail-item"><div className="detail-key">Statut</div><div className="detail-val">{{ store: "🟢 " + tx.inStore2, assigned: "🔵 Sur chantier", nonfunctional: "🔴 Non fonctionnel", obsolete: "⚫ Obsolète" }[tool.status] || tool.status}</div></div>
             <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Localisation</div><div className="detail-val">📍 {tool.location}</div></div>
             {assignee && <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Responsable</div><div className="detail-val">👷 {assignee.name}</div></div>}
             {tool.price && (
@@ -1762,9 +1810,9 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx
       <div className="topbar"><h2>{tx.chantiers}</h2></div>
       <div className="content">
         <div style={{ background: "var(--surface)", border: "1px dashed var(--accent)", borderRadius: 12, padding: 20, marginBottom: 24 }}>
-          <div style={{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800, color: "var(--accent)", marginBottom: 12 }}>🏗 Nouveau chantier</div>
+          <div style={{ fontFamily: "var(--font-head)", fontSize: 17, fontWeight: 800, color: "var(--accent)", marginBottom: 12 }}>🏗 {tx.newSite}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <input className="form-input" style={{ flex: 1, minWidth: 200 }} placeholder="Nom du chantier..." value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === "Enter" && newName.trim() && (addChantier(newName, newColor), setNewName(""))} />
+            <input className="form-input" style={{ flex: 1, minWidth: 200 }} placeholder={tx.siteName} value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === "Enter" && newName.trim() && (addChantier(newName, newColor), setNewName(""))} />
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "var(--muted)" }}>Couleur :</span>
               {CHANTIER_COLORS.map(c => <button key={c} onClick={() => setNewColor(c)} style={{ width: 24, height: 24, borderRadius: "50%", background: c, border: newColor === c ? "3px solid #fff" : "2px solid transparent", cursor: "pointer" }} />)}
@@ -1788,7 +1836,7 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx
                   </div>
                   <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 6 }}>🔧 Outils ({toolsOnSite.length})</div>
-                    {toolsOnSite.length === 0 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>Aucun outil</div> : toolsOnSite.map(t => <div key={t.id} style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}><span>{t.photo}</span><span>{t.name}</span></div>)}
+                    {toolsOnSite.length === 0 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>{tx.noTool}</div> : toolsOnSite.map(t => <div key={t.id} style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}><span>{t.photo}</span><span>{t.name}</span></div>)}
                   </div>
                   {emps.length > 0 && (
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -1866,10 +1914,10 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
             <>
               {/* Info rôle */}
               <div style={{ background: isAdmin ? "rgba(58,142,246,.1)" : "rgba(245,166,35,.1)", border: `1px solid ${isAdmin ? "rgba(58,142,246,.3)" : "rgba(245,166,35,.3)"}`, borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 12, color: isAdmin ? "var(--blue)" : "var(--accent)", fontWeight: 600 }}>
-                {isAdmin ? "🔑 Transfert direct — aucune approbation requise" : "👷 Votre demande sera soumise à approbation par un admin"}
+                {isAdmin ? "🔑 {tx.directTransfer}" : "👷 {tx.needsApproval}"}
               </div>
 
-              {/* Outils sélectionnés */}
+              {/* Outils {tx.selected2}s */}
               <div style={{ background: "var(--surface2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
                 <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>Outils ({selectedIds.length})</div>
                 {selectedTools.map(t => <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><span style={{ fontSize: 18 }}>{t.photo}</span><div><div style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>📍 {t.location}</div></div></div>)}
@@ -1937,7 +1985,7 @@ function RequestActions({ request: r, tool, onApprove, onRefuse }) {
   );
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      <input className="form-input" style={{ flex: 1, fontSize: 12 }} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
+      <input className="form-input" style={{ flex: 1, fontSize: 12 }} placeholder={tx.optNote} value={note} onChange={e => setNote(e.target.value)} />
       <button className={`btn btn-green btn-sm ${loadingApprove ? "loading" : ""}`} disabled={loadingApprove} onClick={() => triggerApprove(() => onApprove(note))}>{loadingApprove ? "⏳..." : `✅ ${tx.approve}`}</button>
       <button className="btn btn-danger btn-sm" onClick={() => setMode("refuse")}>{`❌ ${tx.refuse}`}</button>
     </div>
@@ -1988,7 +2036,7 @@ function ViewerToolCard({ tool, currentUser, users, viewers, chantiers, db, onOp
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue)" }}>🔄 Demande de transfert</div>
           <select className="form-input" value={targetViewer} onChange={e => setTargetViewer(e.target.value)}><option value="">— Vers quel employé ? —</option>{otherViewers.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
           <select className="form-input" value={targetChantier} onChange={e => setTargetChantier(e.target.value)}><option value="">— Vers quel chantier ? —</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
-          <textarea className="form-input" rows={2} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
+          <textarea className="form-input" rows={2} placeholder={tx.optNote} value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver</div>
           <div style={{ display: "flex", gap: 6 }}><button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button><button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier} onClick={() => submit("transfer")}>Envoyer</button></div>
         </div>
@@ -1996,7 +2044,7 @@ function ViewerToolCard({ tool, currentUser, users, viewers, chantiers, db, onOp
       {action === "return" && (
         <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)" }}>🏠 Retour au store</div>
-          <textarea className="form-input" rows={2} placeholder="Note optionnelle..." value={note} onChange={e => setNote(e.target.value)} />
+          <textarea className="form-input" rows={2} placeholder={tx.optNote} value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver</div>
           <div style={{ display: "flex", gap: 6 }}><button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>Annuler</button><button className="btn btn-green btn-sm" onClick={() => submit("return")}>Envoyer</button></div>
         </div>
@@ -2277,7 +2325,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
       <div className="topbar"><h2>🏢 {tx.companies}</h2><button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>+ Nouvelle</button></div>
       <div className="content">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
-          {[{ label: "Total", count: companies.length, color: "var(--accent)" }, { label: "🟢 Actives", count: companies.filter(c => c.active !== false).length, color: "var(--green)" }, { label: "⏸ Suspendues", count: companies.filter(c => c.active === false).length, color: "var(--red)" }].map(s => (
+          {[{ label: "Total", count: companies.length, color: "var(--accent)" }, { label: "🟢 Actives", count: companies.filter(c => c.active !== false).length, color: "var(--green)" }, { label: "⏸ " + tx.suspended, count: companies.filter(c => c.active === false).length, color: "var(--red)" }].map(s => (
             <div key={s.label} style={{ background: "var(--surface)", borderRadius: 12, padding: "12px 14px", border: "1px solid var(--border)" }}>
               <div style={{ fontFamily: "var(--font-head)", fontSize: 26, fontWeight: 800, color: s.color }}>{s.count}</div>
               <div style={{ fontSize: 11, color: "var(--muted)" }}>{s.label}</div>
@@ -2318,7 +2366,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                       <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span>👷 {compUsers.length} · 🔧 {compTools.length}</span>
                         {company.companyPin && <span style={{ background: "var(--surface2)", padding: "1px 8px", borderRadius: 20, fontFamily: "var(--font-head)", fontWeight: 800, color: "var(--accent)", letterSpacing: 3 }}>🔐 {company.companyPin}</span>}
-                        {!isActive && <span style={{ color: "var(--red)", fontWeight: 700 }}>⏸ Suspendue</span>}
+                        {!isActive && <span style={{ color: "var(--red)", fontWeight: 700 }}>⏸ {tx.suspended2}</span>}
                         {company.expiryDate && days !== null && (days < 0 ? <span style={{ background: "rgba(232,82,10,.2)", color: "var(--red)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>❌ Expiré</span> : days <= 5 ? <span style={{ background: "rgba(245,166,35,.2)", color: "var(--accent)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>⚠️ {days}j</span> : <span style={{ background: "rgba(39,201,122,.15)", color: "var(--green)", fontWeight: 600, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>📅 {new Date(company.expiryDate).toLocaleDateString("fr-MU")}</span>)}
                       </div>
                       {days !== null && days <= 5 && compUsers.filter(u => u.role === "director").length > 0 && (
@@ -2348,7 +2396,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                           </div>
                         )}
                       </div>
-                      {[{ role: "director", label: "🏢 Directeurs", color: "#9b59b6" }, { role: "admin", label: "🔑 Admins", color: "var(--accent)" }, { role: "viewer", label: "👷 Employés", color: "var(--blue)" }].map(({ role, label, color }) => {
+                      {[{ role: "director", label: "🏢 Directeurs", color: "#9b59b6" }, { role: "admin", label: "🔑 Admins", color: "var(--accent)" }, { role: "viewer", label: "👷 " + tx.employee, color: "var(--blue)" }].map(({ role, label, color }) => {
                         const roleUsers = compUsers.filter(u => u.role === role);
                         return (
                           <div key={role} style={{ marginBottom: 8 }}>
