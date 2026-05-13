@@ -1529,7 +1529,7 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
     const admin = modal.data;
     const roleLabel = admin.role === "director" ? "Directeur" : "Administrateur";
     const loginInfo = admin.role === "director"
-      ? `📧 Votre email : *${admin.email}*\n🔐 Créez votre mot de passe à la première connexion`
+      ? `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n📧 Votre email : *${admin.email}*\n🔐 Créez votre mot de passe à la première connexion`
       : `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n🔑 Votre code PIN : *${admin.pin}*`;
     const msg = encodeURIComponent(`Bonjour ${admin.name} 👋\n\nVous avez été nommé *${roleLabel}* de *${admin.companyName}* sur *Tool Track*.\n\n📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n${loginInfo}\n\nOuvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n_Bonne gestion !_ 🚀`);
     const phone = admin.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
@@ -1549,8 +1549,10 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
             )}
             {admin.role === "director" && (
               <div style={{ background: "var(--surface2)", borderRadius: 12, padding: "14px 24px", textAlign: "left" }}>
-                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>📧 Email d'accès</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--accent)" }}>{admin.email}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>🏢 Code compagnie</div>
+                <div style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 800, color: "var(--accent)", letterSpacing: 6 }}>{admin.companyPin}</div>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8, marginBottom: 4 }}>📧 Email d'accès</div>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{admin.email}</div>
                 <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>🔐 Il créera son mot de passe à la première connexion</div>
               </div>
             )}
