@@ -835,7 +835,7 @@ export default function App() {
             <div className="user-info"><div className="name">{effectiveUser.name.split(" ")[0]}</div><div className="role">{isSupervising ? "👁 supervision" : effectiveUser.role}</div></div>
           </div>
           <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={isSupervising ? stopSupervision : logoutUser}>{isSupervising ? "✕ Quitter supervision" : `⇄ ${tx.disconnect}`}</button>
-          {!isSupervising && (effectiveUser?.role === "director" || currentUser?.role === "director") && (
+          {!isSupervising && (effectiveUser?.role === "director" || currentUser?.role === "director") && currentUser?.role !== "superadmin" && (
             <button className="btn btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center", background: "rgba(232,64,40,.1)", color: "var(--red)", border: "1px solid rgba(232,64,40,.3)", fontSize: 11 }} onClick={deleteDirectorSelf}>
               {tx.deleteAccount}
             </button>
@@ -876,7 +876,7 @@ export default function App() {
       <button className="bottom-nav-item" onClick={() => setLanguage(lang === "fr" ? "en" : "fr")}>
         <span className="bn-icon">{lang === "fr" ? "🇬🇧" : "🇫🇷"}</span>{lang === "fr" ? "EN" : "FR"}
       </button>
-      {!isSupervising && (currentUser?.role === "director" || effectiveUser?.role === "director") && (
+      {!isSupervising && (currentUser?.role === "director" || effectiveUser?.role === "director") && currentUser?.role !== "superadmin" && (
         <button className="bottom-nav-item" onClick={deleteDirectorSelf} style={{ color: "var(--red)" }}>
           <span className="bn-icon">🗑</span>{tx.deleteAccount}
         </button>
