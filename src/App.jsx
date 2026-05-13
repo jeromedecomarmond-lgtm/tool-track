@@ -2320,7 +2320,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
   const [newName, setNewName] = useState(""), [newColor, setNewColor] = useState("#f5a623"), [newExpiry, setNewExpiry] = useState(""), [newContactEmail, setNewContactEmail] = useState(currentUser.email || "");
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
-  const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "", password: "" });
+  const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "" });
   const [creatingAdmin, setCreatingAdmin] = useState(null);
   const [editingExpiry, setEditingExpiry] = useState(null), [editExpiryDate, setEditExpiryDate] = useState(""), [editContactEmail, setEditContactEmail] = useState("");
   const APP_URL = "tool-track-rosy.vercel.app";
@@ -2385,16 +2385,16 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
     try {
       let userId, authUid = null;
 
-      if (adminForm.email?.trim() && adminForm.password?.length >= 6) {
-        // Sauvegarder l'info du SuperAdmin avant création
-        const superAdminUid = currentUser.authUid;
-        // Créer le compte Firebase Auth du Directeur
-        const cred = await createUserWithEmailAndPassword(auth, adminForm.email.trim(), adminForm.password);
+      if (adminForm.email?.trim()) {
+        // Créer un compte Firebase Auth temporaire avec mot de passe aléatoire
+        const tempPassword = Math.random().toString(36).slice(-12) + "Aa1!";
+        const cred = await createUserWithEmailAndPassword(auth, adminForm.email.trim(), tempPassword);
         authUid = cred.user.uid;
         userId = authUid;
-        // Note: createUserWithEmailAndPassword connecte automatiquement le nouveau compte
-        // On doit reconnecter le SuperAdmin — mais on n'a pas son mot de passe ici
-        // Solution: on signOut et on recharge la page après sauvegarde Firestore
+        // Envoyer un email pour que le Directeur définisse son propre mot de passe
+        await sendPasswordResetEmail(auth, adminForm.email.trim());
+        // Reconnecter le SuperAdmin (Firebase a connecté le nouveau compte)
+        await signOut(auth);
       } else {
         userId = String(Date.now());
       }
@@ -2415,8 +2415,8 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 
       await setDoc(doc(db, "users", userId), newAdmin);
       onAdminCreated({ ...newAdmin });
-      showToast('✅ Directeur créé — invitation envoyée par WhatsApp');
-      setAdminForm({ name: "", phone: "", email: "", password: "" });
+      showToast('✅ Directeur créé — email d invitation envoyé !');
+      setAdminForm({ name: "", phone: "", email: "" });
       setCreatingAdmin(null);
     } catch(e) {
       if (e.code === "auth/email-already-in-use") showToast("❌ Cet email est déjà utilisé");
@@ -2528,10 +2528,10 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         {compAdmins.length >= 30 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>{tx.maxReached}</div> : creatingAdmin === company.id ? (
                           <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                             <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
-                            <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="Téléphone" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email *" type="email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
-                            <input className="form-input" type="password" placeholder="Mot de passe * (6+ caractères)" value={adminForm.password} onChange={e => setAdminForm(p => ({ ...p, password: e.target.value }))} />
+                            <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="Téléphone" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email * (invitation envoyée)" type="email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
                             
-                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || !adminForm.email.trim() || adminForm.password.length < 6} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
+                            
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || !adminForm.email.trim()} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
                           </div>
                         ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>}
                       </div>
