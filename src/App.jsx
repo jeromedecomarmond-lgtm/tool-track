@@ -58,13 +58,13 @@ const T = {
     active2: "Active", suspended2: "Suspendue",
     noCompany: "Aucune compagnie — créez-en une !", toolManagement: "Gestion d'outils",
     disconnect: "Déconnexion", actives: "Actives", total: "Total",
-    expiredLabel: "Expiré", addDirector2: tx.addDirector2, maxReached: "Maximum atteint",
+    expiredLabel: "Expiré", addDirector2: "+ Ajouter un Directeur", maxReached: "Maximum atteint",
     suspend2: "Suspendre", reactivate2: "Réactiver", deleteCompany: "Supprimer",
-    expiryContact: "Expiration & Contact", noDate: "Aucune date", notDefined: tx.notDefined,
+    expiryContact: "Expiration & Contact", noDate: "Aucune date", notDefined: "Non défini",
     none: "Aucun", saveBtn: "Sauvegarder", newAnnouncement: "Nouvelle annonce",
     adminMsg: "Message entre admins", visibleAll: "Visible par tous — les employés pourront lire mais pas répondre",
     visibleAdmins: "Visible uniquement par les admins", noAnnouncement: "Aucune annonce",
-    noAdminMsg: tx.noAdminMsg, subject: "Sujet", yourMessage: "Votre message...",
+    noAdminMsg: "Aucun message entre admins", subject: "Sujet", yourMessage: "Votre message...",
     from: "De", required2: "obligatoire",
   },
   en: {
@@ -133,6 +133,11 @@ const T = {
 };
 
 // FIX #2 — useLang retourne tx (pas t) pour éviter le shadowing avec les variables outil
+// Fonction globale accessible par tous les composants
+function getTx() {
+  try { return T[localStorage.getItem("tooltrack_lang") || "fr"] || T["fr"]; } catch { return T["fr"]; }
+}
+
 function useLang() {
   const [lang, setLang] = useState(() => {
     try { return localStorage.getItem("tooltrack_lang") || "fr"; } catch { return "fr"; }
@@ -1508,7 +1513,7 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
 
 // ─── TOOL DETAIL MODAL ────────────────────────────────────────────────────────
 function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, assignTool, currentUser, deleteTool, updateTool }) {
-  const tx = T[(() => { try { return localStorage.getItem("tooltrack_lang") || "fr"; } catch { return "fr"; } })()];
+  const tx = getTx();
   const [assignForm, setAssignForm] = useState({ viewerId: "", chantier: "" });
 
   const [editing, setEditing] = useState(false);
@@ -1877,7 +1882,7 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx
 
 // ─── MOVE PANEL MODAL — FIX #1 db en props ───────────────────────────────────
 function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, db, onClose, assignTool, showToast, sendRequest, isAdminUser }) {
-  const tx = T[(() => { try { return localStorage.getItem("tooltrack_lang") || "fr"; } catch { return "fr"; } })()];
+  const tx = getTx();
   const [action, setAction] = useState(""), [viewerId, setViewerId] = useState(""), [chantier, setChantier] = useState(""), [note, setNote] = useState(""), [loading, setLoading] = useState(false), [done, setDone] = useState(false);
   const selectedTools = tools.filter(t => selectedIds.includes(t.id));
   const isAdmin = isAdminUser || ["admin","director","superadmin"].includes(currentUser?.role);
@@ -1993,7 +1998,7 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
 
 // ─── REQUEST ACTIONS ──────────────────────────────────────────────────────────
 function RequestActions({ request: r, tool, onApprove, onRefuse }) {
-  const tx = T[(() => { try { return localStorage.getItem("tooltrack_lang") || "fr"; } catch { return "fr"; } })()];
+  const tx = getTx();
   const [note, setNote] = useState(""), [mode, setMode] = useState(null);
   const [loadingApprove, triggerApprove] = useLoadingBtn();
   const [loadingRefuse, triggerRefuse] = useLoadingBtn();
@@ -2045,7 +2050,7 @@ function ParcToolRow({ tool, assignee, isMyTool, currentUser, db, onAsk }) {
 
 // ─── VIEWER TOOL CARD ─────────────────────────────────────────────────────────
 function ViewerToolCard({ tool, currentUser, users, viewers, chantiers, db, onOpen, onRequest }) {
-  const tx = T[(() => { try { return localStorage.getItem("tooltrack_lang") || "fr"; } catch { return "fr"; } })()];
+  const tx = getTx();
   const [action, setAction] = useState(null), [targetViewer, setTargetViewer] = useState(""), [targetChantier, setTargetChantier] = useState(""), [note, setNote] = useState("");
   const otherViewers = viewers.filter(v => String(v.id) !== String(currentUser.id));
   const submit = (type) => { const targetName = targetViewer ? users.find(u => String(u.id) === String(targetViewer))?.name : null; onRequest({ type, toolId: tool.id, toolName: tool.name, toolLocation: tool.location, targetViewerId: targetViewer || null, targetViewerName: targetName, targetChantier: targetChantier || null, note }); setAction(null); setNote(""); setTargetViewer(""); setTargetChantier(""); };
