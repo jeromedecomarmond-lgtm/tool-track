@@ -2383,49 +2383,31 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
     const initials = adminForm.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
 
     try {
-      let userId, authUid = null;
-
-      if (adminForm.email?.trim()) {
-        // Créer un compte Firebase Auth temporaire avec mot de passe aléatoire
-        const tempPassword = Math.random().toString(36).slice(-12) + "Aa1!";
-        const cred = await createUserWithEmailAndPassword(auth, adminForm.email.trim(), tempPassword);
-        authUid = cred.user.uid;
-        userId = authUid;
-      } else {
-        userId = String(Date.now());
-      }
-
+      // On crée uniquement le profil Firestore
+      // Le Directeur créera son propre compte Firebase Auth à la première connexion
+      const userId = String(Date.now());
       const newAdmin = {
         id: userId,
         name: adminForm.name,
         role: "director",
         avatar: initials,
         phone: adminForm.phone || "",
-        email: adminForm.email?.trim() || "",
+        email: adminForm.email.trim(),
         pin: "",
         companyId: company.id,
         companyName: company.name,
         companyPin: company.companyPin || "",
-        authUid: authUid
+        authUid: null,
+        pendingAuth: true  // Le Directeur doit créer son mot de passe à la 1ère connexion
       };
 
-      // Sauvegarder dans Firestore AVANT de faire quoi que ce soit d'autre
       await setDoc(doc(db, "users", userId), newAdmin);
-
-      // Envoyer l'email d'invitation APRÈS la sauvegarde
-      if (adminForm.email?.trim()) {
-        await sendPasswordResetEmail(auth, adminForm.email.trim());
-        // Reconnecter le SuperAdmin (Firebase a connecté le nouveau compte)
-        await signOut(auth);
-      }
-
       onAdminCreated({ ...newAdmin });
-      showToast("✅ Directeur créé — email d'invitation envoyé !");
+      showToast("✅ Directeur créé — invitation WhatsApp envoyée !");
       setAdminForm({ name: "", phone: "", email: "" });
       setCreatingAdmin(null);
     } catch(e) {
-      if (e.code === "auth/email-already-in-use") showToast("❌ Cet email est déjà utilisé");
-      else showToast("❌ Erreur : " + e.message);
+      showToast("❌ Erreur : " + e.message);
     }
   };
 
@@ -2583,15 +2565,38 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
   const handleAdminEmailLogin = async () => {
     if (!adminEmail.trim() || !adminPassword) return;
     setAdminLoading(true); setAdminError("");
+
+    // Chercher le profil par email dans Firestore
+    const profileByEmail = users.find(u => u.email?.toLowerCase() === adminEmail.trim().toLowerCase());
+
     try {
-      const cred = await signInWithEmailAndPassword(auth, adminEmail.trim(), adminPassword);
-      const uid = cred.user.uid;
-      const userProfile = users.find(u => u.authUid === uid || u.id === uid);
-      if (!userProfile) { await signOut(auth); setAdminError("❌ Profil introuvable. Contactez votre administrateur."); setAdminLoading(false); return; }
-      if (!["superadmin", "director", "admin"].includes(userProfile.role)) { await signOut(auth); setAdminError("❌ Ce compte n'a pas accès à la connexion email."); setAdminLoading(false); return; }
-      onLogin(userProfile);
+      if (profileByEmail?.pendingAuth) {
+        // Première connexion — créer le compte Firebase Auth
+        const cred = await createUserWithEmailAndPassword(auth, adminEmail.trim(), adminPassword);
+        const uid = cred.user.uid;
+        // Mettre à jour le profil Firestore avec authUid et retirer pendingAuth
+        await setDoc(doc(db, "users", String(profileByEmail.id)), {
+          ...profileByEmail,
+          authUid: uid,
+          id: uid,
+          pendingAuth: false
+        });
+        // Supprimer l'ancien doc si l'id a changé
+        if (String(profileByEmail.id) !== uid) {
+          await deleteDoc(doc(db, "users", String(profileByEmail.id)));
+        }
+        onLogin({ ...profileByEmail, authUid: uid, id: uid, pendingAuth: false });
+      } else {
+        // Connexion normale
+        const cred = await signInWithEmailAndPassword(auth, adminEmail.trim(), adminPassword);
+        const uid = cred.user.uid;
+        const userProfile = users.find(u => u.authUid === uid || u.id === uid || u.email?.toLowerCase() === adminEmail.trim().toLowerCase());
+        if (!userProfile) { await signOut(auth); setAdminError("❌ Profil introuvable. Contactez votre administrateur."); setAdminLoading(false); return; }
+        onLogin(userProfile);
+      }
     } catch(e) {
       if (e.code === "auth/user-not-found" || e.code === "auth/wrong-password" || e.code === "auth/invalid-credential") setAdminError("❌ Email ou mot de passe incorrect.");
+      else if (e.code === "auth/email-already-in-use") setAdminError("❌ Ce compte existe déjà. Utilisez votre mot de passe habituel.");
       else setAdminError("❌ Erreur : " + e.message);
       setAdminLoading(false);
     }
@@ -2629,7 +2634,7 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
             <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" placeholder="admin@email.com" value={adminEmail} onChange={e => setAdminEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdminEmailLogin()} /></div>
-            <div className="form-group"><label className="form-label">Mot de passe</label><input className="form-input" type="password" placeholder="••••••••" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdminEmailLogin()} /></div>
+            <div className="form-group"><label className="form-label">Mot de passe</label><input className="form-input" type="password" placeholder="Choisissez un mot de passe (6+ car.)" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdminEmailLogin()} /></div>
             {adminError && <div style={{ fontSize: 12, color: "var(--red)", fontWeight: 700 }}>{adminError}</div>}
             <button className={`btn btn-primary ${adminLoading ? "loading" : ""}`} disabled={!adminEmail.trim() || !adminPassword || adminLoading} onClick={handleAdminEmailLogin} style={{ justifyContent: "center" }}>{adminLoading ? "⏳ Connexion..." : "🔑 Se connecter"}</button>
             <button className="btn btn-ghost btn-sm" onClick={handleResetPassword} style={{ justifyContent: "center", fontSize: 11 }}>Mot de passe oublié ?</button>
