@@ -49,7 +49,7 @@ const T = {
     directTransfer: "Transfert direct — aucune approbation requise",
     needsApproval: "Votre demande sera soumise à approbation par un admin",
     transferNow: "Transférer maintenant", sendReq: "Envoyer la demande",
-    newSite: "Nouveau chantier", siteName: "Nom du chantier...", newBtn: "+ Nouveau",
+    newSite: "Nouveau chantier", siteName: "Nom du chantier...", newBtn: "+ Nouveau", siteLabel: "Chantier",
     announcements: "Annonces", adminMessages: "Messages Admins",
     readOnly: "Lecture seule — contactez votre Directeur ou Admin pour toute question",
     writeAnnouncement: "Écrire une annonce...",
@@ -112,7 +112,7 @@ const T = {
     directTransfer: "Direct transfer — no approval required",
     needsApproval: "Your request will be submitted for admin approval",
     transferNow: "Transfer now", sendReq: "Send request",
-    newSite: "New job site", siteName: "Job site name...", newBtn: "+ New",
+    newSite: "New job site", siteName: "Job site name...", newBtn: "+ New", siteLabel: "Job Site",
     announcements: "Announcements", adminMessages: "Admin Messages",
     readOnly: "Read only — contact your Director or Admin for any question",
     writeAnnouncement: "Write an announcement...",
@@ -656,7 +656,7 @@ export default function App() {
     if (!name.trim()) return;
     const id = String(Date.now());
     await setDoc(doc(db, "chantiers", id), { id, name: name.trim(), color, companyId: myCompanyId || null });
-    showToast("✅ Chantier ajouté");
+    showToast(tx.lang === "en" ? "✅ Job site added" : "✅ Chantier ajouté");
   };
 
   const deleteChantier = async (id) => {
@@ -668,7 +668,7 @@ export default function App() {
     }
     if (!window.confirm(`${tx.deleteConfirm || "Supprimer"} "${c?.name}" ?`)) return;
     await deleteDoc(doc(db, "chantiers", String(id)));
-    showToast("🗑 Chantier supprimé");
+    showToast(tx.lang === "en" ? "🗑 Job site deleted" : "🗑 Chantier supprimé");
   };
 
   const sendRequest = async ({ type, toolId, toolName, toolLocation, targetViewerId, targetViewerName, targetChantier, note }) => {
@@ -892,7 +892,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                           { label: "🔧 " + tx.tools, value: cTools.length, color: "var(--accent)" },
                           { label: "🏗 " + tx.chantiers, value: cChantiers.length, color: "var(--green)" },
                           { label: "🟢 " + tx.store, value: cTools.filter(t => t.status === "store").length, color: "var(--green)" },
-                          { label: "🔵 Chantier", value: cTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
+                          { label: "🔵 " + tx.onSite2, value: cTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
                           { label: "🔴 " + tx.nonfunctional, value: cTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
                           { label: "👑 Admins", value: cUsers.filter(u => u.role === "admin").length, color: "var(--accent)" },
                           { label: "👷 " + tx.employee, value: cUsers.filter(u => u.role === "viewer").length, color: "var(--muted)" },
@@ -968,7 +968,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
       <div className="content">
         <div className="filters">
           <div className="search-bar"><span className="search-icon">🔍</span><input placeholder={tx.search} value={search} onChange={e => setSearch(e.target.value)} /></div>
-          {[{ val: "all", label: "Tous" }, { val: "store", label: "🟢 " + tx.store }, { val: "assigned", label: "🔵 Chantier" }, { val: "nonfunctional", label: "🔴 Non fonctionnel" }, { val: "obsolete", label: "⚫ Obsolète" }].map(s => (
+          {[{ val: "all", label: "Tous" }, { val: "store", label: "🟢 " + tx.store }, { val: "assigned", label: "🔵 " + tx.onSite2 }, { val: "nonfunctional", label: "🔴 Non fonctionnel" }, { val: "obsolete", label: "⚫ Obsolète" }].map(s => (
             <button key={s.val} className={`filter-btn ${filterStatus === s.val ? "active" : ""}`} onClick={() => { setFilterStatus(s.val); setFilterUser("all"); setFilterChantier("all"); }}>{s.label}</button>
           ))}
           {/* FIX #6 — reset indépendant */}
@@ -1165,7 +1165,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
                         </select>
                       </div>
                       <div className="form-group">
-                        <label className="form-label">Chantier</label>
+                        <label className="form-label">{tx.siteLabel}</label>
                         <select className="form-input" value={groupChantier} onChange={e => setGroupChantier(e.target.value)}>
                           <option value="">— Choisir un chantier —</option>
                           {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
