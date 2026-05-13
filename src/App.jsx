@@ -417,7 +417,10 @@ export default function App() {
     setCurrentUser(u);
     const savedPage = (() => { try { return localStorage.getItem("tooltrack_last_page"); } catch { return null; } })();
     setPage(getValidPage(savedPage, u));
-    try { localStorage.setItem("tooltrack_user_id", u.id); } catch(e) {}
+    try { 
+      localStorage.setItem("tooltrack_user_id", u.id);
+      localStorage.setItem("tooltrack_user_email", u.email || "");
+    } catch(e) {}
   };
 
   // Auto-suppression Directeur — suspend la compagnie automatiquement
@@ -559,15 +562,20 @@ export default function App() {
       setUsers(loadedUsers);
       try {
         const savedId = localStorage.getItem("tooltrack_user_id");
-        if (savedId) {
-          const savedUser = loadedUsers.find(u => u.id === savedId);
+        const savedEmail = localStorage.getItem("tooltrack_user_email");
+        if (savedId || savedEmail) {
+          const savedUser = loadedUsers.find(u => 
+            u.id === savedId || 
+            u.authUid === savedId ||
+            (savedEmail && u.email?.toLowerCase() === savedEmail.toLowerCase())
+          );
           if (savedUser) {
             setCurrentUser(savedUser);
-            // FIX #5 + FIX #F — restaure la page uniquement si elle est accessible pour ce rôle
             const savedPage = localStorage.getItem("tooltrack_last_page");
             setPage(getValidPage(savedPage, savedUser));
           } else {
             localStorage.removeItem("tooltrack_user_id");
+            localStorage.removeItem("tooltrack_user_email");
             localStorage.removeItem("tooltrack_last_page");
           }
         }
