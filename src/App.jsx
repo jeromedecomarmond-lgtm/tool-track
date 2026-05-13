@@ -55,7 +55,7 @@ const T = {
     writeAnnouncement: "Écrire une annonce...",
     newCompany2: "+ Nouvelle", addDirector: "+ Ajouter un Directeur",
     deleteAccount: "Supprimer mon compte", toolsOnSiteLabel: "Outils sur chantiers", deleteBtn: "Supprimer", directors: "Directeurs", admins: "Admins", director: "Directeur", directorCreated: "Directeur créé", profileDeleted: "Profil supprimé", deleteConfirm: "Supprimer", cannotDeleteSelf: "Vous ne pouvez pas vous supprimer vous-même", cannotDeleteRole: "Vous ne pouvez pas supprimer ce profil",
-    active2: "Active", suspended2: "Suspendue",
+    active2: "Active", suspended2: "Suspendue", actionRequired: "Action requise",
     noCompany: "Aucune compagnie — créez-en une !", toolManagement: "Gestion d'outils",
     disconnect: "Déconnexion", actives: "Actives", total: "Total",
     expiredLabel: "Expiré", addDirector2: "+ Ajouter un Directeur", maxReached: "Maximum atteint",
@@ -118,7 +118,7 @@ const T = {
     writeAnnouncement: "Write an announcement...",
     newCompany2: "+ New", addDirector: "+ Add a Director",
     deleteAccount: "Delete my account", toolsOnSiteLabel: "Tools on job sites", deleteBtn: "Delete", directors: "Directors", admins: "Admins", director: "Director", directorCreated: "Director created", profileDeleted: "Profile deleted", deleteConfirm: "Delete", cannotDeleteSelf: "You cannot delete your own account", cannotDeleteRole: "You cannot delete this profile",
-    active2: "Active", suspended2: "Suspended",
+    active2: "Active", suspended2: "Suspended", actionRequired: "Action required",
     noCompany: "No companies yet — create one!", toolManagement: "Tool management",
     disconnect: "Disconnect", actives: "Active", total: "Total",
     expiredLabel: "Expired", addDirector2: "Add a Director", maxReached: "Maximum reached",
@@ -914,12 +914,32 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                 { label: "⏳ " + tx.pendingReq, value: requests.filter(r => r.status === "pending").length, color: "var(--accent)" },
                 { label: "⏸️ " + tx.suspended, value: companies.filter(c => c.active === false).length, color: "var(--red)" },
               ].map(s => (
-                <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
+                <div key={s.label} style={{ background: "var(--surface)", border: `1px solid ${s.color === "var(--red)" && s.value > 0 ? "rgba(232,82,10,.5)" : "var(--border)"}`, borderRadius: 12, padding: "14px 12px", textAlign: "center" }}>
                   <div style={{ fontFamily: "var(--font-head)", fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
                   <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 4, lineHeight: 1.3 }}>{s.label}</div>
                 </div>
               ))}
             </div>
+            {/* Liste des compagnies suspendues */}
+            {companies.filter(c => c.active === false).length > 0 && (
+              <div style={{ background: "rgba(232,82,10,.08)", border: "2px solid rgba(232,82,10,.4)", borderRadius: 12, padding: "14px 16px", marginBottom: 24, marginTop: -14 }}>
+                <div style={{ fontFamily: "var(--font-head)", fontSize: 13, fontWeight: 800, color: "var(--red)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 1 }}>
+                  ⚠️ {companies.filter(c => c.active === false).length} {tx.suspended2} — {tx.actionRequired || "Action requise"}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {companies.filter(c => c.active === false).map(c => (
+                    <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(232,82,10,.1)", borderRadius: 8, padding: "8px 12px" }}>
+                      <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--red)", flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 800, fontSize: 13 }}>{c.name}</div>
+                        {c.suspendedReason && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{c.suspendedReason}</div>}
+                      </div>
+                      <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 700 }}>⏸️ {tx.suspended2}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 16, marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                 <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800 }}>🔧 {tx.tools} — {tools.length}</div>
@@ -964,7 +984,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                           <div style={{ width: 36, height: 36, borderRadius: 8, background: company.color || "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🏢</div>
                           <div>
                             <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800 }}>{company.name}</div>
-                            <div style={{ fontSize: 10, color: isActive ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+                            <div style={{ fontSize: isActive ? 10 : 13, color: isActive ? "var(--green)" : "var(--red)", fontWeight: 800, background: isActive ? "transparent" : "rgba(232,82,10,.15)", padding: isActive ? 0 : "3px 8px", borderRadius: 6 }}>
                               {isActive ? `🟢 ${tx.active2}` : `⏸️ ${tx.suspended2}`}
                               {dLeft !== null && isActive && dLeft <= 10 && <span style={{ color: dLeft <= 3 ? "var(--red)" : "var(--accent)", marginLeft: 8 }}>⚠️ {dLeft}j</span>}
                             </div>
