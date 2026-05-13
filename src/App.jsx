@@ -2575,21 +2575,27 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
 
     try {
       if (profileByEmail?.pendingAuth) {
-        // Première connexion — créer le compte Firebase Auth
-        const cred = await createUserWithEmailAndPassword(auth, adminEmail.trim(), adminPassword);
-        const uid = cred.user.uid;
-        // Mettre à jour le profil Firestore avec authUid et retirer pendingAuth
-        await setDoc(doc(db, "users", String(profileByEmail.id)), {
-          ...profileByEmail,
-          authUid: uid,
-          id: uid,
-          pendingAuth: false
-        });
-        // Supprimer l'ancien doc si l'id a changé
+        // Première connexion Directeur — essayer de créer, sinon connecter directement
+        let uid;
+        try {
+          const cred = await createUserWithEmailAndPassword(auth, adminEmail.trim(), adminPassword);
+          uid = cred.user.uid;
+        } catch(createErr) {
+          if (createErr.code === "auth/email-already-in-use") {
+            // Compte Firebase Auth existe déjà — connecter directement
+            const cred = await signInWithEmailAndPassword(auth, adminEmail.trim(), adminPassword);
+            uid = cred.user.uid;
+          } else {
+            throw createErr;
+          }
+        }
+        // Mettre à jour le profil Firestore
+        const updatedProfile = { ...profileByEmail, authUid: uid, id: uid, pendingAuth: false };
+        await setDoc(doc(db, "users", uid), updatedProfile);
         if (String(profileByEmail.id) !== uid) {
           await deleteDoc(doc(db, "users", String(profileByEmail.id)));
         }
-        onLogin({ ...profileByEmail, authUid: uid, id: uid, pendingAuth: false });
+        onLogin(updatedProfile);
       } else {
         // Connexion normale
         const cred = await signInWithEmailAndPassword(auth, adminEmail.trim(), adminPassword);
@@ -2600,7 +2606,6 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
       }
     } catch(e) {
       if (e.code === "auth/user-not-found" || e.code === "auth/wrong-password" || e.code === "auth/invalid-credential") setAdminError("❌ Email ou mot de passe incorrect.");
-      else if (e.code === "auth/email-already-in-use") setAdminError("❌ Ce compte existe déjà. Utilisez votre mot de passe habituel.");
       else setAdminError("❌ Erreur : " + e.message);
       setAdminLoading(false);
     }
