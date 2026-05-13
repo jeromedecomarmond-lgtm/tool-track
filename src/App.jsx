@@ -604,7 +604,7 @@ export default function App() {
     toastRef.current = setTimeout(() => setToast(null), 4000);
   };
 
-  if (currentUser && !isSuperAdmin && myCompany && myCompany.active === false) {
+  if (currentUser && !isSuperAdmin && currentUser.role !== "director" && myCompany && myCompany.active === false) {
     const contactEmail = myCompany.contactEmail || "";
     return (
       <><style>{css}</style>
@@ -835,11 +835,7 @@ export default function App() {
             <div className="user-info"><div className="name">{effectiveUser.name.split(" ")[0]}</div><div className="role">{isSupervising ? "👁 supervision" : effectiveUser.role}</div></div>
           </div>
           <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={isSupervising ? stopSupervision : logoutUser}>{isSupervising ? "✕ Quitter supervision" : `⇄ ${tx.disconnect}`}</button>
-          {!isSupervising && (effectiveUser?.role === "director" || currentUser?.role === "director") && currentUser?.role !== "superadmin" && (
-            <button className="btn btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center", background: "rgba(232,64,40,.1)", color: "var(--red)", border: "1px solid rgba(232,64,40,.3)", fontSize: 11 }} onClick={deleteDirectorSelf}>
-              {tx.deleteAccount}
-            </button>
-          )}
+
           <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
             <button onClick={() => setLanguage("fr")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "fr" ? "var(--accent)" : "var(--border)"}`, background: lang === "fr" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "fr" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇫🇷 FR</button>
             <button onClick={() => setLanguage("en")} style={{ flex: 1, padding: "5px 0", borderRadius: 8, border: `2px solid ${lang === "en" ? "var(--accent)" : "var(--border)"}`, background: lang === "en" ? "rgba(245,166,35,.15)" : "transparent", color: lang === "en" ? "var(--accent)" : "var(--muted)", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🇬🇧 EN</button>
@@ -858,7 +854,7 @@ export default function App() {
         {page === "requests" && <RequestsPage isSuperAdmin={isSuperAdmin} isAdmin={isAdmin} filteredRequests={filteredRequests} requests={requests} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} tx={tx} />}
         {/* FIX #10 — page messages rendue */}
         {page === "messages" && <MessagesPage currentUser={effectiveUser} users={users} tools={tools} myTools={myTools} db={db} showToast={showToast} tx={tx} />}
-        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} tx={tx} />}
+        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} tx={tx} deleteDirectorSelf={deleteDirectorSelf} isSupervising={isSupervising} />}
       </main>
     </div>
 
@@ -876,11 +872,7 @@ export default function App() {
       <button className="bottom-nav-item" onClick={() => setLanguage(lang === "fr" ? "en" : "fr")}>
         <span className="bn-icon">{lang === "fr" ? "🇬🇧" : "🇫🇷"}</span>{lang === "fr" ? "EN" : "FR"}
       </button>
-      {!isSupervising && (currentUser?.role === "director" || effectiveUser?.role === "director") && currentUser?.role !== "superadmin" && (
-        <button className="bottom-nav-item" onClick={deleteDirectorSelf} style={{ color: "var(--red)" }}>
-          <span className="bn-icon">🗑</span>{tx.deleteAccount}
-        </button>
-      )}
+
     </nav>
 
     {modal && <ModalRouter modal={modal} setModal={setModal} users={users} tools={tools} setTools={setTools} viewers={viewers} chantiers={chantiers} currentUser={currentUser} effectiveUser={effectiveUser} addTool={addTool} addUser={addUser} assignTool={assignTool} deleteTool={deleteTool} updateTool={updateTool} myCompany={myCompany} />}
@@ -1455,7 +1447,7 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
   );
 }
 
-function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, db, showToast, setModal, onSupervise, tx }) {
+function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, db, showToast, setModal, onSupervise, tx, deleteDirectorSelf, isSupervising }) {
   return (
     <>
       <div className="topbar"><h2>{tx.team}</h2>{!isSuperAdmin && <button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ {tx.addProfile}</button>}</div>
@@ -1550,6 +1542,11 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                             {u.phone && <div style={{ fontSize: 12, color: "var(--muted)" }}>📞 {u.phone}</div>}
                             {u.email && <div style={{ fontSize: 12, color: "var(--muted)" }}>✉️ {u.email}</div>}
                           </div>
+                          {isSelf && u.role === "director" && !isSupervising && (
+                            <button className="btn btn-sm" style={{ width: "100%", justifyContent: "center", background: "rgba(232,64,40,.1)", color: "var(--red)", border: "1px solid rgba(232,64,40,.3)", fontSize: 11, marginBottom: 8 }} onClick={deleteDirectorSelf}>
+                              🗑 {tx.deleteAccount}
+                            </button>
+                          )}
                           {canSeePins && u.pin && (
                             <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                               <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>🔑 PIN</div>
@@ -2636,12 +2633,22 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
     if (newPin.length === 4) {
       const found = companies.find(c => c.companyPin === newPin);
       if (found && found.active === false) {
-        setPinError(true);
-        setTimeout(() => { setCompanyPin(""); setPinError(false); }, 3000);
-        alert(`⚠️ La compagnie "${found.name}" est temporairement suspendue.\n\nUn nouveau Directeur doit être créé pour rétablir l'accès.\n\nContactez le SuperAdmin : jdecomarmond.profile@intnet.mu`);
-        return;
-      }
-      if (found) { setSelectedCompany(found); setStep("profile"); setCompanyPin(""); }
+        // Compagnie suspendue — vérifier si c'est un Directeur qui essaie de se connecter
+        const companyDirectors = companies && users ? users.filter(u => u.companyId === found.id && u.role === "director") : [];
+        if (companyDirectors.length > 0) {
+          // Il y a un directeur — le laisser passer pour qu'il puisse réactiver
+          setSelectedCompany(found);
+          setStep("profile");
+          setCompanyPin("");
+        } else {
+          setPinError(true);
+          setTimeout(() => { setCompanyPin(""); setPinError(false); }, 3000);
+          alert(`⚠️ La compagnie "${found.name}" est temporairement suspendue.
+
+Contactez le SuperAdmin : jdecomarmond.profile@intnet.mu`);
+          return;
+        }
+      } else if (found) { setSelectedCompany(found); setStep("profile"); setCompanyPin(""); }
       else { setPinError(true); setTimeout(() => { setCompanyPin(""); setPinError(false); }, 1000); }
     }
   };
