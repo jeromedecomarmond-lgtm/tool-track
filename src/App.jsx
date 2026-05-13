@@ -32,7 +32,7 @@ const T = {
     noTools: "Aucun outil", noRequests: "Aucune demande", noTeam: "Aucun membre",
     required: "obligatoire", optional: "optionnel",
     language: "Langue", french: "Français", english: "English",
-    all: "Tous", selectAll: "Tout sélectionner", addProfile: "Ajouter un profil", search: "Chercher un outil...", details: "Détails",
+    all: "Tous", selectAll: "Tout sélectionner", search: "Chercher un outil...", details: "Détails",
     globalView: "Vue globale", byCompany: "Par compagnie", totalValue: "Valeur totale du parc",
     totalTools: "Outils total", inStore2: "En store", onSite2: "Sur chantier", nonFunctional2: "Non fonctionnels", obsolete2: "Obsolètes", pendingReq: "Demandes en attente", pendingLabel: "en attente", pendingAdmin: "En attente d'un admin", approvedBy: "Approuvé par", refusedBy: "Refusé par",
     toolsOnSite: "Outils sur chantiers", resetTest: "Reset données test",
@@ -95,7 +95,7 @@ const T = {
     noTools: "No tools", noRequests: "No requests", noTeam: "No members",
     required: "required", optional: "optional",
     language: "Language", french: "Français", english: "English",
-    all: "All", selectAll: "Select all", addProfile: "Add a profile", search: "Search a tool...", details: "Details",
+    all: "All", selectAll: "Select all", search: "Search a tool...", details: "Details",
     globalView: "Global view", byCompany: "By company", totalValue: "Total fleet value",
     totalTools: "Total tools", inStore2: "In store", onSite2: "On site", nonFunctional2: "Not functional", obsolete2: "Obsolete", pendingReq: "Pending requests", pendingLabel: "pending", pendingAdmin: "Waiting for admin", approvedBy: "Approved by", refusedBy: "Refused by",
     toolsOnSite: "Tools on site", resetTest: "Reset test data",
@@ -2457,7 +2457,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                             <div style={{ display: "flex", gap: 8, alignItems: "center" }}><input className="form-input" style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, letterSpacing: 8, textAlign: "center" }} maxLength={4} value={adminForm.pin} onChange={e => setAdminForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} /><button className="btn btn-ghost btn-sm" onClick={() => setAdminForm(p => ({ ...p, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>🔄</button></div>
                             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
                           </div>
-                        ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>
+                        ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>}
                       </div>
                       <div style={{ marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
