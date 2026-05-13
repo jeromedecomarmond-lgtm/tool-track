@@ -968,7 +968,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
       <div className="content">
         <div className="filters">
           <div className="search-bar"><span className="search-icon">🔍</span><input placeholder={tx.search} value={search} onChange={e => setSearch(e.target.value)} /></div>
-          {[{ val: "all", label: "Tous" }, { val: "store", label: "🟢 " + tx.store }, { val: "assigned", label: "🔵 " + tx.onSite2 }, { val: "nonfunctional", label: "🔴 Non fonctionnel" }, { val: "obsolete", label: "⚫ Obsolète" }].map(s => (
+          {[{ val: "all", label: tx.all }, { val: "store", label: "🟢 " + tx.store }, { val: "assigned", label: "🔵 " + tx.onSite2 }, { val: "nonfunctional", label: "🔴 " + tx.nonfunctional }, { val: "obsolete", label: "⚫ " + tx.obsolete2 }].map(s => (
             <button key={s.val} className={`filter-btn ${filterStatus === s.val ? "active" : ""}`} onClick={() => { setFilterStatus(s.val); setFilterUser("all"); setFilterChantier("all"); }}>{s.label}</button>
           ))}
           {/* FIX #6 — reset indépendant */}
@@ -1208,7 +1208,7 @@ function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest,
           {[
             { label: "🟢 " + tx.inStore2, count: filteredTools.filter(t => t.status === "store").length, color: "var(--green)" },
             { label: "🔵 Sur chantiers", count: filteredTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
-            { label: "🔴 Non fonctionnel", count: filteredTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
+            { label: "🔴 " + tx.nonfunctional, count: filteredTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
             { label: "📦 Mes outils", count: myTools.length, color: "var(--accent)" },
           ].map(s => (
             <div key={s.label} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "14px 16px" }}>
@@ -1625,7 +1625,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
           <div className="detail-grid">
             <div className="detail-item"><div className="detail-key">Fournisseur</div><div className="detail-val">{tool.ref || "—"}</div></div>
             <div className="detail-item"><div className="detail-key">Achat</div><div className="detail-val">{tool.purchaseDate ? new Date(tool.purchaseDate).toLocaleDateString("fr-MU") : "—"}</div></div>
-            <div className="detail-item"><div className="detail-key">Statut</div><div className="detail-val">{{ store: "🟢 " + tx.inStore2, assigned: "🔵 Sur chantier", nonfunctional: "🔴 Non fonctionnel", obsolete: "⚫ Obsolète" }[tool.status] || tool.status}</div></div>
+            <div className="detail-item"><div className="detail-key">Statut</div><div className="detail-val">{{ store: "🟢 " + tx.inStore2, assigned: "🔵 Sur chantier", nonfunctional: "🔴 " + tx.nonfunctional, obsolete: "⚫ " + tx.obsolete2 }[tool.status] || tool.status}</div></div>
             <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Localisation</div><div className="detail-val">📍 {tool.location}</div></div>
             {assignee && <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Responsable</div><div className="detail-val">👷 {assignee.name}</div></div>}
             {tool.price && (
