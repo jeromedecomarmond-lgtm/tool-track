@@ -2395,7 +2395,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx })
 // ─── COMPANIES PAGE ───────────────────────────────────────────────────────────
 function CompaniesPage({ companies, users, tools, chantiers, requests, db, currentUser, showToast, onAdminCreated, onSupervise, tx }) {
   const [showForm, setShowForm] = useState(false);
-  const [newName, setNewName] = useState(""), [newColor, setNewColor] = useState("#f5a623"), [newExpiry, setNewExpiry] = useState(""), [newContactEmail, setNewContactEmail] = useState(currentUser.email || "");
+  const [newName, setNewName] = useState(""), [newColor, setNewColor] = useState("#f5a623"), [newExpiry, setNewExpiry] = useState(""), [newContactEmail, setNewContactEmail] = useState(currentUser.email || ""), [newPhone, setNewPhone] = useState("");
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "" });
@@ -2423,9 +2423,9 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 
   const createCompany = async () => {
     setFormSubmitted(true);
-    if (!newName.trim() || !newExpiry || !newContactEmail.trim()) return;
+    if (!newName.trim() || !newExpiry || !newContactEmail.trim() || newPhone.trim().length < 7) return;
     const id = String(Date.now()), companyPin = String(Math.floor(1000 + Math.random() * 9000));
-    await setDoc(doc(db, "companies", id), { id, name: newName.trim(), color: newColor, active: true, createdAt: new Date().toISOString(), createdBy: currentUser.id, expiryDate: newExpiry || null, contactEmail: newContactEmail || currentUser.email || "", companyPin });
+    await setDoc(doc(db, "companies", id), { id, name: newName.trim(), color: newColor, active: true, createdAt: new Date().toISOString(), createdBy: currentUser.id, expiryDate: newExpiry || null, contactEmail: newContactEmail || currentUser.email || "", phone: newPhone.trim(), companyPin });
     setNewName(""); setNewExpiry(""); setShowForm(false); setFormSubmitted(false);
     showToast(`🏢 Compagnie créée ! Code d'accès : ${companyPin}`);
   };
@@ -2514,8 +2514,9 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
               <div style={{ flex: 1 }}><label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📅 Date d'expiration *</label><input className="form-input" style={companyFieldStyle(newExpiry)} type="date" value={newExpiry} onChange={e => setNewExpiry(e.target.value)} />{formSubmitted && !newExpiry && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Date obligatoire</div>}</div>
               <div style={{ flex: 1 }}><label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📧 Email contact *</label><input className="form-input" style={companyFieldStyle(newContactEmail)} type="email" placeholder="votre@email.com" value={newContactEmail} onChange={e => setNewContactEmail(e.target.value)} />{formSubmitted && !newContactEmail.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Email obligatoire</div>}</div>
+              <div style={{ flex: 1 }}><label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📞 Téléphone * (min. 7 chiffres)</label><input className="form-input" style={companyFieldStyle(newPhone.trim().length >= 7 ? newPhone : "")} type="tel" placeholder="+230 5XXX XXXX" value={newPhone} onChange={e => setNewPhone(e.target.value)} />{formSubmitted && newPhone.trim().length < 7 && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Téléphone obligatoire (min. 7 chiffres)</div>}</div>
             </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormSubmitted(false); }}>{tx.cancel}</button><button className="btn btn-primary btn-sm" onClick={createCompany}>{tx.create}</button></div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormSubmitted(false); }}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!newName.trim() || !newExpiry || !newContactEmail.trim() || !newContactEmail.includes("@") || newPhone.trim().length < 7} onClick={createCompany}>{tx.create}</button></div>
           </div>
         )}
         {companies.length === 0 && !showForm && <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}><div style={{ fontSize: 48, marginBottom: 8 }}>🏢</div><div>{tx.noCompany}</div></div>}
