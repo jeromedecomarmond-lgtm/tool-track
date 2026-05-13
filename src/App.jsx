@@ -1541,10 +1541,19 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
           <div className="modal-body" style={{ textAlign: "center", gap: 16 }}>
             <div style={{ width: 60, height: 60, borderRadius: 14, background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, margin: "0 auto" }}>{admin.avatar}</div>
             <div><div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800 }}>{admin.name}</div><div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{admin.role === "director" ? "🏢 Directeur" : "🔑 Admin"} · {admin.companyName}</div></div>
-            <div style={{ background: "var(--surface2)", borderRadius: 12, padding: "14px 24px" }}>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Code PIN</div>
-              <div style={{ fontFamily: "var(--font-head)", fontSize: 36, fontWeight: 800, color: "var(--accent)", letterSpacing: 8 }}>{admin.pin}</div>
-            </div>
+            {admin.role !== "director" && (
+              <div style={{ background: "var(--surface2)", borderRadius: 12, padding: "14px 24px" }}>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Code PIN</div>
+                <div style={{ fontFamily: "var(--font-head)", fontSize: 36, fontWeight: 800, color: "var(--accent)", letterSpacing: 8 }}>{admin.pin}</div>
+              </div>
+            )}
+            {admin.role === "director" && (
+              <div style={{ background: "var(--surface2)", borderRadius: 12, padding: "14px 24px", textAlign: "left" }}>
+                <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 4 }}>📧 Email d'accès</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--accent)" }}>{admin.email}</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>🔐 Il créera son mot de passe à la première connexion</div>
+              </div>
+            )}
             <button className="btn btn-green" style={{ width: "100%", justifyContent: "center", fontSize: 15 }} onClick={() => { window.open(waUrl, "_blank"); setModal(null); }}>📲 Envoyer via WhatsApp</button>
           </div>
           <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setModal(null)}>Fermer sans envoyer</button></div>
