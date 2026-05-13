@@ -49,7 +49,7 @@ const T = {
     directTransfer: "Transfert direct — aucune approbation requise",
     needsApproval: "Votre demande sera soumise à approbation par un admin",
     transferNow: "Transférer maintenant", sendReq: "Envoyer la demande",
-    newSite: "Nouveau chantier", siteName: "Nom du chantier...", newBtn: "+ Nouveau", siteLabel: "Chantier",
+    newSite: "Nouveau chantier", siteName: "Nom du chantier...", newBtn: "+ Nouveau", siteLabel: "Chantier", createSite: "+ Créer", colorLabel: "Couleur", active2Label: "Actif", inactive2Label: "Inactif", noSiteMsg: "Aucun chantier — ajoutez-en un ci-dessus.", employees2: "Employés",
     announcements: "Annonces", adminMessages: "Messages Admins",
     readOnly: "Lecture seule — contactez votre Directeur ou Admin pour toute question",
     writeAnnouncement: "Écrire une annonce...",
@@ -112,7 +112,7 @@ const T = {
     directTransfer: "Direct transfer — no approval required",
     needsApproval: "Your request will be submitted for admin approval",
     transferNow: "Transfer now", sendReq: "Send request",
-    newSite: "New job site", siteName: "Job site name...", newBtn: "+ New", siteLabel: "Job Site",
+    newSite: "New job site", siteName: "Job site name...", newBtn: "+ New", siteLabel: "Job Site", createSite: "+ Create", colorLabel: "Color", active2Label: "Active", inactive2Label: "Inactive", noSiteMsg: "No job sites — add one above.", employees2: "Employees",
     announcements: "Announcements", adminMessages: "Admin Messages",
     readOnly: "Read only — contact your Director or Admin for any question",
     writeAnnouncement: "Write an announcement...",
@@ -1840,13 +1840,13 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <input className="form-input" style={{ flex: 1, minWidth: 200 }} placeholder={tx.siteName} value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === "Enter" && newName.trim() && (addChantier(newName, newColor), setNewName(""))} />
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <span style={{ fontSize: 11, color: "var(--muted)" }}>Couleur :</span>
+              <span style={{ fontSize: 11, color: "var(--muted)" }}>{tx.colorLabel} :</span>
               {CHANTIER_COLORS.map(c => <button key={c} onClick={() => setNewColor(c)} style={{ width: 24, height: 24, borderRadius: "50%", background: c, border: newColor === c ? "3px solid #fff" : "2px solid transparent", cursor: "pointer" }} />)}
             </div>
-            <button className="btn btn-primary" disabled={!newName.trim()} onClick={() => { addChantier(newName, newColor); setNewName(""); }}>+ Créer</button>
+            <button className="btn btn-primary" disabled={!newName.trim()} onClick={() => { addChantier(newName, newColor); setNewName(""); }}>{tx.createSite}</button>
           </div>
         </div>
-        {chantiers.length === 0 && <div style={{ color: "var(--muted)", textAlign: "center", padding: "40px 0" }}>Aucun chantier — ajoutez-en un ci-dessus.</div>}
+        {chantiers.length === 0 && <div style={{ color: "var(--muted)", textAlign: "center", padding: "40px 0" }}>{tx.noSiteMsg}</div>}
         <div className="cards-grid">
           {chantiers.map(c => {
             const toolsOnSite = tools.filter(t => t.location === c.name && t.status === "assigned");
@@ -1857,16 +1857,16 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx
               <div key={c.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderTop: `4px solid ${c.color}`, borderRadius: 12, overflow: "hidden" }}>
                 <div style={{ padding: 16 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
-                    <div><div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800 }}>{c.name}</div><span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, marginTop: 4, display: "inline-block", background: isActive ? "rgba(39,201,122,.15)" : "rgba(120,120,140,.12)", color: isActive ? "var(--green)" : "var(--muted)" }}>{isActive ? "🟢 Actif" : "⚪ Inactif"}</span></div>
+                    <div><div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800 }}>{c.name}</div><span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, marginTop: 4, display: "inline-block", background: isActive ? "rgba(39,201,122,.15)" : "rgba(120,120,140,.12)", color: isActive ? "var(--green)" : "var(--muted)" }}>{isActive ? `🟢 ${tx.active2Label}` : `⚪ ${tx.inactive2Label}`}</span></div>
                     <button onClick={() => deleteChantier(c.id)} style={{ background: isActive ? "rgba(120,120,140,.1)" : "rgba(232,82,10,.1)", border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: isActive ? "not-allowed" : "pointer", fontSize: 15, opacity: isActive ? .4 : 1 }}>🗑</button>
                   </div>
                   <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 6 }}>🔧 Outils ({toolsOnSite.length})</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 6 }}>{`🔧 ${tx.tools} (${toolsOnSite.length})`}</div>
                     {toolsOnSite.length === 0 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>{tx.noTool}</div> : toolsOnSite.map(t => <div key={t.id} style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}><span>{t.photo}</span><span>{t.name}</span></div>)}
                   </div>
                   {emps.length > 0 && (
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, width: "100%", marginBottom: 2 }}>👷 Employés</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, width: "100%", marginBottom: 2 }}>{`👷 ${tx.employees2}`}</div>
                       {emps.map(p => <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(58,142,246,.12)", border: "1px solid rgba(58,142,246,.2)", borderRadius: 20, padding: "3px 10px" }}><div style={{ width: 18, height: 18, borderRadius: 5, background: "var(--blue)", color: "#fff", fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>{p.avatar}</div><span style={{ fontSize: 11, color: "var(--blue)", fontWeight: 600 }}>{p.name.split(" ")[0]}</span></div>)}
                     </div>
                   )}
@@ -2582,7 +2582,7 @@ function LoginScreen({ users, companies, onLogin, db, lang, setLanguage, t }) {
           </div>
         )}
         {viewerUsers.length > 0 && (
-          <><div className="login-sub">👷 Employés — Choisissez votre profil</div>
+          <><div className="login-sub">{`👷 ${t.employee}s — ${t.chooseProfile}`}</div>
           <div className="user-select-list">{viewerUsers.map(u => <PinLogin key={u.id} user={u} onSuccess={onLogin} />)}</div></>
         )}
         {companyUsers.length === 0 && <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: "20px 0" }}>Aucun profil dans cette compagnie</div>}
