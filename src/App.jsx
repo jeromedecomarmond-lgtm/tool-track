@@ -1525,7 +1525,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                       viewer: []
                     };
                     const effectiveRole = (realUser || currentUser)?.role;
-                    const canDelete = !isSelf && (deleteRules[effectiveRole] || []).includes(u.role);
+                    const canDelete = !isSelf && (deleteRules[effectiveRole] || []).includes(u.role) && !(isSupervising && isSelf);
                     const hierarchy = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
                     const canSupervise = onSupervise && !isSelf && (hierarchy[currentUser.role] || 0) > (hierarchy[u.role] || 0);
                     return (
@@ -1549,16 +1549,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                               🗑 {tx.deleteAccount}
                             </button>
                           )}
-                          {/* Bouton suppression par SuperAdmin en supervision */}
-                          {isSupervising && u.role === "director" && (realUser || currentUser)?.role === "superadmin" && (
-                            <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center", marginBottom: 8 }} onClick={() => {
-                              if (assignedTools.length > 0) { showToast("⚠️ Des outils sont encore confiés !", "warn"); return; }
-                              if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { 
-                                deleteDoc(doc(db, "users", String(u.id))); 
-                                showToast(`🗑 ${tx.profileDeleted}`); 
-                              }
-                            }}>{`🗑 ${tx.deleteBtn}`}</button>
-                          )}
+
                           {canSeePins && u.pin && (
                             <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                               <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 600 }}>🔑 PIN</div>
