@@ -2531,7 +2531,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                             <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="Téléphone" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email * (invitation envoyée)" type="email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
                             
                             
-                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || !adminForm.email.trim()} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.email.includes("@") || !adminForm.phone.trim()} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
                           </div>
                         ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>}
                       </div>
