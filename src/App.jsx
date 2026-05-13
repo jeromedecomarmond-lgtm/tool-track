@@ -1527,16 +1527,20 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
   }
   if (modal.type === "whatsappInvite") {
     const admin = modal.data;
-    const msg = encodeURIComponent(`Bonjour ${admin.name} 👋\n\nVous avez été nommé *Administrateur* de *${admin.companyName}* sur *Tool Track*.\n\n📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n👤 Votre profil : *${admin.name}*\n🔑 Votre code PIN : *${admin.pin}*\n\nOuvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n_Bonne gestion !_ 🚀`);
+    const roleLabel = admin.role === "director" ? "Directeur" : "Administrateur";
+    const loginInfo = admin.role === "director"
+      ? `📧 Votre email : *${admin.email}*\n🔐 Créez votre mot de passe à la première connexion`
+      : `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n🔑 Votre code PIN : *${admin.pin}*`;
+    const msg = encodeURIComponent(`Bonjour ${admin.name} 👋\n\nVous avez été nommé *${roleLabel}* de *${admin.companyName}* sur *Tool Track*.\n\n📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n${loginInfo}\n\nOuvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n_Bonne gestion !_ 🚀`);
     const phone = admin.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
     const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
     return (
       <div className="modal-overlay" onClick={() => setModal(null)}>
         <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
-          <div className="modal-header"><h3>✅ Admin créé !</h3><button className="close-btn" onClick={() => setModal(null)}>×</button></div>
+          <div className="modal-header"><h3>✅ {admin.role === "director" ? "Directeur" : "Admin"} créé !</h3><button className="close-btn" onClick={() => setModal(null)}>×</button></div>
           <div className="modal-body" style={{ textAlign: "center", gap: 16 }}>
             <div style={{ width: 60, height: 60, borderRadius: 14, background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, margin: "0 auto" }}>{admin.avatar}</div>
-            <div><div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800 }}>{admin.name}</div><div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>🔑 Admin · {admin.companyName}</div></div>
+            <div><div style={{ fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800 }}>{admin.name}</div><div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{admin.role === "director" ? "🏢 Directeur" : "🔑 Admin"} · {admin.companyName}</div></div>
             <div style={{ background: "var(--surface2)", borderRadius: 12, padding: "14px 24px" }}>
               <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Code PIN</div>
               <div style={{ fontFamily: "var(--font-head)", fontSize: 36, fontWeight: 800, color: "var(--accent)", letterSpacing: 8 }}>{admin.pin}</div>
