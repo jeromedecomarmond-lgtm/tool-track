@@ -2580,12 +2580,6 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                                 <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>🔑 {u.pin}{u.phone ? ` · 📞 ${u.phone}` : ""}</div></div>
                                 <div style={{ display: "flex", gap: 6 }}>
                                   {onSupervise && <button className="btn btn-blue btn-sm" style={{ fontSize: 11, padding: "4px 10px" }} onClick={() => onSupervise(u)}>👁 Voir</button>}
-                                  <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.15)", color: "var(--red)", fontSize: 11, padding: "4px 8px" }} onClick={() => {
-                                    if (String(u.id) === String(currentUser.id)) { showToast(`❌ ${tx.cannotDeleteSelf}`); return; }
-                                    const deleteRules = { superadmin: ["director","admin","viewer"], director: ["admin","viewer"], admin: ["viewer"], viewer: [] };
-                                    if (!(deleteRules[currentUser.role] || []).includes(u.role)) { showToast(`❌ ${tx.cannotDeleteRole}`); return; }
-                                    if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${u.name} ${tx.profileDeleted}`); }
-                                  }}>🗑</button>
                                 </div>
                               </div>
                             ))}
