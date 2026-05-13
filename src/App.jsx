@@ -56,6 +56,16 @@ const T = {
     newCompany2: "+ Nouvelle", addDirector: "+ Ajouter un Directeur",
     deleteAccount: "Supprimer mon compte", toolsOnSiteLabel: "Outils sur chantiers",
     active2: "Active", suspended2: "Suspendue",
+    noCompany: "Aucune compagnie — créez-en une !", toolManagement: "Gestion d'outils",
+    disconnect: "Déconnexion", actives: "Actives", total: "Total",
+    expiredLabel: "Expiré", addDirector2: tx.addDirector2, maxReached: "Maximum atteint",
+    suspend2: "Suspendre", reactivate2: "Réactiver", deleteCompany: "Supprimer",
+    expiryContact: "Expiration & Contact", noDate: "Aucune date", notDefined: tx.notDefined,
+    none: "Aucun", saveBtn: "Sauvegarder", newAnnouncement: "Nouvelle annonce",
+    adminMsg: "Message entre admins", visibleAll: "Visible par tous — les employés pourront lire mais pas répondre",
+    visibleAdmins: "Visible uniquement par les admins", noAnnouncement: "Aucune annonce",
+    noAdminMsg: tx.noAdminMsg, subject: "Sujet", yourMessage: "Votre message...",
+    from: "De", required2: "obligatoire",
   },
   en: {
     dashboard: "Dashboard", tools: "Tools", chantiers: "Job Sites",
@@ -109,6 +119,16 @@ const T = {
     newCompany2: "+ New", addDirector: "+ Add a Director",
     deleteAccount: "Delete my account", toolsOnSiteLabel: "Tools on job sites",
     active2: "Active", suspended2: "Suspended",
+    noCompany: "No companies yet — create one!", toolManagement: "Tool management",
+    disconnect: "Disconnect", actives: "Active", total: "Total",
+    expiredLabel: "Expired", addDirector2: "Add a Director", maxReached: "Maximum reached",
+    suspend2: "Suspend", reactivate2: "Reactivate", deleteCompany: "Delete",
+    expiryContact: "Expiry & Contact", noDate: "No date", notDefined: "Not defined",
+    none: "None", saveBtn: "Save", newAnnouncement: "New announcement",
+    adminMsg: "Admin message", visibleAll: "Visible to all — employees can read but not reply",
+    visibleAdmins: "Visible to admins only", noAnnouncement: "No announcements",
+    noAdminMsg: "No admin messages", subject: "Subject", yourMessage: "Your message...",
+    from: "From", required2: "required",
   }
 };
 
@@ -714,7 +734,7 @@ export default function App() {
 
       {/* SIDEBAR */}
       <aside className="sidebar" style={{ marginTop: isSupervising ? 36 : 0, paddingTop: isSupervising ? 0 : undefined }}>
-        <div className="sidebar-logo"><h1>TOOL<br/>TRACK</h1><p>Gestion d'outils</p></div>
+        <div className="sidebar-logo"><h1>TOOL<br/>TRACK</h1><p>{tx.toolManagement}</p></div>
         <nav className="sidebar-nav">
           {navItems.map(item => (
             <button key={item.key} className={`nav-item ${page === item.key ? "active" : ""}`} onClick={() => setPage(item.key)}>
@@ -728,7 +748,7 @@ export default function App() {
             <div className="avatar">{effectiveUser.avatar}</div>
             <div className="user-info"><div className="name">{effectiveUser.name.split(" ")[0]}</div><div className="role">{isSupervising ? "👁 supervision" : effectiveUser.role}</div></div>
           </div>
-          <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={isSupervising ? stopSupervision : logoutUser}>{isSupervising ? "✕ Quitter supervision" : "⇄ Déconnexion"}</button>
+          <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginTop: 8, justifyContent: "center" }} onClick={isSupervising ? stopSupervision : logoutUser}>{isSupervising ? "✕ Quitter supervision" : `⇄ ${tx.disconnect}`}</button>
           {!isSupervising && effectiveUser?.role === "director" && (
             <button className="btn btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center", background: "rgba(232,64,40,.1)", color: "var(--red)", border: "1px solid rgba(232,64,40,.3)", fontSize: 11 }} onClick={deleteDirectorSelf}>
               {tx.deleteAccount}
@@ -2131,7 +2151,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx })
         <div className="topbar">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <button className="btn btn-ghost btn-sm" onClick={() => setSelected(null)}>← Retour</button>
-            <div><h2 style={{ fontSize: 17 }}>{selectedConv.subject}</h2><div style={{ fontSize: 11, color: "var(--muted)" }}>{selectedConv.type === "annonce" ? "📢 Annonce — visible par toute l'équipe" : "🔑 Messages Directeurs & Admins uniquement"}</div></div>
+            <div><h2 style={{ fontSize: 17 }}>{selectedConv.subject}</h2><div style={{ fontSize: 11, color: "var(--muted)" }}>{selectedConv.type === "annonce" ? `📢 ${tx.visibleAll}` : `🔑 ${tx.adminMessages}`}</div></div>
           </div>
         </div>
         <div className="content" style={{ display: "flex", flexDirection: "column", height: "calc(100% - 70px)" }}>
@@ -2174,7 +2194,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx })
             </div>
           ) : (
             <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, textAlign: "center", fontSize: 12, color: "var(--muted)", fontStyle: "italic", padding: 16 }}>
-              📢 Annonce officielle — lecture seule<br/>
+              {`📢 ${tx.readOnly}`}<br/>
               <span style={{ fontSize: 11 }}>Pour toute question, contactez votre Directeur ou Admin</span>
             </div>
           )}
@@ -2189,7 +2209,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx })
       <div className="content">
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           <button className={`filter-btn ${tab === "annonces" ? "active" : ""}`} onClick={() => { setTab("annonces"); setSelected(null); setNewConvOpen(false); }}>
-            📢 Annonces {conversations.filter(c => c.type === "annonce").length > 0 && `(${conversations.filter(c => c.type === "annonce").length})`}
+            📢 {tx.announcements} {conversations.filter(c => c.type === "annonce").length > 0 && `(${conversations.filter(c => c.type === "annonce").length})`}
             {unreadAnnonces > 0 && <span style={{ background: "var(--red)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10, marginLeft: 4 }}>{unreadAnnonces}</span>}
           </button>
           {isAdmin && (
@@ -2201,14 +2221,14 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx })
         </div>
         {newConvOpen && isAdmin && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
-            <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800, color: "var(--accent)", marginBottom: 10 }}>{tab === "annonces" ? "📢 Nouvelle annonce" : "🔑 Message entre admins"}</div>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800, color: "var(--accent)", marginBottom: 10 }}>{tab === "annonces" ? `📢 ${tx.newAnnouncement}` : `🔑 ${tx.adminMsg}`}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              <input className="form-input" placeholder="Sujet *" value={newSubject} onChange={e => setNewSubject(e.target.value)} />
-              <textarea className="form-input" rows={3} placeholder="Votre message..." value={newText} onChange={e => setNewText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); createConversation(); } }} />
-              <div style={{ fontSize: 11, color: "var(--muted)" }}>{tab === "annonces" ? "📢 Visible par tous — les employés pourront lire mais pas répondre" : "🔑 Visible uniquement par les admins"}</div>
+              <input className="form-input" placeholder={tx.subject + " *"} value={newSubject} onChange={e => setNewSubject(e.target.value)} />
+              <textarea className="form-input" rows={3} placeholder={tx.yourMessage} value={newText} onChange={e => setNewText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); createConversation(); } }} />
+              <div style={{ fontSize: 11, color: "var(--muted)" }}>{tab === "annonces" ? tx.visibleAll : tx.visibleAdmins}</div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => setNewConvOpen(false)}>Annuler</button>
-                <button className="btn btn-primary btn-sm" disabled={!newSubject.trim() || !newText.trim()} onClick={createConversation}>Envoyer</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setNewConvOpen(false)}>{tx.cancel}</button>
+                <button className="btn btn-primary btn-sm" disabled={!newSubject.trim() || !newText.trim()} onClick={createConversation}>{tx.send}</button>
               </div>
             </div>
           </div>
@@ -2216,7 +2236,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx })
         {tabConvs.length === 0 && !newConvOpen && (
           <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>{tab === "annonces" ? "📢" : "🔑"}</div>
-            <div>{tab === "annonces" ? "Aucune annonce" : "Aucun message entre admins"}</div>
+            <div>{tab === "annonces" ? tx.noAnnouncement : tx.noAdminMsg}</div>
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2231,7 +2251,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx })
                       {hasUnread && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--accent)", flexShrink: 0 }} />}
                       <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: hasUnread ? 800 : 600 }}>{c.subject}</div>
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>De {c.createdByName} · {c.messages?.length || 0} message{(c.messages?.length || 0) > 1 ? "s" : ""}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{tx.from} {c.createdByName} · {c.messages?.length || 0} message{(c.messages?.length || 0) > 1 ? "s" : ""}</div>
                     {lastMsg && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}><strong>{lastMsg.fromName}</strong> : {lastMsg.text}</div>}
                   </div>
                   <div style={{ fontSize: 10, color: "var(--muted)", flexShrink: 0 }}>{fmtT(c.lastDate)}</div>
@@ -2322,10 +2342,10 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 
   return (
     <>
-      <div className="topbar"><h2>🏢 {tx.companies}</h2><button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>+ Nouvelle</button></div>
+      <div className="topbar"><h2>🏢 {tx.companies}</h2><button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>{tx.newCompany2}</button></div>
       <div className="content">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
-          {[{ label: "Total", count: companies.length, color: "var(--accent)" }, { label: "🟢 Actives", count: companies.filter(c => c.active !== false).length, color: "var(--green)" }, { label: "⏸ " + tx.suspended, count: companies.filter(c => c.active === false).length, color: "var(--red)" }].map(s => (
+          {[{ label: tx.total, count: companies.length, color: "var(--accent)" }, { label: "🟢 " + tx.actives, count: companies.filter(c => c.active !== false).length, color: "var(--green)" }, { label: "⏸ " + tx.suspended, count: companies.filter(c => c.active === false).length, color: "var(--red)" }].map(s => (
             <div key={s.label} style={{ background: "var(--surface)", borderRadius: 12, padding: "12px 14px", border: "1px solid var(--border)" }}>
               <div style={{ fontFamily: "var(--font-head)", fontSize: 26, fontWeight: 800, color: s.color }}>{s.count}</div>
               <div style={{ fontSize: 11, color: "var(--muted)" }}>{s.label}</div>
@@ -2334,7 +2354,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
         </div>
         {showForm && (
           <div style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
-            <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800, color: "var(--accent)", marginBottom: 12 }}>🏢 Nouvelle compagnie</div>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800, color: "var(--accent)", marginBottom: 12 }}>🏢 {tx.newCompany}</div>
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
               <div style={{ flex: 1 }}><input className="form-input" style={companyFieldStyle(newName)} placeholder="Nom *" value={newName} onChange={e => setNewName(e.target.value)} />{formSubmitted && !newName.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Nom obligatoire</div>}</div>
               <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid var(--border)", cursor: "pointer", padding: 2 }} />
@@ -2343,10 +2363,10 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
               <div style={{ flex: 1 }}><label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📅 Date d'expiration *</label><input className="form-input" style={companyFieldStyle(newExpiry)} type="date" value={newExpiry} onChange={e => setNewExpiry(e.target.value)} />{formSubmitted && !newExpiry && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Date obligatoire</div>}</div>
               <div style={{ flex: 1 }}><label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📧 Email contact *</label><input className="form-input" style={companyFieldStyle(newContactEmail)} type="email" placeholder="votre@email.com" value={newContactEmail} onChange={e => setNewContactEmail(e.target.value)} />{formSubmitted && !newContactEmail.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Email obligatoire</div>}</div>
             </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormSubmitted(false); }}>Annuler</button><button className="btn btn-primary btn-sm" onClick={createCompany}>Créer</button></div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormSubmitted(false); }}>{tx.cancel}</button><button className="btn btn-primary btn-sm" onClick={createCompany}>{tx.create}</button></div>
           </div>
         )}
-        {companies.length === 0 && !showForm && <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}><div style={{ fontSize: 48, marginBottom: 8 }}>🏢</div><div>Aucune compagnie — créez-en une !</div></div>}
+        {companies.length === 0 && !showForm && <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}><div style={{ fontSize: 48, marginBottom: 8 }}>🏢</div><div>{tx.noCompany}</div></div>}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {companies.map(company => {
             const compUsers = users.filter(u => u.companyId === company.id);
@@ -2367,7 +2387,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         <span>👷 {compUsers.length} · 🔧 {compTools.length}</span>
                         {company.companyPin && <span style={{ background: "var(--surface2)", padding: "1px 8px", borderRadius: 20, fontFamily: "var(--font-head)", fontWeight: 800, color: "var(--accent)", letterSpacing: 3 }}>🔐 {company.companyPin}</span>}
                         {!isActive && <span style={{ color: "var(--red)", fontWeight: 700 }}>⏸ {tx.suspended2}</span>}
-                        {company.expiryDate && days !== null && (days < 0 ? <span style={{ background: "rgba(232,82,10,.2)", color: "var(--red)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>❌ Expiré</span> : days <= 5 ? <span style={{ background: "rgba(245,166,35,.2)", color: "var(--accent)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>⚠️ {days}j</span> : <span style={{ background: "rgba(39,201,122,.15)", color: "var(--green)", fontWeight: 600, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>📅 {new Date(company.expiryDate).toLocaleDateString("fr-MU")}</span>)}
+                        {company.expiryDate && days !== null && (days < 0 ? <span style={{ background: "rgba(232,82,10,.2)", color: "var(--red)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>{`❌ ${tx.expiredLabel}`}</span> : days <= 5 ? <span style={{ background: "rgba(245,166,35,.2)", color: "var(--accent)", fontWeight: 700, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>⚠️ {days}j</span> : <span style={{ background: "rgba(39,201,122,.15)", color: "var(--green)", fontWeight: 600, padding: "1px 8px", borderRadius: 20, fontSize: 11 }}>📅 {new Date(company.expiryDate).toLocaleDateString("fr-MU")}</span>)}
                       </div>
                       {days !== null && days <= 5 && compUsers.filter(u => u.role === "director").length > 0 && (
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
@@ -2380,18 +2400,18 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                   {isExpanded && (
                     <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
                       <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", marginBottom: 8 }}>📅 Expiration & Contact</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--muted)", marginBottom: 8 }}>{`📅 ${tx.expiryContact}`}</div>
                         {editingExpiry === company.id ? (
                           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                             <div style={{ display: "flex", gap: 8 }}>
                               <input className="form-input" type="date" value={editExpiryDate} onChange={e => setEditExpiryDate(e.target.value)} style={{ flex: 1 }} />
                               <input className="form-input" type="email" value={editContactEmail} onChange={e => setEditContactEmail(e.target.value)} style={{ flex: 1 }} />
                             </div>
-                            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setEditingExpiry(null)}>Annuler</button><button className="btn btn-primary btn-sm" onClick={() => saveExpiry(company)}>✅ Sauvegarder</button></div>
+                            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setEditingExpiry(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" onClick={() => saveExpiry(company)}>✅ {tx.saveBtn}</button></div>
                           </div>
                         ) : (
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                            <div><div style={{ fontSize: 12 }}>{company.expiryDate ? `📅 ${new Date(company.expiryDate).toLocaleDateString("fr-MU")}` : "📅 Aucune date"}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>📧 {company.contactEmail || "Non défini"}</div></div>
+                            <div><div style={{ fontSize: 12 }}>{company.expiryDate ? `📅 ${new Date(company.expiryDate).toLocaleDateString("fr-MU")}` : `📅 ${tx.noDate}`}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>📧 {company.contactEmail || tx.notDefined}</div></div>
                             <button className="btn btn-ghost btn-sm" onClick={() => { setEditingExpiry(company.id); setEditExpiryDate(company.expiryDate || ""); setEditContactEmail(company.contactEmail || ""); }}>✏️</button>
                           </div>
                         )}
@@ -2401,7 +2421,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         return (
                           <div key={role} style={{ marginBottom: 8 }}>
                             <div style={{ fontSize: 11, fontWeight: 700, color, textTransform: "uppercase", letterSpacing: .5, marginBottom: 6 }}>{label} ({roleUsers.length})</div>
-                            {roleUsers.length === 0 ? <div style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic", paddingLeft: 8 }}>Aucun</div> : roleUsers.map(u => (
+                            {roleUsers.length === 0 ? <div style={{ fontSize: 11, color: "var(--muted)", fontStyle: "italic", paddingLeft: 8 }}>{tx.none}</div> : roleUsers.map(u => (
                               <div key={u.id} style={{ background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                                 <div style={{ width: 32, height: 32, borderRadius: 8, background: color, color: role === "viewer" ? "#fff" : "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800 }}>{u.avatar}</div>
                                 <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 700 }}>{u.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>🔑 {u.pin}{u.phone ? ` · 📞 ${u.phone}` : ""}</div></div>
@@ -2421,18 +2441,18 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                       })}
                       <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12 }}>
                         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 8 }}>Ajouter un Directeur ({compAdmins.length}/30)</div>
-                        {compAdmins.length >= 30 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>Maximum atteint</div> : creatingAdmin === company.id ? (
+                        {compAdmins.length >= 30 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>{tx.maxReached}</div> : creatingAdmin === company.id ? (
                           <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                             <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
                             <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="Téléphone" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
                             <div style={{ display: "flex", gap: 8, alignItems: "center" }}><input className="form-input" style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, letterSpacing: 8, textAlign: "center" }} maxLength={4} value={adminForm.pin} onChange={e => setAdminForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} /><button className="btn btn-ghost btn-sm" onClick={() => setAdminForm(p => ({ ...p, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>🔄</button></div>
-                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>Annuler</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>Créer</button></div>
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
                           </div>
-                        ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>+ Ajouter un Directeur</button>}
+                        ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>}
                       </div>
                       <div style={{ marginTop: 8, borderTop: "1px solid var(--border)", paddingTop: 12 }}>
                         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                          <button className={`btn btn-sm ${isActive ? "btn-danger" : "btn-green"}`} onClick={() => toggleCompany(company)}>{isActive ? "⏸ Suspendre" : "✅ Réactiver"}</button>
+                          <button className={`btn btn-sm ${isActive ? "btn-danger" : "btn-green"}`} onClick={() => toggleCompany(company)}>{isActive ? `⏸ ${tx.suspend2}` : `✅ ${tx.reactivate2}`}</button>
                           <button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "var(--red)", border: "1px solid rgba(232,82,10,.4)", fontWeight: 700 }} onClick={() => { if (window.confirm(`⚠️ Supprimer "${company.name}" et toutes ses données ?`)) deleteCompany(company); }}>🏚 Supprimer</button>
                         </div>
                       </div>
