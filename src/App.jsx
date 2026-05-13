@@ -2391,10 +2391,6 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
         const cred = await createUserWithEmailAndPassword(auth, adminForm.email.trim(), tempPassword);
         authUid = cred.user.uid;
         userId = authUid;
-        // Envoyer un email pour que le Directeur définisse son propre mot de passe
-        await sendPasswordResetEmail(auth, adminForm.email.trim());
-        // Reconnecter le SuperAdmin (Firebase a connecté le nouveau compte)
-        await signOut(auth);
       } else {
         userId = String(Date.now());
       }
@@ -2413,9 +2409,18 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
         authUid: authUid
       };
 
+      // Sauvegarder dans Firestore AVANT de faire quoi que ce soit d'autre
       await setDoc(doc(db, "users", userId), newAdmin);
+
+      // Envoyer l'email d'invitation APRÈS la sauvegarde
+      if (adminForm.email?.trim()) {
+        await sendPasswordResetEmail(auth, adminForm.email.trim());
+        // Reconnecter le SuperAdmin (Firebase a connecté le nouveau compte)
+        await signOut(auth);
+      }
+
       onAdminCreated({ ...newAdmin });
-      showToast('✅ Directeur créé — email d invitation envoyé !');
+      showToast("✅ Directeur créé — email d'invitation envoyé !");
       setAdminForm({ name: "", phone: "", email: "" });
       setCreatingAdmin(null);
     } catch(e) {
