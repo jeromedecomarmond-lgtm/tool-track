@@ -2320,7 +2320,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
   const [newName, setNewName] = useState(""), [newColor, setNewColor] = useState("#f5a623"), [newExpiry, setNewExpiry] = useState(""), [newContactEmail, setNewContactEmail] = useState(currentUser.email || "");
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
-  const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "", password: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
+  const [adminForm, setAdminForm] = useState({ name: "", phone: "", email: "", password: "" });
   const [creatingAdmin, setCreatingAdmin] = useState(null);
   const [editingExpiry, setEditingExpiry] = useState(null), [editExpiryDate, setEditExpiryDate] = useState(""), [editContactEmail, setEditContactEmail] = useState("");
   const APP_URL = "tool-track-rosy.vercel.app";
@@ -2406,7 +2406,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
         avatar: initials,
         phone: adminForm.phone || "",
         email: adminForm.email?.trim() || "",
-        pin: adminForm.pin,
+        pin: "",
         companyId: company.id,
         companyName: company.name,
         companyPin: company.companyPin || "",
@@ -2415,8 +2415,8 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
 
       await setDoc(doc(db, "users", userId), newAdmin);
       onAdminCreated({ ...newAdmin });
-      showToast(`✅ Directeur créé — PIN: ${adminForm.pin}`);
-      setAdminForm({ name: "", phone: "", email: "", password: "", pin: String(Math.floor(1000 + Math.random() * 9000)) });
+      showToast('✅ Directeur créé — invitation envoyée par WhatsApp');
+      setAdminForm({ name: "", phone: "", email: "", password: "" });
       setCreatingAdmin(null);
     } catch(e) {
       if (e.code === "auth/email-already-in-use") showToast("❌ Cet email est déjà utilisé");
@@ -2530,8 +2530,8 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                             <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
                             <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="Téléphone" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email *" type="email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
                             <input className="form-input" type="password" placeholder="Mot de passe * (6+ caractères)" value={adminForm.password} onChange={e => setAdminForm(p => ({ ...p, password: e.target.value }))} />
-                            <div style={{ display: "flex", gap: 8, alignItems: "center" }}><input className="form-input" style={{ flex: 1, fontFamily: "var(--font-head)", fontSize: 20, fontWeight: 800, letterSpacing: 8, textAlign: "center" }} maxLength={4} value={adminForm.pin} onChange={e => setAdminForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} /><button className="btn btn-ghost btn-sm" onClick={() => setAdminForm(p => ({ ...p, pin: String(Math.floor(1000 + Math.random() * 9000)) }))}>🔄</button></div>
-                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || adminForm.pin.length !== 4 || !adminForm.email.trim() || adminForm.password.length < 6} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
+                            
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || !adminForm.email.trim() || adminForm.password.length < 6} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
                           </div>
                         ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>}
                       </div>
@@ -2746,16 +2746,16 @@ function PinLogin({ user, onSuccess }) {
 
 // ─── FIRST ADMIN FORM ─────────────────────────────────────────────────────────
 function FirstAdminForm({ onSave }) {
-  const [name, setName] = useState(""), [phone, setPhone] = useState(""), [email, setEmail] = useState(""), [password, setPassword] = useState(""), [pin, setPin] = useState(String(Math.floor(1000 + Math.random() * 9000)));
+  const [name, setName] = useState(""), [phone, setPhone] = useState(""), [email, setEmail] = useState(""), [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false), [error, setError] = useState("");
   const handleCreate = async () => {
-    if (!name.trim() || !email.trim() || password.length < 6 || pin.length !== 4) return;
+    if (!name.trim() || !email.trim() || password.length < 6) return;
     setLoading(true); setError("");
     try {
       const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
       const uid = cred.user.uid;
       const initials = name.trim().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-      await onSave({ id: uid, name: name.trim(), role: "superadmin", avatar: initials, phone, email: email.trim(), pin, companyId: null, authUid: uid });
+      await onSave({ id: uid, name: name.trim(), role: "superadmin", avatar: initials, phone, email: email.trim(), pin: "", companyId: null, authUid: uid });
     } catch(e) {
       if (e.code === "auth/email-already-in-use") setError("❌ Cet email est déjà utilisé.");
       else if (e.code === "auth/invalid-email") setError("❌ Email invalide.");
@@ -2769,9 +2769,9 @@ function FirstAdminForm({ onSave }) {
       <div className="form-group"><label className="form-label">Téléphone</label><input className="form-input" placeholder="+230 ..." value={phone} onChange={e => setPhone(e.target.value)} /></div>
       <div className="form-group"><label className="form-label">Email *</label><input className="form-input" type="email" placeholder="vous@email.com" value={email} onChange={e => setEmail(e.target.value)} /></div>
       <div className="form-group"><label className="form-label">Mot de passe * (min. 6 caractères)</label><input className="form-input" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} /></div>
-      <div className="form-group"><label className="form-label">🔑 Code PIN * (pour mobile)</label><input className="form-input" style={{ fontSize: 22, fontWeight: 800, letterSpacing: 8, textAlign: "center" }} maxLength={4} placeholder="4 chiffres" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,"").slice(0,4))} /><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>Le PIN sert à la connexion rapide sur mobile</div></div>
+      
       {error && <div style={{ fontSize: 12, color: "var(--red)", fontWeight: 700 }}>{error}</div>}
-      <button className={`btn btn-primary ${loading ? "loading" : ""}`} disabled={!name.trim() || !email.trim() || password.length < 6 || pin.length !== 4 || loading} onClick={handleCreate} style={{ justifyContent: "center", marginTop: 4 }}>{loading ? "⏳ Création..." : "🚀 Créer et démarrer"}</button>
+      <button className={`btn btn-primary ${loading ? "loading" : ""}`} disabled={!name.trim() || !email.trim() || password.length < 6 || loading} onClick={handleCreate} style={{ justifyContent: "center", marginTop: 4 }}>{loading ? "⏳ Création..." : "🚀 Créer et démarrer"}</button>
     </div>
   );
 }
