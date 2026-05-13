@@ -2457,7 +2457,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
   };
 
   const createFirstAdmin = async (company) => {
-    if (!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.phone.trim()) return;
+    if (!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.phone.trim() || adminForm.phone.trim().length < 7) return;
     const initials = adminForm.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
     // Récupérer le companyPin frais depuis la liste companies
     const freshCompany = companies.find(c => c.id === company.id) || company;
@@ -2597,10 +2597,10 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         {compAdmins.length >= 30 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>{tx.maxReached}</div> : creatingAdmin === company.id ? (
                           <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
                             <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
-                            <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="Téléphone" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email * (invitation envoyée)" type="email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
+                            <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="📞 Téléphone * (min. 7 chiffres)" type="tel" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email * (invitation envoyée)" type="email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
                             
                             
-                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.email.includes("@") || !adminForm.phone.trim()} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.email.includes("@") || adminForm.phone.trim().length < 7} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
                           </div>
                         ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>}
                       </div>
