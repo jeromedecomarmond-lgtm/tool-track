@@ -2379,7 +2379,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
   };
 
   const createFirstAdmin = async (company) => {
-    if (!adminForm.name.trim() || adminForm.pin.length !== 4) return;
+    if (!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.phone.trim()) return;
     const initials = adminForm.name.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase();
 
     try {
