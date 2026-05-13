@@ -49,7 +49,7 @@ const T = {
     directTransfer: "Transfert direct — aucune approbation requise",
     needsApproval: "Votre demande sera soumise à approbation par un admin",
     transferNow: "Transférer maintenant", sendReq: "Envoyer la demande",
-    newSite: "Nouveau chantier", siteName: "Nom du chantier...",
+    newSite: "Nouveau chantier", siteName: "Nom du chantier...", newBtn: "+ Nouveau",
     announcements: "Annonces", adminMessages: "Messages Admins",
     readOnly: "Lecture seule — contactez votre Directeur ou Admin pour toute question",
     writeAnnouncement: "Écrire une annonce...",
@@ -112,7 +112,7 @@ const T = {
     directTransfer: "Direct transfer — no approval required",
     needsApproval: "Your request will be submitted for admin approval",
     transferNow: "Transfer now", sendReq: "Send request",
-    newSite: "New job site", siteName: "Job site name...",
+    newSite: "New job site", siteName: "Job site name...", newBtn: "+ New",
     announcements: "Announcements", adminMessages: "Admin Messages",
     readOnly: "Read only — contact your Director or Admin for any question",
     writeAnnouncement: "Write an announcement...",
@@ -2214,7 +2214,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx })
 
   return (
     <>
-      <div className="topbar"><h2>💬 {tx.messages}</h2>{isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setNewConvOpen(true)}>+ Nouveau</button>}</div>
+      <div className="topbar"><h2>💬 {tx.messages}</h2>{isAdmin && <button className="btn btn-primary btn-sm" onClick={() => setNewConvOpen(true)}>{tx.newBtn}</button>}</div>
       <div className="content">
         <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
           <button className={`filter-btn ${tab === "annonces" ? "active" : ""}`} onClick={() => { setTab("annonces"); setSelected(null); setNewConvOpen(false); }}>
