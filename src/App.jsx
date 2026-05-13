@@ -49,7 +49,7 @@ const T = {
     directTransfer: "Transfert direct — aucune approbation requise",
     needsApproval: "Votre demande sera soumise à approbation par un admin",
     transferNow: "Transférer maintenant", sendReq: "Envoyer la demande",
-    newSite: "Nouveau chantier", siteName: "Nom du chantier...", newBtn: "+ Nouveau", siteLabel: "Chantier", createSite: "+ Créer", colorLabel: "Couleur", active2Label: "Actif", inactive2Label: "Inactif", noSiteMsg: "Aucun chantier — ajoutez-en un ci-dessus.", employees2: "Employés",
+    newSite: "Nouveau chantier", siteName: "Nom du chantier...", newBtn: "+ Nouveau", siteLabel: "Chantier", createSite: "+ Créer", colorLabel: "Couleur", active2Label: "Actif", inactive2Label: "Inactif", noSiteMsg: "Aucun chantier — ajoutez-en un ci-dessus.", employees2: "Employés", supervisionMode: "Mode supervision — vous voyez l'app comme", supervisionRole: "rôle", quitSupervision: "✕ Quitter la supervision",
     announcements: "Annonces", adminMessages: "Messages Admins",
     readOnly: "Lecture seule — contactez votre Directeur ou Admin pour toute question",
     writeAnnouncement: "Écrire une annonce...",
@@ -112,7 +112,7 @@ const T = {
     directTransfer: "Direct transfer — no approval required",
     needsApproval: "Your request will be submitted for admin approval",
     transferNow: "Transfer now", sendReq: "Send request",
-    newSite: "New job site", siteName: "Job site name...", newBtn: "+ New", siteLabel: "Job Site", createSite: "+ Create", colorLabel: "Color", active2Label: "Active", inactive2Label: "Inactive", noSiteMsg: "No job sites — add one above.", employees2: "Employees",
+    newSite: "New job site", siteName: "Job site name...", newBtn: "+ New", siteLabel: "Job Site", createSite: "+ Create", colorLabel: "Color", active2Label: "Active", inactive2Label: "Inactive", noSiteMsg: "No job sites — add one above.", employees2: "Employees", supervisionMode: "Supervision mode — you are viewing the app as", supervisionRole: "role", quitSupervision: "✕ Quit supervision",
     announcements: "Announcements", adminMessages: "Admin Messages",
     readOnly: "Read only — contact your Director or Admin for any question",
     writeAnnouncement: "Write an announcement...",
@@ -732,8 +732,8 @@ export default function App() {
       {isSupervising && (
         <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 9999, height: 40, background: "#f5a623", color: "#000", padding: "0 20px", display: "flex", alignItems: "center", gap: 12, fontSize: 13, fontWeight: 700 }}>
           <span style={{ fontSize: 18 }}>👁</span>
-          <span style={{ flex: 1 }}>Mode supervision — vous voyez l'app comme <strong>{supervisedUser.fakeUser.name}</strong> ({supervisedUser.fakeUser.role})</span>
-          <button onClick={stopSupervision} style={{ background: "#000", color: "#f5a623", border: "none", borderRadius: 8, padding: "4px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>✕ Quitter la supervision</button>
+          <span style={{ flex: 1 }}>{tx.supervisionMode} <strong>{supervisedUser.fakeUser.name}</strong> ({supervisedUser.fakeUser.role})</span>
+          <button onClick={stopSupervision} style={{ background: "#000", color: "#f5a623", border: "none", borderRadius: 8, padding: "4px 14px", fontWeight: 800, fontSize: 12, cursor: "pointer" }}>{tx.quitSupervision}</button>
         </div>
       )}
 
