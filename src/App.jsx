@@ -1540,8 +1540,8 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                             {u.phone && <div style={{ fontSize: 12, color: "var(--muted)" }}>📞 {u.phone}</div>}
                             {u.email && <div style={{ fontSize: 12, color: "var(--muted)" }}>✉️ {u.email}</div>}
                           </div>
-                          {/* Bouton auto-suppression pour le Directeur lui-même */}
-                          {isSelf && u.role === "director" && !isSupervising && (
+                          {/* Bouton auto-suppression pour le Directeur — visible aussi en supervision SuperAdmin */}
+                          {isSelf && u.role === "director" && (
                             <button className="btn btn-sm" style={{ width: "100%", justifyContent: "center", background: "rgba(232,64,40,.1)", color: "var(--red)", border: "1px solid rgba(232,64,40,.3)", fontSize: 11, marginBottom: 8 }} onClick={deleteDirectorSelf}>
                               🗑 {tx.deleteAccount}
                             </button>
