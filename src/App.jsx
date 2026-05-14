@@ -279,8 +279,8 @@ const css = `
   .history-list { display: flex; flex-direction: column; }
   .history-item { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
   .history-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-  .history-text { font-size: 12px; color: var(--muted); }
-  .history-date { font-size: 11px; color: var(--border); }
+  .history-text { font-size: 13px; color: var(--text); }
+  .history-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .reminder-banner { background: rgba(232,82,10,.12); border: 1px solid rgba(232,82,10,.4); border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
   .reminder-banner p { font-size: 13px; color: #f07030; }
   .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -1878,10 +1878,10 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             <div className="history-list">
               {[...(tool.history || [])].reverse().map((h, i) => (
                 <div key={i} className="history-item">
-                  <div className="history-dot" />
+                  <div className="history-dot" style={{ background: h.action?.startsWith("✅") ? "var(--green)" : h.action?.startsWith("📋") ? "var(--accent)" : h.action?.startsWith("🔄") || h.action?.startsWith("📤") ? "var(--blue)" : h.action?.startsWith("🏠") ? "var(--green)" : h.action?.startsWith("🔴") ? "var(--red)" : "var(--accent)" }} />
                   <div>
-                    <div className="history-text" style={{ fontWeight: h.action.includes("Confié") || h.action.includes("Transféré") ? 600 : 400 }}>{h.action}</div>
-                    <div className="history-date">{h.date} — {tx.byLabel} {h.by}</div>
+                    <div className="history-text" style={{ fontWeight: 600 }}>{h.action}</div>
+                    <div className="history-date">📅 {h.date} — {tx.byLabel} {h.by}</div>
                   </div>
                 </div>
               ))}
