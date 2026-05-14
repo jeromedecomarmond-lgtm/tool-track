@@ -1919,7 +1919,7 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
                   {/* Règle stricte : on ne crée que des rôles STRICTEMENT inférieurs */}
                   {["admin","director","superadmin"].includes(currentUser?.role) && <option value="viewer">👷 Employé</option>}
                   {["director","superadmin"].includes(currentUser?.role) && <option value="admin">🔑 Admin</option>}
-                  {currentUser?.role === "superadmin" && <option value="director">🏢 Directeur</option>}
+                  {["superadmin","director"].includes(currentUser?.role) && <option value="director">🏢 Directeur</option>}
                   {/* Admin → Employé seulement | Directeur → Admin + Employé | SuperAdmin → tous sauf SuperAdmin */}
                 </select>
               </div>
