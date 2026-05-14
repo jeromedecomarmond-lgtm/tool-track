@@ -684,9 +684,16 @@ export default function App() {
       : actionBy;
 
     let action = "";
-    if (direction === "out") action = `📤 Store → ${toPerson} — ${toLocation}`;
-    else if (newViewer && chantier) action = `🔄 ${fromPerson} — ${fromLocation} → ${toPerson} — ${toLocation}`;
-    else action = `🏠 ${prevOwner ? prevOwner.name + " — " + fromLocation : fromLocation} → Store`;
+    if (direction === "out" && fromLocation === "Store") {
+      // Sortie du store
+      action = `📤 Store → ${toPerson} — ${toLocation}`;
+    } else if (newViewer && chantier) {
+      // Transfert entre employés/chantiers
+      action = `🔄 ${fromPerson} — ${fromLocation} → ${toPerson} — ${toLocation}`;
+    } else {
+      // Retour au store
+      action = `🏠 ${prevOwner ? prevOwner.name + " — " + fromLocation : fromLocation} → Store`;
+    }
 
     const updatedTool = {
       ...tool,
