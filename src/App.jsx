@@ -781,17 +781,13 @@ export default function App() {
 
   // FIX #6 — filtrage outils : employé ET chantier sont mutuellement exclusifs
   const displayedTools = filteredTools.filter(tool => {
+    if (!isAdmin) return String(tool.assignedTo) === String(effectiveUser.id) || tool.status === "store";
+    // Tous les filtres s'appliquent ensemble (AND)
     const matchStatus = filterStatus === "all" || tool.status === filterStatus;
     const matchSearch = !search || tool.name.toLowerCase().includes(search.toLowerCase()) || (tool.ref || "").toLowerCase().includes(search.toLowerCase());
-    if (!isAdmin) return String(tool.assignedTo) === String(effectiveUser.id) || tool.status === "store";
-    if (filterUser !== "all") {
-      const matchEmploye = String(tool.assignedTo) === filterUser || (filterUser === "none" && !tool.assignedTo);
-      return matchStatus && matchEmploye && matchSearch;
-    }
-    if (filterChantier !== "all") {
-      return matchStatus && tool.location === filterChantier && matchSearch;
-    }
-    return matchStatus && matchSearch;
+    const matchUser = filterUser === "all" || String(tool.assignedTo) === filterUser || (filterUser === "none" && !tool.assignedTo);
+    const matchChantier = filterChantier === "all" || tool.location === filterChantier;
+    return matchStatus && matchSearch && matchUser && matchChantier;
   });
 
   // ── RENDER ──────────────────────────────────────────────────────────────────
