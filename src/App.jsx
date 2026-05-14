@@ -1511,23 +1511,22 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                 <div className="cards-grid">
                   {roleUsers.map(u => {
                     const assignedTools = filteredTools.filter(t => String(t.assignedTo) === String(u.id));
-                    const isSelf = String(u.id) === String(currentUser.id);
-                    // Règle stricte de suppression :
-                    // - Jamais soi-même
-                    // - SuperAdmin → peut supprimer Directeur, Admin, Employé
-                    // - Directeur → peut supprimer Admin et Employé seulement
-                    // - Admin → peut supprimer Employé seulement
-                    // - Employé → personne
+                    // En supervision, utiliser realUser pour les permissions
+                    const activeUser = realUser || currentUser;
+                    const isSelf = isSupervising
+                      ? String(u.id) === String(currentUser.id) // en supervision, "soi" = compte supervisé
+                      : String(u.id) === String(activeUser.id);
+                    const isRealSelf = String(u.id) === String(activeUser.id); // vrai "moi" = le SuperAdmin
                     const deleteRules = {
                       superadmin: ["director", "admin", "viewer"],
                       director: ["admin", "viewer"],
                       admin: ["viewer"],
                       viewer: []
                     };
-                    const effectiveRole = (realUser || currentUser)?.role;
-                    const canDelete = !isSelf && (deleteRules[effectiveRole] || []).includes(u.role) && !(isSupervising && isSelf);
+                    const effectiveRole = activeUser?.role;
+                    const canDelete = !isRealSelf && (deleteRules[effectiveRole] || []).includes(u.role);
                     const hierarchy = { superadmin: 4, director: 3, admin: 2, viewer: 1 };
-                    const canSupervise = onSupervise && !isSelf && (hierarchy[currentUser.role] || 0) > (hierarchy[u.role] || 0);
+                    const canSupervise = onSupervise && !isRealSelf && (hierarchy[activeUser?.role] || 0) > (hierarchy[u.role] || 0);
                     return (
                       <div key={u.id} style={{ background: "var(--surface)", border: `1px solid ${isSelf ? roleColor : "var(--border)"}`, borderRadius: 12, overflow: "hidden" }}>
                         <div style={{ height: 6, background: roleColor }} />
