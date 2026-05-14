@@ -1340,7 +1340,7 @@ function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest,
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginBottom: 20 }}>
           {[
             { label: "🟢 " + tx.inStore2, count: filteredTools.filter(t => t.status === "store").length, color: "var(--green)" },
-            { label: "🔵 Sur chantiers", count: filteredTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
+            { label: "🔵 " + tx.onSite2, count: filteredTools.filter(t => t.status === "assigned").length, color: "var(--blue)" },
             { label: "🔴 " + tx.nonfunctional, count: filteredTools.filter(t => t.status === "nonfunctional").length, color: "#f07030" },
             { label: "📦 Mes outils", count: myTools.length, color: "var(--accent)" },
           ].map(s => (
@@ -1364,7 +1364,7 @@ function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest,
         )}
         {filteredTools.filter(t => t.status === "assigned").length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--blue)", marginBottom: 10 }}>🔵 Sur chantiers</div>
+            <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--blue)", marginBottom: 10 }}>{`🔵 ${tx.onSite2}`}</div>
             {filteredTools.filter(t => t.status === "assigned").map(tool => {
               const assignee = users.find(u => String(u.id) === String(tool.assignedTo));
               const isMyTool = String(tool.assignedTo) === String(currentUser.id);
@@ -1778,7 +1778,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
           <div className="detail-grid">
             <div className="detail-item"><div className="detail-key">Fournisseur</div><div className="detail-val">{tool.ref || "—"}</div></div>
             <div className="detail-item"><div className="detail-key">Achat</div><div className="detail-val">{tool.purchaseDate ? new Date(tool.purchaseDate).toLocaleDateString("fr-MU") : "—"}</div></div>
-            <div className="detail-item"><div className="detail-key">Statut</div><div className="detail-val">{{ store: "🟢 " + tx.inStore2, assigned: "🔵 Sur chantier", nonfunctional: "🔴 " + tx.nonfunctional, obsolete: "⚫ " + tx.obsolete2 }[tool.status] || tool.status}</div></div>
+            <div className="detail-item"><div className="detail-key">Statut</div><div className="detail-val">{{ store: "🟢 " + tx.inStore2, assigned: "🔵 " + tx.onSite2, nonfunctional: "🔴 " + tx.nonfunctional, obsolete: "⚫ " + tx.obsolete2 }[tool.status] || tool.status}</div></div>
             <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Localisation</div><div className="detail-val">📍 {tool.location}</div></div>
             {assignee && <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Responsable</div><div className="detail-val">👷 {assignee.name}</div></div>}
             {tool.price && (
@@ -1816,7 +1816,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
               </div>
               {tool.status !== "nonfunctional" && tool.status !== "obsolete" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  <div style={{ fontSize: 12, color: "var(--muted)" }}>Signaler un problème :</div>
+                  <div style={{ fontSize: 12, color: "var(--muted)" }}>{tx.reportProblem}</div>
                   <input className="form-input" type="date" value={declareDate} onChange={e => setDeclareDate(e.target.value)} />
                   <input className="form-input" type="text" inputMode="numeric" placeholder={`🇲🇺 ${tx.repairCost}`} value={newEntryCost} onChange={e => { const raw = e.target.value.replace(/\s/g,"").replace(/[^0-9]/g,""); setNewEntryCost(raw.replace(/\B(?=(\d{3})+(?!\d))/g," ")); }} />
                   <textarea className="form-input" rows={2} placeholder={tx.repairNote} value={newEntryNote} onChange={e => setNewEntryNote(e.target.value)} />
