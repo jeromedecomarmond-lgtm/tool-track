@@ -1074,12 +1074,12 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
             <button key={s.val} className={`filter-btn ${filterStatus === s.val ? "active" : ""}`} onClick={() => { setFilterStatus(s.val); setFilterUser("all"); setFilterChantier("all"); }}>{s.label}</button>
           ))}
           {/* FIX #6 — reset indépendant */}
-          <select className="form-input" style={{ width: "auto", fontSize: 12 }} value={filterUser} onChange={e => { setFilterUser(e.target.value); setFilterChantier("all"); }}>
+          <select className="form-input" style={{ width: "auto", fontSize: 12 }} value={filterUser} onChange={e => { setFilterUser(e.target.value); setFilterChantier("all"); setFilterStatus("all"); }}>
             <option value="all">{tx.allEmployees}</option>
             <option value="none">Non assigné</option>
             {viewers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
           </select>
-          <select className="form-input" style={{ width: "auto", fontSize: 12 }} value={filterChantier} onChange={e => { setFilterChantier(e.target.value); setFilterUser("all"); }}>
+          <select className="form-input" style={{ width: "auto", fontSize: 12 }} value={filterChantier} onChange={e => { setFilterChantier(e.target.value); setFilterUser("all"); setFilterStatus("all"); }}>
             <option value="all">{tx.allSites}</option>
             <option value="Store">Store</option>
             {filteredChantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
