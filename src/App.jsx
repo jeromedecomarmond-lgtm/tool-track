@@ -41,7 +41,7 @@ const T = {
     noTool: "Aucun outil", noToolSub: "Cliquez sur + Ajouter un outil pour commencer",
     noRequest: "Aucune demande pour le moment", noMember: "Aucun membre",
     groupRequest: "Demande groupée", requestType: "Type de demande", returnStore2: "Retour store", requestsSent: "Demandes envoyées !", toolsConcerned: "Outils concernés", transferTo2: "Transférer à", reasonNote: "Raison de la demande...", noteOptional: "Note (optionnel)", chooseEmployee2: "— Choisir un employé —", chooseSite2: "— Choisir un chantier —",
-    transferTo: "Transférer à", chooseEmployee: tx.chooseEmployee2, chooseSite: tx.chooseSite2,
+    transferTo: "Transférer à", chooseEmployee: "— Choisir un employé —", chooseSite: "— Choisir un chantier —",
     optNote: "Note optionnelle...", adminWillProcess: "L'admin va traiter vos demandes.",
     requestSent: "Demandes envoyées !",
     noToolAssigned: "Aucun outil confié", toolAssignedSoon: "Un admin vous assignera un outil bientôt.",
