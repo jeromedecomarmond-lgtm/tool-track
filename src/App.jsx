@@ -676,15 +676,23 @@ export default function App() {
     const toLocation = chantier || "Store";
     const toPerson = newViewer ? newViewer.name : null;
     const today = new Date().toLocaleDateString("fr-MU", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    // Traçabilité inter-profils — qui fait l'action et pour qui
+    const actionBy = currentUser.name; // le vrai utilisateur connecté
+    const supervisedName = supervisedUser?.fakeUser?.name || null; // profil supervisé si supervision
+    const byLabel = supervisedName && supervisedName !== actionBy
+      ? `${actionBy} (pour ${supervisedName})`
+      : actionBy;
+
     let action = "";
     if (direction === "out") action = `📤 ${fromLocation} → ${toLocation}${toPerson ? ` — Confié à ${toPerson}` : ""}`;
     else if (newViewer && chantier) action = `🔄 Transféré de ${fromPerson} (${fromLocation}) → ${toPerson} (${toLocation})`;
     else action = `🏠 Retour store — depuis ${fromLocation}${prevOwner ? ` (${prevOwner.name})` : ""}`;
+
     const updatedTool = {
       ...tool,
       status: (newViewer || chantier) && toLocation !== "Store" ? "assigned" : "store",
       assignedTo: newViewer ? String(viewerId) : null, location: toLocation,
-      history: [...tool.history, { date: today, action, by: currentUser.name }],
+      history: [...tool.history, { date: today, action, by: byLabel }],
       lastReminder: newViewer ? new Date().toISOString() : null,
     };
     await setDoc(doc(db, "tools", String(toolId)), updatedTool);
@@ -772,10 +780,32 @@ export default function App() {
       await setDoc(doc(db, "messages", id), { id, from: currentUser.id, to: null, type: "push", text: `⚠️ ${currentUser.name} a signalé "${toolName}" NON FONCTIONNEL.${note ? ` — "${note}"` : ""}`, toolId: String(toolId), date: new Date().toISOString(), read: false });
       showToast("⚠️ Signalement envoyé aux admins"); return;
     }
-    const reqText = type === "transfer"
-      ? `🔄 ${currentUser.name} demande de transférer "${toolName}" (${toolLocation}) → ${targetViewerName} — ${targetChantier}${note ? ` — "${note}"` : ""}`
-      : `🏠 ${currentUser.name} demande le retour au store de "${toolName}" (${toolLocation})${note ? ` — "${note}"` : ""}`;
-    await setDoc(doc(db, "requests", id), { id, type, status: "pending", from: effectiveUser.id, fromName: effectiveUser.name, toolId: String(toolId), toolName, toolLocation, targetViewerId: targetViewerId ? String(targetViewerId) : null, targetViewerName: targetViewerName || null, targetChantier: targetChantier || null, note: note || "", text: reqText, date: new Date().toISOString(), companyId: myCompanyId || null });
+    // Détecter si la demande est faite en supervision (admin au nom d'un employé)
+    const isOnBehalf = isSupervising && supervisedUser?.fakeUser;
+    const requesterName = isOnBehalf ? currentUser.name : effectiveUser.name; // qui fait la demande
+    const onBehalfOf = isOnBehalf ? effectiveUser.name : null; // pour qui (si supervision)
+
+    // Trouver l'outil pour avoir le nom du responsable actuel
+    const toolObj = tools.find(t => String(t.id) === String(toolId));
+    const currentOwner = toolObj?.assignedTo ? users.find(u => String(u.id) === String(toolObj.assignedTo)) : null;
+    const currentOwnerName = currentOwner?.name || null;
+
+    let reqText = "";
+    if (type === "transfer") {
+      if (isOnBehalf) {
+        reqText = `🔄 ${requesterName} demande (au nom de ${onBehalfOf}) de transférer "${toolName}"${currentOwnerName ? ` — actuellement sous la responsabilité de ${currentOwnerName}` : ` (${toolLocation})`} → ${targetViewerName} — ${targetChantier}${note ? ` — "${note}"` : ""}`;
+      } else {
+        reqText = `🔄 ${requesterName} demande le transfert de "${toolName}"${currentOwnerName && currentOwnerName !== requesterName ? ` — actuellement sous la responsabilité de ${currentOwnerName}` : ` (${toolLocation})`} → ${targetViewerName} — ${targetChantier}${note ? ` — "${note}"` : ""}`;
+      }
+    } else {
+      if (isOnBehalf) {
+        reqText = `🏠 ${requesterName} demande (au nom de ${onBehalfOf}) le retour au store de "${toolName}"${currentOwnerName ? ` — actuellement sous la responsabilité de ${currentOwnerName}` : ` (${toolLocation})`}${note ? ` — "${note}"` : ""}`;
+      } else {
+        reqText = `🏠 ${requesterName} demande le retour au store de "${toolName}" (${toolLocation})${note ? ` — "${note}"` : ""}`;
+      }
+    }
+
+    await setDoc(doc(db, "requests", id), { id, type, status: "pending", from: effectiveUser.id, fromName: effectiveUser.name, requestedBy: requesterName, onBehalfOf, toolId: String(toolId), toolName, toolLocation, currentOwnerName, targetViewerId: targetViewerId ? String(targetViewerId) : null, targetViewerName: targetViewerName || null, targetChantier: targetChantier || null, note: note || "", text: reqText, date: new Date().toISOString(), companyId: myCompanyId || null });
     showToast("📨 Demande envoyée aux admins !");
   };
 
@@ -1429,8 +1459,8 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
                   {isAdmin && isPending && (
                     <RequestActions request={r} tool={tool}
                       onApprove={async (adminNote) => {
-                        if (r.type === "transfer" && tool) await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "assigned", assignedTo: String(r.targetViewerId), location: r.targetChantier, history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Transfert approuvé → ${r.targetViewerName} (${r.targetChantier})`, by: currentUser.name }] });
-                        else if (r.type === "return" && tool) await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "store", assignedTo: null, location: "Store", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Retour store approuvé`, by: currentUser.name }] });
+                        if (r.type === "transfer" && tool) await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "assigned", assignedTo: String(r.targetViewerId), location: r.targetChantier, history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Transfert approuvé — Confié à ${r.targetViewerName} (${r.targetChantier})`, by: currentUser.name }] });
+                        else if (r.type === "return" && tool) await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "store", assignedTo: null, location: "Store", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Retour au store approuvé — depuis ${r.fromName || "employé"}`, by: currentUser.name }] });
                         await setDoc(doc(db, "requests", r.id), { ...r, status: "approved", adminNote: adminNote || "", approvedBy: currentUser.name, approvedAt: new Date().toISOString() });
                         showToast("✅ Demande approuvée !");
                       }}
@@ -1834,7 +1864,10 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
               {[...(tool.history || [])].reverse().map((h, i) => (
                 <div key={i} className="history-item">
                   <div className="history-dot" />
-                  <div><div className="history-text">{h.action}</div><div className="history-date">{h.date} — par {h.by}</div></div>
+                  <div>
+                    <div className="history-text" style={{ fontWeight: h.action.includes("Confié") || h.action.includes("Transféré") ? 600 : 400 }}>{h.action}</div>
+                    <div className="history-date">{h.date} — par {h.by}</div>
+                  </div>
                 </div>
               ))}
             </div>
