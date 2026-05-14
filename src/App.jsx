@@ -2817,8 +2817,9 @@ Contactez le SuperAdmin : jdecomarmond.profile@intnet.mu`);
 
   if (step === "profile" && selectedCompany) {
     const companyUsers = users.filter(u => u.companyId === selectedCompany.id);
-    const viewerUsers = companyUsers.filter(u => ["viewer", "admin"].includes(u.role));
-    const adminUsers = companyUsers.filter(u => u.role === "director");
+    const directorUsers = companyUsers.filter(u => u.role === "director");
+    const adminUsers = companyUsers.filter(u => u.role === "admin");
+    const viewerUsers = companyUsers.filter(u => u.role === "viewer");
     return (
       <div className="login-screen"><div className="login-card">
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, width: "100%" }}>
@@ -2835,11 +2836,14 @@ Contactez le SuperAdmin : jdecomarmond.profile@intnet.mu`);
                 <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
               </div>
             ))}
-            {viewerUsers.length > 0 && <div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} />}
           </div>
         )}
+        {adminUsers.length > 0 && (
+          <><div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} /><div className="login-sub">{`🔑 Admins — ${t.chooseProfile}`}</div>
+          <div className="user-select-list">{adminUsers.map(u => <PinLogin key={u.id} user={u} onSuccess={onLogin} />)}</div></>
+        )}
         {viewerUsers.length > 0 && (
-          <><div className="login-sub">{`👷 ${t.employee}s — ${t.chooseProfile}`}</div>
+          <><div style={{ borderTop: "1px solid var(--border)", margin: "12px 0" }} /><div className="login-sub">{`👷 ${t.employee}s — ${t.chooseProfile}`}</div>
           <div className="user-select-list">{viewerUsers.map(u => <PinLogin key={u.id} user={u} onSuccess={onLogin} />)}</div></>
         )}
         {companyUsers.length === 0 && <div style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: "20px 0" }}>Aucun profil dans cette compagnie</div>}
