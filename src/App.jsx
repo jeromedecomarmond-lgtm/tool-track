@@ -425,7 +425,9 @@ export default function App() {
 
   // Auto-suppression Directeur — suspend la compagnie automatiquement
   const deleteDirectorSelf = async () => {
-    const company = companies.find(c => c.id === currentUser.companyId);
+    // Utiliser effectiveUser (le vrai Directeur) même en mode supervision
+    const targetDirector = supervisedUser?.fakeUser || currentUser;
+    const company = companies.find(c => c.id === targetDirector.companyId);
     const companyName = company?.name || "votre compagnie";
     const superAdmin = users.find(u => u.role === "superadmin");
     const superAdminEmail = superAdmin?.email || "jdecomarmond.profile@intnet.mu";
@@ -433,9 +435,9 @@ export default function App() {
 
     // Vérifier s'il y a d'autres directeurs dans la compagnie
     const otherDirectors = users.filter(u => 
-      u.companyId === currentUser.companyId && 
+      u.companyId === targetDirector.companyId && 
       u.role === "director" && 
-      String(u.id) !== String(currentUser.id)
+      String(u.id) !== String(targetDirector.id)
     );
 
     const isLastDirector = otherDirectors.length === 0;
@@ -476,7 +478,7 @@ export default function App() {
           await setDoc(doc(db, "companies", company.id), {
             ...company,
             active: false,
-            suspendedReason: `Dernier Directeur (${currentUser.name}) supprimé le ${new Date().toLocaleDateString("fr-FR")}`,
+            suspendedReason: `Dernier Directeur (${targetDirector.name}) supprimé le ${new Date().toLocaleDateString("fr-FR")}`,
             suspendedAt: Date.now()
           });
         }
@@ -484,9 +486,9 @@ export default function App() {
         // Envoyer WhatsApp au SuperAdmin
         const waMsg = encodeURIComponent(
           `🚨 *TOOL TRACK — ALERTE URGENTE*\n\n` +
-          `Le Directeur *${currentUser.name}* vient de supprimer son compte.\n\n` +
+          `Le Directeur *${targetDirector.name}* vient de supprimer son compte.\n\n` +
           `🏢 Compagnie : *${companyName}*\n` +
-          `📧 Email : ${currentUser.email || "non renseigné"}\n` +
+          `📧 Email : ${targetDirector.email || "non renseigné"}\n` +
           `⚠️ Statut compagnie : *SUSPENDUE*\n` +
           `📅 Date : ${new Date().toLocaleDateString("fr-FR")} à ${new Date().toLocaleTimeString("fr-FR")}\n\n` +
           `👉 Un nouveau Directeur doit être créé pour rétablir l'accès.\n` +
@@ -513,14 +515,20 @@ export default function App() {
       }
 
       // Supprimer le profil Firestore
-      await deleteDoc(doc(db, "users", String(currentUser.id)));
-      // Déconnexion Firebase Auth
-      try { await signOut(auth); } catch(e) {}
-      setCurrentUser(null);
-      try { 
-        localStorage.removeItem("tooltrack_user_id"); 
-        localStorage.removeItem("tooltrack_last_page"); 
-      } catch(e) {}
+      await deleteDoc(doc(db, "users", String(targetDirector.id)));
+      // Déconnexion si c'est le directeur lui-même (pas supervision)
+      if (!supervisedUser) {
+        try { await signOut(auth); } catch(e) {}
+        setCurrentUser(null);
+        try { 
+          localStorage.removeItem("tooltrack_user_id");
+          localStorage.removeItem("tooltrack_user_email");
+          localStorage.removeItem("tooltrack_last_page"); 
+        } catch(e) {}
+      } else {
+        // En supervision — juste quitter la supervision
+        stopSupervision();
+      }
       
       showToast(isLastDirector ? "🗑 Compte supprimé — compagnie suspendue" : "🗑 Compte supprimé");
     } catch(e) {
