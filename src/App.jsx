@@ -1899,7 +1899,21 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
   const [savedUser, setSavedUser] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const fieldStyle = (val) => ({ borderColor: submitted && !val?.trim() ? "var(--red)" : undefined, boxShadow: submitted && !val?.trim() ? "0 0 0 2px rgba(232,82,10,.2)" : undefined });
-  const handleSave = async () => { setSubmitted(true); if (!form.name.trim() || form.pin.length !== 4) return; await onSave(form); setSavedUser({ ...form }); setSaved(true); };
+  const handleSave = async () => {
+    setSubmitted(true);
+    if (!form.name.trim()) return;
+    if (form.phone.trim().length < 7) return;
+    // Directeur → email obligatoire, pas de PIN
+    if (form.role === "director") {
+      if (!form.email.trim() || !form.email.includes("@")) return;
+    } else {
+      // Admin/Employé → PIN obligatoire
+      if (form.pin.length !== 4) return;
+    }
+    await onSave(form);
+    setSavedUser({ ...form });
+    setSaved(true);
+  };
   const sendWhatsApp = () => {
     const companyPin = myCompany?.companyPin || "", companyName = myCompany?.name || "";
     const msg = encodeURIComponent(`Bonjour ${savedUser.name} 👋\n\nTu es invité(e) sur *Tool Track*.\n\n📱 https://${APP_URL}\n${companyName ? `🏢 Compagnie : *${companyName}*\n` : ""}${companyPin ? `🔐 Code : *${companyPin}*\n` : ""}👤 Profil : *${savedUser.name}*\n🔑 PIN : *${savedUser.pin}*\n\n_Ouvre le lien dans Safari (iPhone) ou Chrome (Android) et ajoute-le à ton écran d'accueil !_`);
@@ -1923,17 +1937,22 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
                   {/* Admin → Employé seulement | Directeur → Admin + Employé | SuperAdmin → tous sauf SuperAdmin */}
                 </select>
               </div>
+              {form.role === "director" && <div style={{ fontSize: 11, color: "var(--accent)", background: "rgba(245,166,35,.1)", borderRadius: 8, padding: "8px 12px", marginBottom: 8 }}>📧 Le Directeur recevra un email pour créer son mot de passe</div>}
               <div className="form-row">
-                <div className="form-group"><label className="form-label">Téléphone WhatsApp</label><input className="form-input" placeholder="+230 ..." value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
-                <div className="form-group"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
+                <div className="form-group"><label className="form-label">📞 Téléphone * (min. 7 chiffres)</label><input className="form-input" placeholder="+230 ..." value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
+                {form.role !== "viewer" && <div className="form-group"><label className="form-label">{form.role === "director" ? "📧 Email * (invitation)" : "Email"}</label><input className="form-input" type="email" placeholder={form.role === "director" ? "email@exemple.com" : "optionnel"} value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>}
               </div>
-              <div className="form-group"><label className="form-label">🔑 Code PIN (4 chiffres) *</label>
-                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                  <input className="form-input" style={{ flex: 1, fontSize: 22, fontWeight: 800, letterSpacing: 8, textAlign: "center", ...(submitted && form.pin.length !== 4 ? { borderColor: "var(--red)" } : {}) }} maxLength={4} value={form.pin} onChange={e => setForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} />
-                  <button className="btn btn-ghost btn-sm" onClick={() => setForm(p => ({ ...p, pin: generatePin() }))}>🔄 Nouveau</button>
+              {form.role !== "director" && (
+                <div className="form-group"><label className="form-label">🔑 Code PIN (4 chiffres) *</label>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input className="form-input" style={{ flex: 1, fontSize: 22, fontWeight: 800, letterSpacing: 8, textAlign: "center", ...(submitted && form.pin.length !== 4 ? { borderColor: "var(--red)" } : {}) }} maxLength={4} value={form.pin} onChange={e => setForm(p => ({ ...p, pin: e.target.value.replace(/\D/g,"").slice(0,4) }))} />
+                    <button className="btn btn-ghost btn-sm" onClick={() => setForm(p => ({ ...p, pin: generatePin() }))}>🔄 Nouveau</button>
+                  </div>
+                  {submitted && form.pin.length !== 4 && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ PIN doit contenir 4 chiffres</div>}
                 </div>
-                {submitted && form.pin.length !== 4 && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ PIN doit contenir 4 chiffres</div>}
-              </div>
+              )}
+              {submitted && form.role === "director" && (!form.email.trim() || !form.email.includes("@")) && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Email obligatoire pour un Directeur</div>}
+              {submitted && form.phone.trim().length < 7 && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Téléphone obligatoire (min. 7 chiffres)</div>}
             </>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14, alignItems: "center", textAlign: "center", padding: "10px 0" }}>
@@ -1947,7 +1966,7 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
             </div>
           )}
         </div>
-        <div className="modal-footer">{!saved ? <><button className="btn btn-ghost" onClick={onClose}>Annuler</button><button className="btn btn-primary" onClick={handleSave}>Créer le profil</button></> : <button className="btn btn-ghost" onClick={onClose}>Fermer</button>}</div>
+        <div className="modal-footer">{!saved ? <><button className="btn btn-ghost" onClick={onClose}>Annuler</button><button className="btn btn-primary" disabled={!form.name.trim() || form.phone.trim().length < 7 || (form.role === "director" ? (!form.email.trim() || !form.email.includes("@")) : form.pin.length !== 4)} onClick={handleSave}>Créer le profil</button></> : <button className="btn btn-ghost" onClick={onClose}>Fermer</button>}</div>
       </div>
     </div>
   );
