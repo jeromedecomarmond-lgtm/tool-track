@@ -684,9 +684,9 @@ export default function App() {
       : actionBy;
 
     let action = "";
-    if (direction === "out") action = `📤 Sorti du store par ${byLabel} — Confié à ${toPerson} sur ${toLocation}`;
-    else if (newViewer && chantier) action = `🔄 Transféré par ${byLabel} — de ${fromPerson} (${fromLocation}) → ${toPerson} (${toLocation})`;
-    else action = `🏠 Retour au store par ${byLabel}${prevOwner ? ` — depuis ${prevOwner.name} (${fromLocation})` : ""}`;
+    if (direction === "out") action = `📤 Store → ${toPerson} — ${toLocation}`;
+    else if (newViewer && chantier) action = `🔄 ${fromPerson} — ${fromLocation} → ${toPerson} — ${toLocation}`;
+    else action = `🏠 ${prevOwner ? prevOwner.name + " — " + fromLocation : fromLocation} → Store`;
 
     const updatedTool = {
       ...tool,
@@ -810,8 +810,8 @@ export default function App() {
       date: new Date().toLocaleDateString("fr-MU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }),
       by: isOnBehalf ? `${requesterName} (pour ${onBehalfOf})` : requesterName,
       action: type === "transfer"
-        ? `📋 Demande de transfert — ${currentOwnerName || effectiveUser.name} (${toolLocation}) → ${targetViewerName} — ${targetChantier}${isOnBehalf ? ` [demandé par ${requesterName}]` : ""}${note ? ` — "${note}"` : ""}`
-        : `📋 Demande de retour au store — ${currentOwnerName || effectiveUser.name} (${toolLocation})${isOnBehalf ? ` [demandé par ${requesterName}]` : ""}${note ? ` — "${note}"` : ""}`
+        ? `📋 Demande : ${currentOwnerName || effectiveUser.name} — ${toolLocation} → ${targetViewerName} — ${targetChantier}${note ? ` · "${note}"` : ""}${isOnBehalf ? ` [par ${requesterName}]` : ""}`
+        : `📋 Demande retour store : ${currentOwnerName || effectiveUser.name} — ${toolLocation} → Store${note ? ` · "${note}"` : ""}${isOnBehalf ? ` [par ${requesterName}]` : ""}`
     };
     if (toolObj) {
       await setDoc(doc(db, "tools", String(toolId)), {
@@ -1474,8 +1474,8 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
                   {isAdmin && isPending && (
                     <RequestActions request={r} tool={tool}
                       onApprove={async (adminNote) => {
-                        if (r.type === "transfer" && tool) await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "assigned", assignedTo: String(r.targetViewerId), location: r.targetChantier, history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Demande approuvée par ${currentUser.name} — Outil transféré de ${r.currentOwnerName || r.fromName} vers ${r.targetViewerName} (${r.targetChantier})`, by: currentUser.name }] });
-                        else if (r.type === "return" && tool) await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "store", assignedTo: null, location: "Store", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Retour au store approuvé par ${currentUser.name} — depuis ${r.currentOwnerName || r.fromName}`, by: currentUser.name }] });
+                        if (r.type === "transfer" && tool) await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "assigned", assignedTo: String(r.targetViewerId), location: r.targetChantier, history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Approuvé par ${currentUser.name} : ${r.currentOwnerName || r.fromName} → ${r.targetViewerName} — ${r.targetChantier}`, by: currentUser.name }] });
+                        else if (r.type === "return" && tool) await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "store", assignedTo: null, location: "Store", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `✅ Approuvé par ${currentUser.name} : ${r.currentOwnerName || r.fromName} → Store`, by: currentUser.name }] });
                         await setDoc(doc(db, "requests", r.id), { ...r, status: "approved", adminNote: adminNote || "", approvedBy: currentUser.name, approvedAt: new Date().toISOString() });
                         showToast("✅ Demande approuvée !");
                       }}
