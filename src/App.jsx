@@ -1484,7 +1484,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                               if (assignedTools.length > 0) { showToast("⚠️ Ce profil a des outils confiés !", "warn"); return; }
                               if (String(u.id) === String(currentUser.id)) { showToast(`❌ ${tx.cannotDeleteSelf}`); return; }
                               const deleteRules = { superadmin: ["director","admin","viewer"], director: ["admin","viewer"], admin: ["viewer"], viewer: [] };
-                              if (!(deleteRules[currentUser.role] || []).includes(u.role)) { showToast(`❌ ${tx.cannotDeleteRole}`); return; }
+                              if (!(deleteRules[(realUser||currentUser)?.role] || []).includes(u.role)) { showToast(`❌ ${tx.cannotDeleteRole}`); return; }
                               if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${tx.profileDeleted}`); }
                             }}>🗑</button>
                           </div>
