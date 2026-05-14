@@ -684,15 +684,15 @@ export default function App() {
       : actionBy;
 
     let action = "";
-    if (direction === "out" && fromLocation === "Store") {
-      // Sortie du store
-      action = `📤 Store → ${toPerson} — ${toLocation}`;
-    } else if (newViewer && chantier) {
-      // Transfert entre employés/chantiers
-      action = `🔄 ${fromPerson} — ${fromLocation} → ${toPerson} — ${toLocation}`;
-    } else {
+    if (!newViewer && !chantier) {
       // Retour au store
       action = `🏠 ${prevOwner ? prevOwner.name + " — " + fromLocation : fromLocation} → Store`;
+    } else if (fromLocation === "Store" || fromPerson === "Store") {
+      // Sortie du store vers un employé/chantier
+      action = `📤 Store → ${toPerson} — ${toLocation}`;
+    } else {
+      // Transfert entre employés/chantiers
+      action = `🔄 ${fromPerson} — ${fromLocation} → ${toPerson} — ${toLocation}`;
     }
 
     const updatedTool = {
