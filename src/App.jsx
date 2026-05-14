@@ -11,8 +11,8 @@ const T = {
     add: "Ajouter", save: "Sauvegarder", cancel: "Annuler", delete: "Supprimer",
     edit: "Modifier", confirm: "Confirmer", send: "Envoyer", create: "Créer",
     approve: "Approuver", refuse: "Refuser", close: "Fermer",
-    addTool: "Ajouter un outil", toolName: "Nom", supplier: "Fournisseur",
-    purchaseDate: "Date d'achat", price: "Prix d'achat (Rs)", description: "Description",
+    addTool: "Ajouter un outil", toolName: "Nom", supplier: tx.supplier,
+    purchaseDate: tx.purchase, price: "Prix d'achat (Rs)", description: tx.description2,
     photo: "Photo de l'outil", takePhoto: "Prendre une photo", gallery: "Choisir depuis la galerie",
     noPhoto: "Aucune photo", store: "Store", assigned: "Sur chantier",
     nonfunctional: "Non fonctionnel", obsolete: "Obsolète",
@@ -40,7 +40,7 @@ const T = {
     allEmployees: "Tous les employés", allSites: "Tous les chantiers", notAssigned: "Non assigné",
     noTool: "Aucun outil", noToolSub: "Cliquez sur + Ajouter un outil pour commencer",
     noRequest: "Aucune demande pour le moment", noMember: "Aucun membre",
-    groupRequest: "Demande groupée", requestType: "Type de demande", returnStore2: "Retour store", requestsSent: "Demandes envoyées !", toolsConcerned: "Outils concernés", transferTo2: "Transférer à", reasonNote: "Raison de la demande...", noteOptional: "Note (optionnel)", chooseEmployee2: "— Choisir un employé —", chooseSite2: "— Choisir un chantier —",
+    groupRequest: "Demande groupée", requestType: "Type de demande", returnStore2: "Retour store", requestsSent: "Demandes envoyées !", toolsConcerned: "Outils concernés", transferTo2: "Transférer à", reasonNote: "Raison de la demande...", noteOptional: "Note (optionnel)", supplier: tx.supplier, purchase: "Achat", status2: "Statut", location2: "Localisation", responsible: "Responsable", purchaseValue: "Valeur d'achat", repairTotal: "Total réparations", repairWarning: tx.repairWarning, lossWarning: "{tx.lossWarning}", outStore: "Sortir du store → Chantier", assignTo: tx.assignTo, outAndAssign: tx.outAndAssign, repairTracking: "Suivi réparation", reportProblem: tx.reportProblem, repairCost: "Coût réparation estimé (Rs) — optionnel", repairNote: "Note : câble coupé, moteur grillé...", openTracking: "Ouvrir le suivi", confirmSuppr: tx.confirmSuppr, irreversible: tx.irreversible, editName: tx.editName, camera: tx.camera, gallery: tx.gallery, save: "✅ Sauvegarder", description2: tx.description2, historyTitle: tx.historyTitle, byLabel: "par", chooseEmployee2: "— Choisir un employé —", chooseSite2: "— Choisir un chantier —",
     transferTo: "Transférer à", chooseEmployee: "— Choisir un employé —", chooseSite: "— Choisir un chantier —",
     optNote: "Note optionnelle...", adminWillProcess: "L'admin va traiter vos demandes.",
     requestSent: "Demandes envoyées !",
@@ -75,7 +75,7 @@ const T = {
     edit: "Edit", confirm: "Confirm", send: "Send", create: "Add",
     approve: "Approve", refuse: "Refuse", close: "Close",
     addTool: "Add a tool", toolName: "Name", supplier: "Supplier",
-    purchaseDate: "Purchase date", price: "Purchase price (Rs)", description: "Description",
+    purchaseDate: "Purchase date", price: "Purchase price (Rs)", description: tx.description2,
     photo: "Tool photo", takePhoto: "Take a photo", gallery: "Choose from gallery",
     noPhoto: "No photo", store: "Store", assigned: "On site",
     nonfunctional: "Not functional", obsolete: "Obsolete",
@@ -103,7 +103,7 @@ const T = {
     allEmployees: "All employees", allSites: "All job sites", notAssigned: "Not assigned",
     noTool: "No tools", noToolSub: "Click + Add a tool to start",
     noRequest: "No requests yet", noMember: "No members",
-    groupRequest: "Group request", requestType: "Request type", returnStore2: "Return to store", requestsSent: "Requests sent!", toolsConcerned: "Tools concerned", transferTo2: "Transfer to", reasonNote: "Reason for request...", noteOptional: "Note (optional)", chooseEmployee2: "— Choose an employee —", chooseSite2: "— Choose a job site —",
+    groupRequest: "Group request", requestType: "Request type", returnStore2: "Return to store", requestsSent: "Requests sent!", toolsConcerned: "Tools concerned", transferTo2: "Transfer to", reasonNote: "Reason for request...", noteOptional: "Note (optional)", supplier: "Supplier", purchase: "Purchase", status2: "Status", location2: "Location", responsible: "Responsible", purchaseValue: "Purchase value", repairTotal: "Total repairs", repairWarning: "Cumulative total of all repairs.", lossWarning: "In case of loss or damage, this amount will be charged to the tool's responsible person.", outStore: "Out of store → Job site", assignTo: "— Assign to (employee) —", outAndAssign: "Out & Assign", repairTracking: "Repair tracking", reportProblem: "Report a problem:", repairCost: "Estimated repair cost (Rs) — optional", repairNote: "Note: cut cable, burnt motor...", openTracking: "Open tracking", confirmSuppr: "Confirm deletion", irreversible: "Irreversible action.", editName: "Name *", camera: "Camera", gallery: "Gallery", save: "✅ Save", description2: tx.description2, historyTitle: "History", byLabel: "by", chooseEmployee2: "— Choose an employee —", chooseSite2: "— Choose a job site —",
     transferTo: "Transfer to", chooseEmployee: "— Choose an employee —", chooseSite: "— Choose a job site —",
     optNote: "Optional note...", adminWillProcess: "The admin will process your requests.",
     requestSent: "Requests sent!",
@@ -1741,7 +1741,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Action irréversible.</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)}>{tx.cancel}</button>
-              <button className={`btn btn-danger btn-sm ${loadingDelete ? "loading" : ""}`} disabled={loadingDelete} onClick={() => triggerDelete(() => deleteTool(tool.id))}>{loadingDelete ? "⏳..." : "Confirmer la suppression"}</button>
+              <button className={`btn btn-danger btn-sm ${loadingDelete ? "loading" : ""}`} disabled={loadingDelete} onClick={() => triggerDelete(() => deleteTool(tool.id))}>{loadingDelete ? "⏳..." : tx.confirmSuppr}</button>
             </div>
           </div>
         )}
@@ -1768,7 +1768,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setNewPhoto(null); }}>{tx.cancel}</button>
-              <button className={`btn btn-primary btn-sm ${loadingSave ? "loading" : ""}`} disabled={!editForm.name.trim() || loadingSave} onClick={() => triggerSave(async () => { await updateTool(tool.id, { name: editForm.name, ref: editForm.ref, description: editForm.description, purchaseDate: editForm.purchaseDate, price: editForm.price ? Number(String(editForm.price).replace(/\s/g,"")) : null, photoUrl: newPhoto || tool.photoUrl }); setEditing(false); setNewPhoto(null); })}>{loadingSave ? "⏳..." : "✅ Sauvegarder"}</button>
+              <button className={`btn btn-primary btn-sm ${loadingSave ? "loading" : ""}`} disabled={!editForm.name.trim() || loadingSave} onClick={() => triggerSave(async () => { await updateTool(tool.id, { name: editForm.name, ref: editForm.ref, description: editForm.description, purchaseDate: editForm.purchaseDate, price: editForm.price ? Number(String(editForm.price).replace(/\s/g,"")) : null, photoUrl: newPhoto || tool.photoUrl }); setEditing(false); setNewPhoto(null); })}>{loadingSave ? "⏳..." : tx.save}</button>
             </div>
           </div>
         )}
@@ -1784,7 +1784,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             {tool.price && (
               <div className="detail-item" style={{ gridColumn: "1/-1", background: "rgba(232,82,10,.08)", border: "1px solid rgba(232,82,10,.25)" }}>
                 <div className="detail-key">Valeur d'achat</div>
-                <div style={{ marginTop: 4 }}><div className="price-tag-lg">🇲🇺 Rs {tool.price.toLocaleString("fr-MU")}</div><div className="price-warning">⚠️ En cas de perte ou dommage, ce montant sera à rembourser par le responsable de l'outil.</div></div>
+                <div style={{ marginTop: 4 }}><div className="price-tag-lg">🇲🇺 Rs {tool.price.toLocaleString("fr-MU")}</div><div className="price-warning">⚠️ {tx.lossWarning}</div></div>
               </div>
             )}
             {tool.totalRepairCost > 0 && (
@@ -1801,7 +1801,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <select className="form-input" value={assignForm.viewerId} onChange={e => setAssignForm(p => ({ ...p, viewerId: e.target.value }))}><option value="">— Confier à (employé) —</option>{viewers.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
                 <select className="form-input" value={assignForm.chantier} onChange={e => setAssignForm(p => ({ ...p, chantier: e.target.value }))}><option value="">{tx.chooseSite}</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
-                <button className={`btn btn-primary btn-sm ${loadingAssign ? "loading" : ""}`} disabled={!assignForm.viewerId || !assignForm.chantier || loadingAssign} onClick={() => triggerAssign(() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out"))}>{loadingAssign ? "⏳..." : "Sortir & Confier"}</button>
+                <button className={`btn btn-primary btn-sm ${loadingAssign ? "loading" : ""}`} disabled={!assignForm.viewerId || !assignForm.chantier || loadingAssign} onClick={() => triggerAssign(() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out"))}>{loadingAssign ? "⏳..." : tx.outAndAssign}</button>
               </div>
             </div>
           )}
@@ -1811,16 +1811,16 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
           {isAdmin && (
             <div style={{ background: "rgba(120,120,140,.07)", border: "1px solid rgba(120,120,140,.25)", borderRadius: 12, padding: 14 }}>
               <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "#aaa", marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                🔴 Suivi réparation
+                🔴 {tx.repairTracking}
                 {(tool.status === "nonfunctional" || tool.status === "obsolete") && tool.obsoleteType && <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: getStatus(tool.obsoleteType).color + "30", color: getStatus(tool.obsoleteType).color }}>{getStatus(tool.obsoleteType).label}</span>}
               </div>
               {tool.status !== "nonfunctional" && tool.status !== "obsolete" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ fontSize: 12, color: "var(--muted)" }}>Signaler un problème :</div>
                   <input className="form-input" type="date" value={declareDate} onChange={e => setDeclareDate(e.target.value)} />
-                  <input className="form-input" type="text" inputMode="numeric" placeholder="🇲🇺 Coût réparation estimé (Rs) — optionnel" value={newEntryCost} onChange={e => { const raw = e.target.value.replace(/\s/g,"").replace(/[^0-9]/g,""); setNewEntryCost(raw.replace(/\B(?=(\d{3})+(?!\d))/g," ")); }} />
-                  <textarea className="form-input" rows={2} placeholder="Note : câble coupé, moteur grillé..." value={newEntryNote} onChange={e => setNewEntryNote(e.target.value)} />
-                  <button className={`btn btn-sm ${loadingDeclare ? "loading" : ""}`} disabled={loadingDeclare} style={{ background: "rgba(232,82,10,.25)", color: "#f07030", alignSelf: "flex-start", border: "1px solid rgba(232,82,10,.4)" }} onClick={() => triggerDeclare(declareNonFunctional)}>{loadingDeclare ? "⏳..." : "🔴 Ouvrir le suivi"}</button>
+                  <input className="form-input" type="text" inputMode="numeric" placeholder={`🇲🇺 ${tx.repairCost}`} value={newEntryCost} onChange={e => { const raw = e.target.value.replace(/\s/g,"").replace(/[^0-9]/g,""); setNewEntryCost(raw.replace(/\B(?=(\d{3})+(?!\d))/g," ")); }} />
+                  <textarea className="form-input" rows={2} placeholder={tx.repairNote} value={newEntryNote} onChange={e => setNewEntryNote(e.target.value)} />
+                  <button className={`btn btn-sm ${loadingDeclare ? "loading" : ""}`} disabled={loadingDeclare} style={{ background: "rgba(232,82,10,.25)", color: "#f07030", alignSelf: "flex-start", border: "1px solid rgba(232,82,10,.4)" }} onClick={() => triggerDeclare(declareNonFunctional)}>{loadingDeclare ? "⏳..." : `🔴 ${tx.openTracking}`}</button>
                 </div>
               ) : (
                 <>
@@ -1847,7 +1847,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                     <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
                       {STATUSES.map(s => <button key={s.val} onClick={() => setNewEntryStatus(s.val)} style={{ padding: "4px 10px", borderRadius: 20, border: "1px solid", fontSize: 11, fontWeight: 700, cursor: "pointer", background: newEntryStatus === s.val ? s.color + "25" : "var(--surface2)", borderColor: newEntryStatus === s.val ? s.color : "var(--border)", color: newEntryStatus === s.val ? s.color : "var(--muted)" }}>{s.label}</button>)}
                     </div>
-                    <input className="form-input" type="text" inputMode="numeric" placeholder="Coût réparation (Rs) — optionnel" value={newEntryCost} onChange={e => { const raw = e.target.value.replace(/\s/g,"").replace(/[^0-9]/g,""); setNewEntryCost(raw.replace(/\B(?=(\d{3})+(?!\d))/g," ")); }} />
+                    <input className="form-input" type="text" inputMode="numeric" placeholder={tx.repairCost} value={newEntryCost} onChange={e => { const raw = e.target.value.replace(/\s/g,"").replace(/[^0-9]/g,""); setNewEntryCost(raw.replace(/\B(?=(\d{3})+(?!\d))/g," ")); }} />
                     <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
                       <textarea className="form-input" rows={2} style={{ flex: 1, resize: "none" }} placeholder={`Note de ${currentUser.name}...`} value={newEntryNote} onChange={e => setNewEntryNote(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); addThreadEntry(); } }} />
                       <button className={`btn btn-blue btn-sm ${loadingThread ? "loading" : ""}`} disabled={loadingThread} style={{ alignSelf: "flex-end" }} onClick={() => triggerThread(addThreadEntry)}>{loadingThread ? "⏳" : "Envoyer"}</button>
@@ -1867,7 +1867,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                   <div className="history-dot" />
                   <div>
                     <div className="history-text" style={{ fontWeight: h.action.includes("Confié") || h.action.includes("Transféré") ? 600 : 400 }}>{h.action}</div>
-                    <div className="history-date">{h.date} — par {h.by}</div>
+                    <div className="history-date">{h.date} — {tx.byLabel} {h.by}</div>
                   </div>
                 </div>
               ))}
@@ -2567,7 +2567,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
           <div style={{ background: "var(--surface)", border: "1px solid var(--accent)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
             <div style={{ fontFamily: "var(--font-head)", fontSize: 15, fontWeight: 800, color: "var(--accent)", marginBottom: 12 }}>🏢 {tx.newCompany}</div>
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
-              <div style={{ flex: 1 }}><input className="form-input" style={companyFieldStyle(newName)} placeholder="Nom *" value={newName} onChange={e => setNewName(e.target.value)} />{formSubmitted && !newName.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Nom obligatoire</div>}</div>
+              <div style={{ flex: 1 }}><input className="form-input" style={companyFieldStyle(newName)} placeholder={tx.editName} value={newName} onChange={e => setNewName(e.target.value)} />{formSubmitted && !newName.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Nom obligatoire</div>}</div>
               <input type="color" value={newColor} onChange={e => setNewColor(e.target.value)} style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid var(--border)", cursor: "pointer", padding: 2 }} />
             </div>
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
@@ -2649,7 +2649,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                         <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 8 }}>{`${tx.addDirector2} (${compAdmins.length}/30)`}</div>
                         {compAdmins.length >= 30 ? <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic" }}>{tx.maxReached}</div> : creatingAdmin === company.id ? (
                           <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                            <input className="form-input" placeholder="Nom *" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
+                            <input className="form-input" placeholder={tx.editName} value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} />
                             <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="📞 Téléphone * (min. 7 chiffres)" type="tel" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email * (invitation envoyée)" type="email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
                             
                             
