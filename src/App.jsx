@@ -1088,6 +1088,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
 }
 
 function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, users, filterStatus, setFilterStatus, filterUser, setFilterUser, filterChantier, setFilterChantier, search, setSearch, selectedTools, setSelectedTools, showMovePanel, setShowMovePanel, openTool, setModal, assignTool, showToast, currentUser, db, sendRequest, tx }) {
+  tx = tx || getTx();
   return (
     <>
       <div className="topbar">
@@ -1880,6 +1881,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
 
 // ─── ADD TOOL MODAL ───────────────────────────────────────────────────────────
 function AddToolModal({ onClose, onSave }) {
+  const tx = getTx();
   const [form, setForm] = useState({ name: "", ref: "", purchaseDate: "", price: "", description: "", photo: "🔧", photoUrl: null });
   const [submitted, setSubmitted] = useState(false);
   const fileRef = useRef(), cameraRef = useRef();
@@ -1920,6 +1922,7 @@ function AddToolModal({ onClose, onSave }) {
 
 // ─── ADD USER MODAL ───────────────────────────────────────────────────────────
 function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
+  const tx = getTx();
   const APP_URL = "tool-track-rosy.vercel.app";
   const generatePin = () => String(Math.floor(1000 + Math.random() * 9000));
   const defaultRole = currentUser?.role === "superadmin" ? "director" : currentUser?.role === "director" ? "admin" : "viewer";
