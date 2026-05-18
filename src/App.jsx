@@ -2868,12 +2868,12 @@ Contactez le SuperAdmin : jdecomarmond.profile@intnet.mu`);
           <button onClick={() => { setStep("company"); setSelectedCompany(null); }} style={{ background: "none", border: "none", color: "var(--muted)", fontSize: 22, cursor: "pointer", padding: 0 }}>←</button>
           <div style={{ flex: 1 }}><div className="login-title" style={{ fontSize: 22, marginBottom: 0 }}>TOOL TRACK</div><div style={{ fontSize: 13, color: selectedCompany.color || "var(--accent)", fontWeight: 700 }}>🏢 {selectedCompany.name}</div></div>
         </div>
-        {adminUsers.length > 0 && (
+        {directorUsers.length > 0 && (
           <div style={{ width: "100%", marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: "var(--accent)", textAlign: "center", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>🏢 Directeurs</div>
-            {adminUsers.map(u => (
+            {directorUsers.map(u => (
               <div key={u.id} className="user-select-item" onClick={() => { setAdminEmail(u.email || ""); setShowAdminLogin(true); }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: u.role === "director" ? "#9b59b6" : "var(--accent)", color: u.role === "director" ? "#fff" : "#000" }}>{u.avatar}</div>
+                <div style={{ width: 40, height: 40, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 13, flexShrink: 0, background: "#9b59b6", color: "#fff" }}>{u.avatar}</div>
                 <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{u.name}</div><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>🏢 Directeur · Email + mot de passe</div></div>
                 <span style={{ fontSize: 18, color: "var(--muted)" }}>›</span>
               </div>
