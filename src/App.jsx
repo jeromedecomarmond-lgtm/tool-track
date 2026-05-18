@@ -1243,7 +1243,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
           })}
         </div>
       </div>
-      {showMovePanel && <MovePanelModal selectedIds={selectedTools} tools={filteredTools} viewers={filteredUsers.filter(u => ["viewer","admin","director"].includes(u.role))} chantiers={filteredChantiers} currentUser={currentUser} db={db} onClose={() => { setShowMovePanel(false); setSelectedTools([]); }} assignTool={assignTool} showToast={showToast} sendRequest={sendRequest} isAdminUser={true} />}
+      {showMovePanel && <MovePanelModal selectedIds={selectedTools} tools={filteredTools} viewers={users.filter(u => ["viewer","admin","director"].includes(u.role))} chantiers={filteredChantiers} currentUser={currentUser} db={db} onClose={() => { setShowMovePanel(false); setSelectedTools([]); }} assignTool={assignTool} showToast={showToast} sendRequest={sendRequest} isAdminUser={true} />}
     </>
   );
 }
@@ -1385,7 +1385,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
                         <label className="form-label">{tx.siteLabel}</label>
                         <select className="form-input" value={groupChantier} onChange={e => setGroupChantier(e.target.value)}>
                           <option value="">{tx.chooseSite || "— Choisir —"}</option>
-                          {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                          {chantiers.filter(c => c.name !== "Transit" && !c.isTransit).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                         </select>
                       </div>
                     </>
@@ -2109,7 +2109,7 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx
         </div>
         {chantiers.length === 0 && <div style={{ color: "var(--muted)", textAlign: "center", padding: "40px 0" }}>{tx.noSiteMsg}</div>}
         <div className="cards-grid">
-          {chantiers.map(c => {
+          {chantiers.filter(c => c.name !== "Transit" && !c.isTransit).map(c => {
             const toolsOnSite = tools.filter(t => t.location === c.name && t.status === "assigned");
             const empIds = [...new Set(toolsOnSite.map(t => t.assignedTo))];
             const emps = empIds.map(id => users.find(u => u.id === id)).filter(Boolean);
@@ -2217,6 +2217,7 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
                 {[
                   { val: "out", label: "🔄 Transfert vers un employé", color: "var(--blue)" },
                   { val: "in", label: "🏠 Retour au Store", color: "var(--green)" },
+                  { val: "transit", label: "🚗 Transit", color: "var(--accent)" },
                   { val: "nonfunctional", label: "🔴 Déclarer non fonctionnel", color: "#f07030" }
                 ].map(a => (
                   <button key={a.val} onClick={() => setAction(a.val)} style={{ padding: "12px 16px", borderRadius: 10, border: `2px solid ${action === a.val ? a.color : "var(--border)"}`, background: action === a.val ? a.color + "22" : "var(--surface)", color: action === a.val ? a.color : "var(--text)", fontWeight: 700, fontSize: 13, textAlign: "left", cursor: "pointer" }}>{a.label}</button>
@@ -2231,7 +2232,18 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
                   </select>
                   <select className="form-input" value={chantier} onChange={e => setChantier(e.target.value)}>
                     <option value="">— Choisir un chantier —</option>
-                    {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    {chantiers.filter(c => c.name !== "Transit" && !c.isTransit).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
+              {action === "transit" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, color: "var(--accent)", background: "rgba(245,166,35,.1)", borderRadius: 8, padding: "8px 12px", fontWeight: 600 }}>
+                    🚗 L'outil sera mis en Transit — confier au transporteur
+                  </div>
+                  <select className="form-input" value={viewerId} onChange={e => setViewerId(e.target.value)}>
+                    <option value="">— Choisir le transporteur —</option>
+                    {(viewers || []).map(u => <option key={u.id} value={String(u.id)}>{u.name}{String(u.id) === String(currentUser?.id) ? " (moi)" : ""}</option>)}
                   </select>
                 </div>
               )}
@@ -2247,7 +2259,7 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
         {!done && (
           <div className="modal-footer">
             <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
-            <button className="btn btn-primary" disabled={!action || (action === "out" && (!viewerId || !chantier)) || loading} onClick={handleMove}>
+            <button className="btn btn-primary" disabled={!action || (action === "out" && (!viewerId || !chantier)) || (action === "transit" && !viewerId) || loading} onClick={handleMove}>
               {loading ? "⏳ En cours..." : isAdmin ? `✅ Transférer (${selectedIds.length})` : `📨 Envoyer la demande (${selectedIds.length})`}
             </button>
           </div>
@@ -2326,7 +2338,7 @@ function ViewerToolCard({ tool, currentUser, users, viewers, chantiers, db, onOp
         <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue)" }}>🔄 Demande de transfert</div>
           <select className="form-input" value={targetViewer} onChange={e => setTargetViewer(e.target.value)}><option value="">— Vers quel employé ? —</option>{otherViewers.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
-          <select className="form-input" value={targetChantier} onChange={e => setTargetChantier(e.target.value)}><option value="">— Vers quel chantier ? —</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
+          <select className="form-input" value={targetChantier} onChange={e => setTargetChantier(e.target.value)}><option value="">— Vers quel chantier ? —</option>{chantiers.filter(c => c.name !== "Transit" && !c.isTransit).map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
           <textarea className="form-input" rows={2} placeholder={tx.optNote || "Note..."} value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver</div>
           <div style={{ display: "flex", gap: 6 }}><button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{tx.cancel || "Annuler"}</button><button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier} onClick={() => submit("transfer")}>Envoyer</button></div>
