@@ -133,6 +133,23 @@ const T = {
 };
 
 // FIX #2 — useLang retourne tx (pas t) pour éviter le shadowing avec les variables outil
+// Compresser une image avant de la sauvegarder
+function compressImage(dataUrl, maxWidth = 400, quality = 0.6) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      let w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.src = dataUrl;
+  });
+}
+
 // Fonction globale accessible par tous les composants
 function getTx() {
   try { return T[localStorage.getItem("tooltrack_lang") || "fr"] || T["fr"]; } catch { return T["fr"]; }
@@ -1798,8 +1815,8 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             <div className="form-group"><label className="form-label">Description</label><textarea className="form-input" rows={2} value={editForm.description} onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))} /></div>
             <div className="form-group">
               <label className="form-label">📷 Changer la photo</label>
-              <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setNewPhoto(ev.target.result); r.readAsDataURL(f); }} />
-              <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} id="cameraEditInput" onChange={e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = ev => setNewPhoto(ev.target.result); r.readAsDataURL(f); }} />
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }} onChange={async e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async ev => { const compressed = await compressImage(ev.target.result, 400, 0.6); setNewPhoto(compressed); }; r.readAsDataURL(f); }} />
+              <input type="file" accept="image/*" capture="environment" style={{ display: "none" }} id="cameraEditInput" onChange={async e => { const f = e.target.files[0]; if (!f) return; const r = new FileReader(); r.onload = async ev => { const compressed = await compressImage(ev.target.result, 400, 0.6); setNewPhoto(compressed); }; r.readAsDataURL(f); }} />
               {newPhoto ? (<div><img src={newPhoto} alt="aperçu" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8 }} /><button className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setNewPhoto(null)}>{`🗑 ${tx.deleteBtn}`}</button></div>) : (
                 <div style={{ display: "flex", gap: 8 }}>
                   <button className="btn btn-ghost btn-sm" style={{ flex: 1, flexDirection: "column", gap: 4, padding: "12px 0" }} onClick={() => document.getElementById("cameraEditInput").click()}><span style={{ fontSize: 22 }}>📸</span><span style={{ fontSize: 11 }}>Caméra</span></button>
@@ -1926,7 +1943,7 @@ function AddToolModal({ onClose, onSave }) {
   const [form, setForm] = useState({ name: "", ref: "", purchaseDate: "", price: "", description: "", photo: "🔧", photoUrl: null });
   const [submitted, setSubmitted] = useState(false);
   const fileRef = useRef(), cameraRef = useRef();
-  const handlePhoto = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => setForm(p => ({ ...p, photoUrl: ev.target.result })); reader.readAsDataURL(file); };
+  const handlePhoto = async (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = async (ev) => { const compressed = await compressImage(ev.target.result, 400, 0.6); setForm(p => ({ ...p, photoUrl: compressed })); }; reader.readAsDataURL(file); };
   const [saving, setSaving] = useState(false);
   const handleSave = async () => {
     setSubmitted(true);
