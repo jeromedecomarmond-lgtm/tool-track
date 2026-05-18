@@ -2149,7 +2149,7 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
   const isAdmin = isAdminUser || ["admin","director","superadmin"].includes(currentUser?.role);
 
   const handleMove = async () => {
-    if (!action || (action === "out" && (!viewerId || !chantier))) return;
+    if (!action || (action === "out" && (!viewerId || !chantier)) || (action === "transit" && !viewerId)) return;
     setLoading(true);
     if (isAdmin) {
       // Admin/Directeur — transfert direct immédiat
@@ -2158,7 +2158,10 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
         else if (action === "in") await assignTool(tool.id, null, null, "in");
         else if (action === "transit") {
           // Transit — assigner au transporteur sur le chantier Transit
-          await assignTool(tool.id, viewerId, "Transit", "out");
+          const driver = viewers.find(v => String(v.id) === String(viewerId));
+          if (driver) {
+            await assignTool(tool.id, String(viewerId), "Transit", "out");
+          }
         }
         else if (action === "nonfunctional") {
           await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "nonfunctional", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `🔴 Déclaré non fonctionnel — par ${currentUser.name}`, by: currentUser.name }] });
