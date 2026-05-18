@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { db, auth } from "./firebase";
-import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs } from "firebase/firestore";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from "firebase/auth";
+import { collection, doc, onSnapshot, setDoc, deleteDoc, getDocs, getDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, deleteUser as deleteAuthUser } from "firebase/auth";
 
 const T = {
   fr: {
@@ -413,6 +413,26 @@ export default function App() {
     return isSA ? "dashboard" : isAd ? "tools" : "mytools";
   };
 
+  // Supprimer un utilisateur complètement — Firestore + Firebase Auth
+  const deleteUserCompletely = async (u) => {
+    // 1. Supprimer le profil Firestore
+    await deleteDoc(doc(db, "users", String(u.id)));
+    // 2. Si le user a un authUid, supprimer aussi de Firebase Auth
+    // Note: on ne peut supprimer que le compte connecté via deleteUser()
+    // Pour supprimer un autre compte, il faudrait Firebase Admin SDK (côté serveur)
+    // Pour l'instant on marque le compte comme supprimé dans Auth via metadata
+    if (u.authUid) {
+      // Stocker dans Firestore une liste noire pour bloquer les connexions
+      try {
+        await setDoc(doc(db, "deletedAuthUids", u.authUid), { 
+          deletedAt: new Date().toISOString(), 
+          email: u.email || "",
+          name: u.name || ""
+        });
+      } catch(e) {}
+    }
+  };
+
   const loginUser = (u) => {
     setCurrentUser(u);
     const savedPage = (() => { try { return localStorage.getItem("tooltrack_last_page"); } catch { return null; } })();
@@ -515,7 +535,7 @@ export default function App() {
       }
 
       // Supprimer le profil Firestore
-      await deleteDoc(doc(db, "users", String(targetDirector.id)));
+      await deleteUserCompletely(targetDirector);
       // Déconnexion si c'est le directeur lui-même (pas supervision)
       if (!supervisedUser) {
         try { await signOut(auth); } catch(e) {}
@@ -569,7 +589,7 @@ export default function App() {
       const loadedUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setUsers(loadedUsers);
       try {
-        const savedId = localStorage.getItem("tooltrack_user_id");
+          const savedId = localStorage.getItem("tooltrack_user_id");
         const savedEmail = localStorage.getItem("tooltrack_user_email");
         if (savedId || savedEmail) {
           const savedUser = loadedUsers.find(u => 
@@ -1538,7 +1558,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                               if (String(u.id) === String(currentUser.id)) { showToast(`❌ ${tx.cannotDeleteSelf}`); return; }
                               const deleteRules = { superadmin: ["director","admin","viewer"], director: ["admin","viewer"], admin: ["viewer"], viewer: [] };
                               if (!(deleteRules[(realUser||currentUser)?.role] || []).includes(u.role)) { showToast(`❌ ${tx.cannotDeleteRole}`); return; }
-                              if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${tx.profileDeleted}`); }
+                              if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { deleteUserCompletely(u); showToast(`🗑 ${tx.profileDeleted}`); }
                             }}>🗑</button>
                           </div>
                         </div>
@@ -1614,7 +1634,7 @@ function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, c
                           {canDelete && <button className="btn btn-danger btn-sm" style={{ width: "100%", justifyContent: "center" }} onClick={() => {
                             if (String(u.id) === String(currentUser.id)) { showToast(`❌ ${tx.cannotDeleteSelf}`); return; }
                             if (assignedTools.length > 0) { showToast("⚠️ Des outils sont encore confiés !", "warn"); return; }
-                            if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { deleteDoc(doc(db, "users", String(u.id))); showToast(`🗑 ${tx.profileDeleted}`); }
+                            if (window.confirm(`${tx.deleteConfirm} ${u.name} ?`)) { deleteUserCompletely(u); showToast(`🗑 ${tx.profileDeleted}`); }
                           }}>{`🗑 ${tx.deleteBtn}`}</button>}
                         </div>
                       </div>
@@ -2775,6 +2795,15 @@ Contactez le SuperAdmin : jdecomarmond.profile@intnet.mu`);
         // Connexion normale
         const cred = await signInWithEmailAndPassword(auth, adminEmail.trim(), adminPassword);
         const uid = cred.user.uid;
+        // Vérifier liste noire
+        try {
+          const blackDoc = await getDoc(doc(db, "deletedAuthUids", uid));
+          if (blackDoc.exists()) { 
+            await signOut(auth); 
+            setAdminError("❌ Ce compte a été supprimé. Contactez votre administrateur."); 
+            setAdminLoading(false); return; 
+          }
+        } catch(e) {}
         const userProfile = users.find(u => u.authUid === uid || u.id === uid || u.email?.toLowerCase() === adminEmail.trim().toLowerCase());
         if (!userProfile) { await signOut(auth); setAdminError("❌ Profil introuvable. Contactez votre administrateur."); setAdminLoading(false); return; }
         onLogin(userProfile);
