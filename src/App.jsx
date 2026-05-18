@@ -152,7 +152,12 @@ function compressImage(dataUrl, maxWidth = 600, quality = 0.75) {
 
 // Fonction globale accessible par tous les composants
 function getTx() {
-  try { return T[localStorage.getItem("tooltrack_lang") || "fr"] || T["fr"]; } catch { return T["fr"]; }
+  try { 
+    const lang = localStorage.getItem("tooltrack_lang") || "fr";
+    return T[lang] || T["fr"] || {};
+  } catch { 
+    return T["fr"] || {};
+  }
 }
 
 function useLang() {
@@ -1362,7 +1367,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
                     <label className="form-label">{tx.requestType}</label>
                     <div style={{ display: "flex", gap: 8 }}>
                       <button className={`btn ${groupType === "return" ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1, justifyContent: "center" }} onClick={() => setGroupType("return")}>{`🏠 ${tx.returnStore2}`}</button>
-                      <button className={`btn ${groupType === "transfer" ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1, justifyContent: "center" }} onClick={() => setGroupType("transfer")}>{`🔄 ${tx.transfer}`}</button>
+                      <button className={`btn ${groupType === "transfer" ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1, justifyContent: "center" }} onClick={() => setGroupType("transfer")}>{`🔄 ${tx.transfer || "Transfert"}`}</button>
                     </div>
                   </div>
 
@@ -1379,7 +1384,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
                       <div className="form-group">
                         <label className="form-label">{tx.siteLabel}</label>
                         <select className="form-input" value={groupChantier} onChange={e => setGroupChantier(e.target.value)}>
-                          <option value="">{tx.chooseSite}</option>
+                          <option value="">{tx.chooseSite || "— Choisir —"}</option>
                           {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                         </select>
                       </div>
@@ -1388,7 +1393,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
 
                   {/* Note */}
                   <div className="form-group">
-                    <label className="form-label">{tx.noteOptional}</label>
+                    <label className="form-label">{tx.noteOptional || "Note"}</label>
                     <textarea className="form-input" rows={2} placeholder={tx.reasonNote} value={groupNote} onChange={e => setGroupNote(e.target.value)} />
                   </div>
                 </>
@@ -1396,7 +1401,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
             </div>
             {!groupSent && (
               <div className="modal-footer">
-                <button className="btn btn-ghost" onClick={() => setShowGroupModal(false)}>{tx.cancel}</button>
+                <button className="btn btn-ghost" onClick={() => setShowGroupModal(false)}>{tx.cancel || "Annuler"}</button>
                 <button className="btn btn-primary"
                   disabled={groupType === "transfer" && (!groupTargetViewer || !groupChantier)}
                   onClick={handleGroupRequest}>
@@ -1819,7 +1824,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             <div style={{ fontWeight: 700, marginBottom: 8, color: "var(--red)" }}>{`⚠️ ${tx.deleteBtn} "${tool.name}" ?`}</div>
             <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>Action irréversible.</div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)}>{tx.cancel}</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(false)}>{tx.cancel || "Annuler"}</button>
               <button className={`btn btn-danger btn-sm ${loadingDelete ? "loading" : ""}`} disabled={loadingDelete} onClick={() => triggerDelete(() => deleteTool(tool.id))}>{loadingDelete ? "⏳..." : tx.confirmSuppr}</button>
             </div>
           </div>
@@ -1846,7 +1851,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
               )}
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setNewPhoto(null); }}>{tx.cancel}</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setEditing(false); setNewPhoto(null); }}>{tx.cancel || "Annuler"}</button>
               <button className={`btn btn-primary btn-sm ${loadingSave ? "loading" : ""}`} disabled={!editForm.name.trim() || loadingSave} onClick={() => triggerSave(async () => { await updateTool(tool.id, { name: editForm.name, ref: editForm.ref, description: editForm.description, purchaseDate: editForm.purchaseDate, price: editForm.price ? Number(String(editForm.price).replace(/\s/g,"")) : null, photoUrl: newPhoto || tool.photoUrl }); setEditing(false); setNewPhoto(null); })}>{loadingSave ? "⏳..." : tx.save}</button>
             </div>
           </div>
@@ -1884,7 +1889,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                   👤 M'attribuer
                 </button>
                 <select className="form-input" value={assignForm.viewerId} onChange={e => setAssignForm(p => ({ ...p, viewerId: e.target.value }))}><option value="">— Confier à —</option>{(users || []).filter(u => u.companyId === currentUser?.companyId && ["viewer","admin","director"].includes(u.role)).map(v => <option key={v.id} value={v.id}>{v.name}{String(v.id) === String(currentUser?.id) ? " (moi)" : ""} - {v.role === "viewer" ? "Employe" : v.role === "admin" ? "Admin" : "Directeur"}</option>)}</select>
-                <select className="form-input" value={assignForm.chantier} onChange={e => setAssignForm(p => ({ ...p, chantier: e.target.value }))}><option value="">{tx.chooseSite}</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
+                <select className="form-input" value={assignForm.chantier} onChange={e => setAssignForm(p => ({ ...p, chantier: e.target.value }))}><option value="">{tx.chooseSite || "— Choisir —"}</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
                 <button className={`btn btn-primary btn-sm ${loadingAssign ? "loading" : ""}`} disabled={!assignForm.viewerId || !assignForm.chantier || loadingAssign} onClick={() => triggerAssign(() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out"))}>{loadingAssign ? "⏳..." : tx.outAndAssign}</button>
               </div>
             </div>
@@ -2006,7 +2011,7 @@ function AddToolModal({ onClose, onSave }) {
           <div className="form-group"><label className="form-label">🇲🇺 Prix d'achat (Rs) <span style={{ color: "var(--red)" }}>*</span></label><input className="form-input" style={{ borderColor: submitted && !form.price.toString().trim() ? "var(--red)" : undefined }} type="text" inputMode="numeric" placeholder="ex: 20 000" value={form.price} onChange={e => { const raw = e.target.value.replace(/\s/g,"").replace(/[^0-9]/g,""); setForm(p => ({ ...p, price: raw.replace(/\B(?=(\d{3})+(?!\d))/g," ") })); }} />{submitted && !form.price.toString().trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Prix obligatoire</div>}</div>
           <div className="form-group"><label className="form-label">Description</label><textarea className="form-input" rows={3} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></div>
         </div>
-        <div className="modal-footer"><button className="btn btn-ghost" onClick={onClose}>{tx.cancel}</button><button className="btn btn-primary" disabled={saving || !form.name.trim() || !form.ref.trim() || !form.purchaseDate || !form.price.toString().trim()} onClick={handleSave}>{saving ? "⏳..." : "Ajouter"}</button></div>
+        <div className="modal-footer"><button className="btn btn-ghost" onClick={onClose}>{tx.cancel || "Annuler"}</button><button className="btn btn-primary" disabled={saving || !form.name.trim() || !form.ref.trim() || !form.purchaseDate || !form.price.toString().trim()} onClick={handleSave}>{saving ? "⏳..." : "Ajouter"}</button></div>
       </div>
     </div>
   );
@@ -2090,7 +2095,7 @@ function AddUserModal({ onClose, onSave, currentUser, myCompany }) {
             </div>
           )}
         </div>
-        <div className="modal-footer">{!saved ? <><button className="btn btn-ghost" onClick={onClose}>{tx.cancel}</button><button className="btn btn-primary" disabled={!form.name.trim() || form.phone.trim().length < 7 || (form.role === "director" ? (!form.email.trim() || !form.email.includes("@")) : form.pin.length !== 4)} onClick={handleSave}>Créer le profil</button></> : <button className="btn btn-ghost" onClick={onClose}>Fermer</button>}</div>
+        <div className="modal-footer">{!saved ? <><button className="btn btn-ghost" onClick={onClose}>{tx.cancel || "Annuler"}</button><button className="btn btn-primary" disabled={!form.name.trim() || form.phone.trim().length < 7 || (form.role === "director" ? (!form.email.trim() || !form.email.includes("@")) : form.pin.length !== 4)} onClick={handleSave}>Créer le profil</button></> : <button className="btn btn-ghost" onClick={onClose}>Fermer</button>}</div>
       </div>
     </div>
   );
@@ -2193,7 +2198,7 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 420 }}>
         <div className="modal-header">
-          <h3>{isAdmin ? `↗ ${tx.transfer}` : `📋 ${tx.groupRequest}`} — {selectedIds.length} outil{selectedIds.length > 1 ? "s" : ""}</h3>
+          <h3>{isAdmin ? `↗ ${tx.transfer || "Transfert"}` : `📋 ${tx.groupRequest || "Demande"}`} — {selectedIds.length} outil{selectedIds.length > 1 ? "s" : ""}</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">
@@ -2211,22 +2216,22 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
             <>
               {/* Info rôle */}
               <div style={{ background: isAdmin ? "rgba(58,142,246,.1)" : "rgba(245,166,35,.1)", border: `1px solid ${isAdmin ? "rgba(58,142,246,.3)" : "rgba(245,166,35,.3)"}`, borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 12, color: isAdmin ? "var(--blue)" : "var(--accent)", fontWeight: 600 }}>
-                {isAdmin ? `🔑 ${tx.directTransfer}` : `👷 ${tx.needsApproval}`}
+                {isAdmin ? `🔑 ${tx.directTransfer || "Transfert direct"}` : `👷 ${tx.needsApproval || "Demande"}`}
               </div>
 
               {/* Outils {tx.selected2}s */}
               <div style={{ background: "var(--surface2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>{tx.tools} ({selectedIds.length})</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>{tx.tools || "Outils"} ({selectedIds.length})</div>
                 {selectedTools.map(t => <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><span style={{ fontSize: 18 }}>{t.photo}</span><div><div style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>📍 {t.location}</div></div></div>)}
               </div>
 
               {/* Actions */}
-              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "var(--muted)" }}>{tx.requestType} :</div>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "var(--muted)" }}>{tx.requestType || "Type"} :</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
                 {[
-                  { val: "out", label: `🔄 ${tx.transfer}`, color: "var(--blue)" },
-                  { val: "in", label: `🏠 ${tx.returnStore}`, color: "var(--green)" },
-                  { val: "nonfunctional", label: `🔴 ${tx.nonfunctional}`, color: "#f07030" }
+                  { val: "out", label: `🔄 ${tx.transfer || "Transfert"}`, color: "var(--blue)" },
+                  { val: "in", label: `🏠 ${tx.returnStore || "Retour store"}`, color: "var(--green)" },
+                  { val: "nonfunctional", label: `🔴 ${tx.nonfunctional || "Non fonctionnel"}`, color: "#f07030" }
                 ].map(a => (
                   <button key={a.val} onClick={() => setAction(a.val)} style={{ padding: "12px 16px", borderRadius: 10, border: `2px solid ${action === a.val ? a.color : "var(--border)"}`, background: action === a.val ? a.color + "22" : "var(--surface)", color: action === a.val ? a.color : "var(--text)", fontWeight: 700, fontSize: 13, textAlign: "left", cursor: "pointer" }}>{a.label}</button>
                 ))}
@@ -2241,7 +2246,7 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
                     ))}
                   </select>
                   <select className="form-input" value={chantier} onChange={e => setChantier(e.target.value)}>
-                    <option value="">{tx.chooseSite}</option>
+                    <option value="">{tx.chooseSite || "— Choisir —"}</option>
                     {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
@@ -2249,15 +2254,15 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
 
               {/* Note */}
               <div className="form-group">
-                <label className="form-label">{tx.noteOptional}</label>
-                <textarea className="form-input" rows={2} placeholder={tx.optNote} value={note} onChange={e => setNote(e.target.value)} />
+                <label className="form-label">{tx.noteOptional || "Note"}</label>
+                <textarea className="form-input" rows={2} placeholder={tx.optNote || "Note..."} value={note} onChange={e => setNote(e.target.value)} />
               </div>
             </>
           )}
         </div>
         {!done && (
           <div className="modal-footer">
-            <button className="btn btn-ghost" onClick={onClose}>{tx.cancel}</button>
+            <button className="btn btn-ghost" onClick={onClose}>{tx.cancel || "Annuler"}</button>
             <button className="btn btn-primary" disabled={!action || (action === "out" && (!viewerId || !chantier)) || loading} onClick={handleMove}>
               {loading ? "⏳..." : isAdmin ? `✅ ${tx.transferNow} (${selectedIds.length})` : `📨 ${tx.sendReq} (${selectedIds.length})`}
             </button>
@@ -2278,14 +2283,14 @@ function RequestActions({ request: r, tool, onApprove, onRefuse }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <textarea className="form-input" rows={2} placeholder="Motif du refus..." value={note} onChange={e => setNote(e.target.value)} />
       <div style={{ display: "flex", gap: 6 }}>
-        <button className="btn btn-ghost btn-sm" onClick={() => setMode(null)}>{tx.cancel}</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setMode(null)}>{tx.cancel || "Annuler"}</button>
         <button className={`btn btn-danger btn-sm ${loadingRefuse ? "loading" : ""}`} disabled={loadingRefuse} onClick={() => triggerRefuse(() => onRefuse(note))}>{loadingRefuse ? "⏳..." : "Confirmer le refus"}</button>
       </div>
     </div>
   );
   return (
     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-      <input className="form-input" style={{ flex: 1, fontSize: 12 }} placeholder={tx.optNote} value={note} onChange={e => setNote(e.target.value)} />
+      <input className="form-input" style={{ flex: 1, fontSize: 12 }} placeholder={tx.optNote || "Note..."} value={note} onChange={e => setNote(e.target.value)} />
       <button className={`btn btn-green btn-sm ${loadingApprove ? "loading" : ""}`} disabled={loadingApprove} onClick={() => triggerApprove(() => onApprove(note))}>{loadingApprove ? "⏳..." : `✅ ${tx.approve}`}</button>
       <button className="btn btn-danger btn-sm" onClick={() => setMode("refuse")}>{`❌ ${tx.refuse}`}</button>
     </div>
@@ -2331,23 +2336,23 @@ function ViewerToolCard({ tool, currentUser, users, viewers, chantiers, db, onOp
       {tool.photoUrl ? <img src={tool.photoUrl} alt={tool.name} className="tool-photo-card" onClick={onOpen} style={{ cursor: "pointer" }} /> : <div className="tool-photo-placeholder" onClick={onOpen} style={{ cursor: "pointer" }}><span className="big-emoji">{tool.photo}</span><span style={{ fontSize: 11 }}>Aucune photo</span></div>}
       <div className="tool-card-top" onClick={onOpen} style={{ cursor: "pointer" }}><div className="tool-meta" style={{ width: "100%" }}><div className="tool-name">{tool.name}</div>{tool.ref && <div className="tool-ref">🏭 {tool.ref}</div>}</div></div>
       <div className="tool-card-body" onClick={onOpen} style={{ cursor: "pointer" }}><div className="tool-desc">{tool.description}</div><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>📍 {tool.location}</div>{tool.price && <div style={{ marginTop: 4 }}><span className="price-tag">🇲🇺 Rs {tool.price.toLocaleString("fr-MU")}</span></div>}</div>
-      {!action && (<div style={{ padding: "10px 12px", display: "flex", gap: 6, flexWrap: "wrap", borderTop: "1px solid var(--border)" }}><button className="btn btn-blue btn-sm" onClick={() => setAction("transfer")}>{`🔄 ${tx.transfer}`}</button><button className="btn btn-green btn-sm" onClick={() => setAction("return")}>{`🏠 ${tx.returnStore2}`}</button><button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "#f07030" }} onClick={() => setAction("nonfunctional")}>🔴 Non fonctionnel</button></div>)}
+      {!action && (<div style={{ padding: "10px 12px", display: "flex", gap: 6, flexWrap: "wrap", borderTop: "1px solid var(--border)" }}><button className="btn btn-blue btn-sm" onClick={() => setAction("transfer")}>{`🔄 ${tx.transfer || "Transfert"}`}</button><button className="btn btn-green btn-sm" onClick={() => setAction("return")}>{`🏠 ${tx.returnStore2}`}</button><button className="btn btn-sm" style={{ background: "rgba(232,82,10,.2)", color: "#f07030" }} onClick={() => setAction("nonfunctional")}>🔴 Non fonctionnel</button></div>)}
       {action === "transfer" && (
         <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--blue)" }}>🔄 Demande de transfert</div>
           <select className="form-input" value={targetViewer} onChange={e => setTargetViewer(e.target.value)}><option value="">— Vers quel employé ? —</option>{otherViewers.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
           <select className="form-input" value={targetChantier} onChange={e => setTargetChantier(e.target.value)}><option value="">— Vers quel chantier ? —</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
-          <textarea className="form-input" rows={2} placeholder={tx.optNote} value={note} onChange={e => setNote(e.target.value)} />
+          <textarea className="form-input" rows={2} placeholder={tx.optNote || "Note..."} value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver</div>
-          <div style={{ display: "flex", gap: 6 }}><button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{tx.cancel}</button><button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier} onClick={() => submit("transfer")}>Envoyer</button></div>
+          <div style={{ display: "flex", gap: 6 }}><button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{tx.cancel || "Annuler"}</button><button className="btn btn-blue btn-sm" disabled={!targetViewer || !targetChantier} onClick={() => submit("transfer")}>Envoyer</button></div>
         </div>
       )}
       {action === "return" && (
         <div style={{ padding: "10px 12px", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--green)" }}>🏠 Retour au store</div>
-          <textarea className="form-input" rows={2} placeholder={tx.optNote} value={note} onChange={e => setNote(e.target.value)} />
+          <textarea className="form-input" rows={2} placeholder={tx.optNote || "Note..."} value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>📨 Un admin devra approuver</div>
-          <div style={{ display: "flex", gap: 6 }}><button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{tx.cancel}</button><button className="btn btn-green btn-sm" onClick={() => submit("return")}>Envoyer</button></div>
+          <div style={{ display: "flex", gap: 6 }}><button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{tx.cancel || "Annuler"}</button><button className="btn btn-green btn-sm" onClick={() => submit("return")}>Envoyer</button></div>
         </div>
       )}
       {action === "nonfunctional" && (
@@ -2355,7 +2360,7 @@ function ViewerToolCard({ tool, currentUser, users, viewers, chantiers, db, onOp
           <div style={{ fontSize: 12, fontWeight: 700, color: "#f07030" }}>🔴 Signaler non fonctionnel</div>
           <textarea className="form-input" rows={2} placeholder="Décrivez le problème..." value={note} onChange={e => setNote(e.target.value)} />
           <div style={{ fontSize: 11, color: "var(--muted)" }}>⚠️ L'outil sera marqué non fonctionnel immédiatement</div>
-          <div style={{ display: "flex", gap: 6 }}><button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{tx.cancel}</button><button className="btn btn-sm" style={{ background: "rgba(232,82,10,.3)", color: "#f07030" }} onClick={() => submit("nonfunctional")}>Confirmer</button></div>
+          <div style={{ display: "flex", gap: 6 }}><button className="btn btn-ghost btn-sm" onClick={() => setAction(null)}>{tx.cancel || "Annuler"}</button><button className="btn btn-sm" style={{ background: "rgba(232,82,10,.3)", color: "#f07030" }} onClick={() => submit("nonfunctional")}>Confirmer</button></div>
         </div>
       )}
     </div>
@@ -2508,7 +2513,7 @@ function MessagesPage({ currentUser, users, tools, myTools, db, showToast, tx })
               <textarea className="form-input" rows={3} placeholder={tx.yourMessage} value={newText} onChange={e => setNewText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); createConversation(); } }} />
               <div style={{ fontSize: 11, color: "var(--muted)" }}>{tab === "annonces" ? tx.visibleAll : tx.visibleAdmins}</div>
               <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => setNewConvOpen(false)}>{tx.cancel}</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setNewConvOpen(false)}>{tx.cancel || "Annuler"}</button>
                 <button className="btn btn-primary btn-sm" disabled={!newSubject.trim() || !newText.trim()} onClick={createConversation}>{tx.send}</button>
               </div>
             </div>
@@ -2685,7 +2690,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
               <div style={{ flex: 1 }}><label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📧 Email contact *</label><input className="form-input" style={companyFieldStyle(newContactEmail)} type="email" placeholder="votre@email.com" value={newContactEmail} onChange={e => setNewContactEmail(e.target.value)} />{formSubmitted && !newContactEmail.trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Email obligatoire</div>}</div>
               <div style={{ flex: 1 }}><label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>📞 Téléphone * (min. 7 chiffres)</label><input className="form-input" style={companyFieldStyle(newPhone.trim().length >= 7 ? newPhone : "")} type="tel" placeholder="+230 5XXX XXXX" value={newPhone} onChange={e => setNewPhone(e.target.value)} />{formSubmitted && newPhone.trim().length < 7 && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Téléphone obligatoire (min. 7 chiffres)</div>}</div>
             </div>
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormSubmitted(false); }}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!newName.trim() || !newExpiry || !newContactEmail.trim() || !newContactEmail.includes("@") || newPhone.trim().length < 7} onClick={createCompany}>{tx.create}</button></div>
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => { setShowForm(false); setFormSubmitted(false); }}>{tx.cancel || "Annuler"}</button><button className="btn btn-primary btn-sm" disabled={!newName.trim() || !newExpiry || !newContactEmail.trim() || !newContactEmail.includes("@") || newPhone.trim().length < 7} onClick={createCompany}>{tx.create}</button></div>
           </div>
         )}
         {companies.length === 0 && !showForm && <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}><div style={{ fontSize: 48, marginBottom: 8 }}>🏢</div><div>{tx.noCompany}</div></div>}
@@ -2729,7 +2734,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                               <input className="form-input" type="date" value={editExpiryDate} onChange={e => setEditExpiryDate(e.target.value)} style={{ flex: 1 }} />
                               <input className="form-input" type="email" value={editContactEmail} onChange={e => setEditContactEmail(e.target.value)} style={{ flex: 1 }} />
                             </div>
-                            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setEditingExpiry(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" onClick={() => saveExpiry(company)}>✅ {tx.saveBtn}</button></div>
+                            <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setEditingExpiry(null)}>{tx.cancel || "Annuler"}</button><button className="btn btn-primary btn-sm" onClick={() => saveExpiry(company)}>✅ {tx.saveBtn}</button></div>
                           </div>
                         ) : (
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
@@ -2763,7 +2768,7 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
                             <div style={{ display: "flex", gap: 8 }}><input className="form-input" placeholder="📞 Téléphone * (min. 7 chiffres)" type="tel" value={adminForm.phone} onChange={e => setAdminForm(p => ({ ...p, phone: e.target.value }))} /><input className="form-input" placeholder="Email * (invitation envoyée)" type="email" value={adminForm.email} onChange={e => setAdminForm(p => ({ ...p, email: e.target.value }))} /></div>
                             
                             
-                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.email.includes("@") || adminForm.phone.trim().length < 7} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
+                            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}><button className="btn btn-ghost btn-sm" onClick={() => setCreatingAdmin(null)}>{tx.cancel || "Annuler"}</button><button className="btn btn-primary btn-sm" disabled={!adminForm.name.trim() || !adminForm.email.trim() || !adminForm.email.includes("@") || adminForm.phone.trim().length < 7} onClick={() => createFirstAdmin(company)}>{tx.create}</button></div>
                           </div>
                         ) : <button className="btn btn-blue btn-sm" onClick={() => setCreatingAdmin(company.id)}>{tx.addDirector}</button>}
                       </div>
