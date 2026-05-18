@@ -34,7 +34,7 @@ const T = {
     language: "Langue", french: "Français", english: "English",
     all: "Tous", selectAll: "Tout sélectionner", search: "Chercher un outil...", details: "Détails",
     globalView: "Vue globale", byCompany: "Par compagnie", totalValue: "Valeur totale du parc",
-    totalTools: "Outils total", inStore2: "En store", onSite2: "Sur chantier", nonFunctional2: "Non fonctionnels", obsolete2: "Obsolètes", pendingReq: "Demandes en attente", pendingLabel: "en attente", pendingAdmin: "En attente d'un admin", approvedBy: "Approuvé par", refusedBy: "Refusé par",
+    totalTools: "Outils total", inStore2: "En store", onSite2: "Sur chantier", nonFunctional2: "Non fonctionnels", inTransit: "En transit", giveTool: "Donner l'outil", transitDriver: "Transporteur (obligatoire)", transitDest: "Destination prévue", receiveBtn: "📦 Recevoir l'outil", transitBy: "En transit avec", transitFrom: "Donné par", cancelTransit: "Annuler transit", obsolete2: "Obsolètes", pendingReq: "Demandes en attente", pendingLabel: "en attente", pendingAdmin: "En attente d'un admin", approvedBy: "Approuvé par", refusedBy: "Refusé par",
     toolsOnSite: "Outils sur chantiers", resetTest: "Reset données test",
     totalTeam: "Équipes total", deselect: "Désélectionner", selected2: "sélectionné",
     allEmployees: "Tous les employés", allSites: "Tous les chantiers", notAssigned: "Non assigné",
@@ -97,7 +97,7 @@ const T = {
     language: "Language", french: "Français", english: "English",
     all: "All", selectAll: "Select all", search: "Search a tool...", details: "Details",
     globalView: "Global view", byCompany: "By company", totalValue: "Total fleet value",
-    totalTools: "Total tools", inStore2: "In store", onSite2: "On site", nonFunctional2: "Not functional", obsolete2: "Obsolete", pendingReq: "Pending requests", pendingLabel: "pending", pendingAdmin: "Waiting for admin", approvedBy: "Approved by", refusedBy: "Refused by",
+    totalTools: "Total tools", inStore2: "In store", onSite2: "On site", nonFunctional2: "Not functional", inTransit: "In transit", giveToolg: "Give tool", transitDriver: "Transporter (required)", transitDest: "Planned destination", receiveBtn: "📦 Receive tool", transitBy: "In transit with", transitFrom: "Given by", cancelTransit: "Cancel transit", obsolete2: "Obsolete", pendingReq: "Pending requests", pendingLabel: "pending", pendingAdmin: "Waiting for admin", approvedBy: "Approved by", refusedBy: "Refused by",
     toolsOnSite: "Tools on site", resetTest: "Reset test data",
     totalTeam: "Total teams", deselect: "Deselect", selected2: "selected",
     allEmployees: "All employees", allSites: "All job sites", notAssigned: "Not assigned",
@@ -1097,6 +1097,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                       <div style={{ fontSize: 12, color: "var(--muted)" }}>📍 {tool.location} — 👷 {assignee?.name || "—"}</div>
                     </div>
                     <button className="btn btn-ghost btn-sm" onClick={() => openTool(tool)}>{tx.details}</button>
+
                   </div>
                 );
               })}
@@ -1185,12 +1186,8 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
   const hasOldTools = myTools.some(tool => { const d = daysSince(tool.lastReminder); return d !== null && d >= 3; });
   const [selected, setSelected] = useState([]);
   const [showGroupModal, setShowGroupModal] = useState(false);
-  const [groupType, setGroupType] = useState("return");
-  const [groupTargetViewer, setGroupTargetViewer] = useState("");
-  const [groupChantier, setGroupChantier] = useState("");
   const [groupNote, setGroupNote] = useState("");
   const [groupSent, setGroupSent] = useState(false);
-
   const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const allSelected = myTools.length > 0 && selected.length === myTools.length;
 
@@ -1198,18 +1195,18 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
     const selectedTools = myTools.filter(t => selected.includes(t.id));
     for (const tool of selectedTools) {
       await sendRequest({
-        type: groupType,
+        type: "return", // seulement retour store
         toolId: tool.id,
         toolName: tool.name,
         toolLocation: tool.location,
-        targetViewerId: groupType === "transfer" ? groupTargetViewer : null,
-        targetViewerName: groupType === "transfer" ? (viewers.find(v => v.id === groupTargetViewer)?.name || "") : null,
-        targetChantier: groupType === "transfer" ? groupChantier : null,
+        targetViewerId: null,
+        targetViewerName: null,
+        targetChantier: null,
         note: groupNote,
       });
     }
     setGroupSent(true);
-    setTimeout(() => { setShowGroupModal(false); setSelected([]); setGroupSent(false); setGroupNote(""); setGroupTargetViewer(""); setGroupChantier(""); }, 1500);
+    setTimeout(() => { setShowGroupModal(false); setSelected([]); setGroupSent(false); setGroupNote(""); }, 1500);
   };
 
   return (
@@ -2093,6 +2090,7 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
       for (const tool of selectedTools) {
         if (action === "out") await assignTool(tool.id, viewerId, chantier, "out");
         else if (action === "in") await assignTool(tool.id, null, null, "in");
+        // Les transferts sont maintenant directs pour tous les profils
         else if (action === "nonfunctional") {
           await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "nonfunctional", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `🔴 Déclaré non fonctionnel — par ${currentUser.name}`, by: currentUser.name }] });
         }
@@ -2506,6 +2504,9 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
     if (!newName.trim() || !newExpiry || !newContactEmail.trim() || newPhone.trim().length < 7) return;
     const id = String(Date.now()), companyPin = String(Math.floor(1000 + Math.random() * 9000));
     await setDoc(doc(db, "companies", id), { id, name: newName.trim(), color: newColor, active: true, createdAt: new Date().toISOString(), createdBy: currentUser.id, expiryDate: newExpiry || null, contactEmail: newContactEmail || currentUser.email || "", phone: newPhone.trim(), companyPin });
+    // Créer automatiquement le chantier "Transit" pour cette compagnie
+    const transitId = id + "_transit";
+    await setDoc(doc(db, "chantiers", transitId), { id: transitId, name: "Transit", color: "#f5a623", companyId: id, createdAt: new Date().toISOString(), isTransit: true });
     setNewName(""); setNewExpiry(""); setShowForm(false); setFormSubmitted(false);
     showToast(`🏢 Compagnie créée ! Code d'accès : ${companyPin}`);
   };
