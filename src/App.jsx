@@ -732,6 +732,8 @@ export default function App() {
     // FIX #9 — nettoyage robuste du prix
     const rawPrice = String(form.price || "").replace(/[\s.,]/g, "").replace(/[^0-9]/g, "");
     const parsedPrice = rawPrice ? Number(rawPrice) : null;
+    // S'assurer qu'on a bien le companyId
+    const toolCompanyId = myCompanyId || effectiveUser?.companyId || currentUser?.companyId || null;
     const newTool = {
       id, name: form.name, ref: form.ref || "",
       purchaseDate: form.purchaseDate || "",
@@ -739,12 +741,13 @@ export default function App() {
       obsolete: false, obsoleteDate: null, description: form.description || "",
       photo: form.photo || "🔧", photoUrl: form.photoUrl || null,
       status: "store", assignedTo: null, location: "Store",
-      companyId: myCompanyId || null,
+      companyId: toolCompanyId,
       history: [{ date: new Date().toLocaleDateString("fr-MU", { weekday: "short", day: "numeric", month: "short", year: "numeric" }), action: "📦 Ajouté au store", by: currentUser.name }],
       lastReminder: null, totalRepairCost: 0,
     };
     await setDoc(doc(db, "tools", id), newTool);
-    showToast("✅ Outil ajouté au store"); setModal(null);
+    showToast("✅ Outil ajouté au store !");
+    setModal(null);
   };
 
   const addUser = async (form) => {
