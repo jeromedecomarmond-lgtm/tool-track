@@ -900,7 +900,7 @@ export default function App() {
   const displayedTools = filteredTools.filter(tool => {
     if (!isAdmin) return String(tool.assignedTo) === String(effectiveUser.id) || tool.status === "store";
     // Tous les filtres s'appliquent ensemble (AND)
-    const matchStatus = filterStatus === "all" || tool.status === filterStatus;
+    const matchStatus = filterStatus === "all" || tool.status === filterStatus || (filterStatus === "transit" && tool.location === "Transit");
     const matchSearch = !search || tool.name.toLowerCase().includes(search.toLowerCase()) || (tool.ref || "").toLowerCase().includes(search.toLowerCase());
     const matchUser = filterUser === "all" || String(tool.assignedTo) === filterUser || (filterUser === "none" && !tool.assignedTo);
     const matchChantier = filterChantier === "all" || tool.location === filterChantier;
@@ -1189,7 +1189,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
       <div className="content">
         <div className="filters">
           <div className="search-bar"><span className="search-icon">🔍</span><input placeholder={tx.search} value={search} onChange={e => setSearch(e.target.value)} /></div>
-          {[{ val: "all", label: tx.all }, { val: "store", label: "🟢 " + tx.store }, { val: "assigned", label: "🔵 " + tx.onSite2 }, { val: "nonfunctional", label: "🔴 " + tx.nonfunctional }, { val: "obsolete", label: "⚫ " + tx.obsolete2 }].map(s => (
+          {[{ val: "all", label: tx.all }, { val: "store", label: "🟢 " + tx.store }, { val: "transit", label: "🚗 Transit" }, { val: "assigned", label: "🔵 " + tx.onSite2 }, { val: "nonfunctional", label: "🔴 " + tx.nonfunctional }, { val: "obsolete", label: "⚫ " + tx.obsolete2 }].map(s => (
             <button key={s.val} className={`filter-btn ${filterStatus === s.val ? "active" : ""}`} onClick={() => { setFilterStatus(s.val); setFilterUser("all"); setFilterChantier("all"); }}>{s.label}</button>
           ))}
           {/* FIX #6 — reset indépendant */}
