@@ -2156,6 +2156,10 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
       for (const tool of selectedTools) {
         if (action === "out") await assignTool(tool.id, viewerId, chantier, "out");
         else if (action === "in") await assignTool(tool.id, null, null, "in");
+        else if (action === "transit") {
+          // Transit — assigner au transporteur sur le chantier Transit
+          await assignTool(tool.id, viewerId, "Transit", "out");
+        }
         else if (action === "nonfunctional") {
           await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "nonfunctional", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `🔴 Déclaré non fonctionnel — par ${currentUser.name}`, by: currentUser.name }] });
         }
