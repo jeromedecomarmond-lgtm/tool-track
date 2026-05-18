@@ -2235,8 +2235,10 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
               {action === "out" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
                   <select className="form-input" value={viewerId} onChange={e => setViewerId(e.target.value)}>
-                    <option value="">{tx.chooseEmployee}</option>
-                    {viewers.filter(v => v.id !== currentUser?.id).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    <option value="">— Confier à —</option>
+                    {(isAdminUser ? users.filter(u => u.companyId === currentUser?.companyId && ["viewer","admin","director"].includes(u.role)) : viewers).map(u => (
+                      <option key={u.id} value={u.id}>{String(u.id) === String(currentUser?.id) ? "👤 " : ""}{u.name}{String(u.id) === String(currentUser?.id) ? " (moi)" : ""} — {u.role === "viewer" ? "Employé" : u.role === "admin" ? "Admin" : "Directeur"}</option>
+                    ))}
                   </select>
                   <select className="form-input" value={chantier} onChange={e => setChantier(e.target.value)}>
                     <option value="">{tx.chooseSite}</option>
