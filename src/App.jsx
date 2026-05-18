@@ -1878,7 +1878,12 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
           {isAdmin && tool.status === "store" && (
             <div className="assign-section"><h4>📤 Sortir du store → Chantier</h4>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <select className="form-input" value={assignForm.viewerId} onChange={e => setAssignForm(p => ({ ...p, viewerId: e.target.value }))}><option value="">— Confier à —</option>{viewers.map(v => <option key={v.id} value={v.id}>{v.name} ({v.role === "viewer" ? "Employé" : v.role === "admin" ? "Admin" : "Directeur"})</option>)}</select>
+                {/* Bouton M'attribuer directement */}
+                <button className="btn btn-sm" style={{ background: "rgba(245,166,35,.15)", color: "var(--accent)", border: "1px solid rgba(245,166,35,.4)", fontWeight: 700 }}
+                  onClick={() => setAssignForm(p => ({ ...p, viewerId: String(currentUser.id) }))}>
+                  👤 M'attribuer
+                </button>
+                <select className="form-input" value={assignForm.viewerId} onChange={e => setAssignForm(p => ({ ...p, viewerId: e.target.value }))}><option value="">— Confier à —</option>{viewers.map(v => <option key={v.id} value={v.id}>{v.name}{String(v.id) === String(currentUser.id) ? " (moi)" : ""} ({v.role === "viewer" ? "Employé" : v.role === "admin" ? "Admin" : "Directeur"})</option>)}</select>
                 <select className="form-input" value={assignForm.chantier} onChange={e => setAssignForm(p => ({ ...p, chantier: e.target.value }))}><option value="">{tx.chooseSite}</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
                 <button className={`btn btn-primary btn-sm ${loadingAssign ? "loading" : ""}`} disabled={!assignForm.viewerId || !assignForm.chantier || loadingAssign} onClick={() => triggerAssign(() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out"))}>{loadingAssign ? "⏳..." : tx.outAndAssign}</button>
               </div>
