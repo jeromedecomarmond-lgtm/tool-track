@@ -743,13 +743,13 @@ export default function App() {
     let action = "";
     if (!newViewer && !chantier) {
       // Retour au store
-      action = `🏠 ${prevOwner ? prevOwner.name + " — " + fromLocation : fromLocation} → Store`;
+      action = `🏠 Retour au store depuis ${prevOwner ? prevOwner.name + " (" + fromLocation + ")" : fromLocation} · par ${byLabel}`;
     } else if (fromLocation === "Store" || fromPerson === "Store") {
       // Sortie du store vers un employé/chantier
-      action = `📤 Store → ${toPerson} — ${toLocation}`;
+      action = `📤 Du store à ${toPerson} — ${toLocation} · initié par ${byLabel}`;
     } else {
       // Transfert entre employés/chantiers
-      action = `🔄 ${fromPerson} — ${fromLocation} → ${toPerson} — ${toLocation}`;
+      action = `🔄 De ${fromPerson} (${fromLocation}) à ${toPerson} — ${toLocation} · par ${byLabel}`;
     }
 
     const updatedTool = {
