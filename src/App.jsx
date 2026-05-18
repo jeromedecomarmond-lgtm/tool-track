@@ -1238,7 +1238,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
           })}
         </div>
       </div>
-      {showMovePanel && <MovePanelModal selectedIds={selectedTools} tools={filteredTools} viewers={viewers} chantiers={filteredChantiers} currentUser={currentUser} db={db} onClose={() => { setShowMovePanel(false); setSelectedTools([]); }} assignTool={assignTool} showToast={showToast} sendRequest={sendRequest} isAdminUser={true} />}
+      {showMovePanel && <MovePanelModal selectedIds={selectedTools} tools={filteredTools} viewers={viewers} users={filteredUsers} chantiers={filteredChantiers} currentUser={currentUser} db={db} onClose={() => { setShowMovePanel(false); setSelectedTools([]); }} assignTool={assignTool} showToast={showToast} sendRequest={sendRequest} isAdminUser={true} />}
     </>
   );
 }
@@ -2150,7 +2150,7 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx
 }
 
 // ─── MOVE PANEL MODAL — FIX #1 db en props ───────────────────────────────────
-function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, db, onClose, assignTool, showToast, sendRequest, isAdminUser }) {
+function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, currentUser, db, onClose, assignTool, showToast, sendRequest, isAdminUser }) {
   const tx = getTx();
   const [action, setAction] = useState(""), [viewerId, setViewerId] = useState(""), [chantier, setChantier] = useState(""), [note, setNote] = useState(""), [loading, setLoading] = useState(false), [done, setDone] = useState(false);
   const selectedTools = tools.filter(t => selectedIds.includes(t.id));
