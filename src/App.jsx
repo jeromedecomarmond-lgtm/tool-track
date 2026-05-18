@@ -1883,7 +1883,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
                   onClick={() => setAssignForm(p => ({ ...p, viewerId: String(currentUser.id) }))}>
                   👤 M'attribuer
                 </button>
-                <select className="form-input" value={assignForm.viewerId} onChange={e => setAssignForm(p => ({ ...p, viewerId: e.target.value }))}><option value="">— Confier à —</option>{(users || []).filter(u => u.companyId === currentUser?.companyId && ["viewer","admin","director"].includes(u.role)).map(v => <option key={v.id} value={v.id}>{String(v.id) === String(currentUser.id) ? "👤 " : ""}{v.name}{String(v.id) === String(currentUser.id) ? " (moi)" : ""} — {v.role === "viewer" ? "Employé" : v.role === "admin" ? "Admin" : "Directeur"}</option>)}</select>
+                <select className="form-input" value={assignForm.viewerId} onChange={e => setAssignForm(p => ({ ...p, viewerId: e.target.value }))}><option value="">— Confier à —</option>{(users || []).filter(u => u.companyId === currentUser?.companyId && ["viewer","admin","director"].includes(u.role)).map(v => <option key={v.id} value={v.id}>{v.name}{String(v.id) === String(currentUser?.id) ? " (moi)" : ""} - {v.role === "viewer" ? "Employe" : v.role === "admin" ? "Admin" : "Directeur"}</option>)}</select>
                 <select className="form-input" value={assignForm.chantier} onChange={e => setAssignForm(p => ({ ...p, chantier: e.target.value }))}><option value="">{tx.chooseSite}</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
                 <button className={`btn btn-primary btn-sm ${loadingAssign ? "loading" : ""}`} disabled={!assignForm.viewerId || !assignForm.chantier || loadingAssign} onClick={() => triggerAssign(() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out"))}>{loadingAssign ? "⏳..." : tx.outAndAssign}</button>
               </div>
@@ -2237,7 +2237,7 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
                   <select className="form-input" value={viewerId} onChange={e => setViewerId(e.target.value)}>
                     <option value="">— Confier à —</option>
                     {(isAdminUser ? (users || []).filter(u => u.companyId === currentUser?.companyId && ["viewer","admin","director"].includes(u.role)) : (viewers || [])).map(u => (
-                      <option key={u.id} value={u.id}>{String(u.id) === String(currentUser?.id) ? "👤 " : ""}{u.name}{String(u.id) === String(currentUser?.id) ? " (moi)" : ""} — {u.role === "viewer" ? "Employé" : u.role === "admin" ? "Admin" : "Directeur"}</option>
+                      <option key={u.id} value={u.id}>{u.name}{String(u.id) === String(currentUser?.id) ? " (moi)" : ""} - {u.role === "viewer" ? "Employe" : u.role === "admin" ? "Admin" : "Directeur"}</option>
                     ))}
                   </select>
                   <select className="form-input" value={chantier} onChange={e => setChantier(e.target.value)}>
