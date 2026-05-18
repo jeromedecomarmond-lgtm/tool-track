@@ -2502,7 +2502,19 @@ function CompaniesPage({ companies, users, tools, chantiers, requests, db, curre
   const createCompany = async () => {
     setFormSubmitted(true);
     if (!newName.trim() || !newExpiry || !newContactEmail.trim() || newPhone.trim().length < 7) return;
-    const id = String(Date.now()), companyPin = String(Math.floor(1000 + Math.random() * 9000));
+    const id = String(Date.now());
+    // Générer un code unique — vérifier qu'il n'existe pas déjà
+    let companyPin;
+    let attempts = 0;
+    do {
+      companyPin = String(Math.floor(1000 + Math.random() * 9000));
+      attempts++;
+    } while (companies.some(c => c.companyPin === companyPin) && attempts < 50);
+    // Si après 50 tentatives on n'a pas trouvé un code unique avec 4 chiffres,
+    // utiliser 6 chiffres pour plus de possibilités
+    if (companies.some(c => c.companyPin === companyPin)) {
+      companyPin = String(Math.floor(100000 + Math.random() * 900000));
+    }
     await setDoc(doc(db, "companies", id), { id, name: newName.trim(), color: newColor, active: true, createdAt: new Date().toISOString(), createdBy: currentUser.id, expiryDate: newExpiry || null, contactEmail: newContactEmail || currentUser.email || "", phone: newPhone.trim(), companyPin });
     // Créer automatiquement le chantier "Transit" pour cette compagnie
     const transitId = id + "_transit";
