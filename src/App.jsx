@@ -2155,7 +2155,7 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx
 }
 
 // ─── MOVE PANEL MODAL — FIX #1 db en props ───────────────────────────────────
-function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, currentUser, db, onClose, assignTool, showToast, sendRequest, isAdminUser }) {
+function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, db, onClose, assignTool, showToast, sendRequest, isAdminUser }) {
   const tx = getTx();
   const [action, setAction] = useState(""), [viewerId, setViewerId] = useState(""), [chantier, setChantier] = useState(""), [note, setNote] = useState(""), [loading, setLoading] = useState(false), [done, setDone] = useState(false);
   const selectedTools = tools.filter(t => selectedIds.includes(t.id));
@@ -2169,7 +2169,6 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
       for (const tool of selectedTools) {
         if (action === "out") await assignTool(tool.id, viewerId, chantier, "out");
         else if (action === "in") await assignTool(tool.id, null, null, "in");
-        // Les transferts sont maintenant directs pour tous les profils
         else if (action === "nonfunctional") {
           await setDoc(doc(db, "tools", String(tool.id)), { ...tool, status: "nonfunctional", history: [...(tool.history || []), { date: new Date().toLocaleDateString("fr-MU"), action: `🔴 Déclaré non fonctionnel — par ${currentUser.name}`, by: currentUser.name }] });
         }
@@ -2198,7 +2197,7 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ maxWidth: 420 }}>
         <div className="modal-header">
-          <h3>{isAdmin ? `↗ ${tx.transfer || "Transfert"}` : `📋 ${tx.groupRequest || "Demande"}`} — {selectedIds.length} outil{selectedIds.length > 1 ? "s" : ""}</h3>
+          <h3>{isAdmin ? "↗ Transférer" : "📋 Demande de transfert"} — {selectedIds.length} outil{selectedIds.length > 1 ? "s" : ""}</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
         <div className="modal-body">
@@ -2206,32 +2205,32 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ fontSize: 48, marginBottom: 12 }}>{isAdmin ? "✅" : "📨"}</div>
               <div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800, color: isAdmin ? "var(--green)" : "var(--accent)" }}>
-                {isAdmin ? tx.transferNow + " ✅" : tx.requestSent}
+                {isAdmin ? "Transfert effectué !" : "Demande envoyée !"}
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 8 }}>
-                {isAdmin ? tx.toolsOnSiteLabel + "." : tx.adminWillProcess}
+                {isAdmin ? "Les outils ont été déplacés." : "Un admin va traiter votre demande."}
               </div>
             </div>
           ) : (
             <>
               {/* Info rôle */}
               <div style={{ background: isAdmin ? "rgba(58,142,246,.1)" : "rgba(245,166,35,.1)", border: `1px solid ${isAdmin ? "rgba(58,142,246,.3)" : "rgba(245,166,35,.3)"}`, borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 12, color: isAdmin ? "var(--blue)" : "var(--accent)", fontWeight: 600 }}>
-                {isAdmin ? `🔑 ${tx.directTransfer || "Transfert direct"}` : `👷 ${tx.needsApproval || "Demande"}`}
+                {isAdmin ? "🔑 Transfert direct — aucune approbation requise" : "👷 Votre demande sera soumise à approbation par un admin"}
               </div>
 
-              {/* Outils {tx.selected2}s */}
+              {/* Outils sélectionnés */}
               <div style={{ background: "var(--surface2)", borderRadius: 10, padding: "10px 14px", marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>{tx.tools || "Outils"} ({selectedIds.length})</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", fontWeight: 700, marginBottom: 8, textTransform: "uppercase" }}>Outils ({selectedIds.length})</div>
                 {selectedTools.map(t => <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}><span style={{ fontSize: 18 }}>{t.photo}</span><div><div style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>📍 {t.location}</div></div></div>)}
               </div>
 
               {/* Actions */}
-              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "var(--muted)" }}>{tx.requestType || "Type"} :</div>
+              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: "var(--muted)" }}>Type d'action :</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
                 {[
-                  { val: "out", label: `🔄 ${tx.transfer || "Transfert"}`, color: "var(--blue)" },
-                  { val: "in", label: `🏠 ${tx.returnStore || "Retour store"}`, color: "var(--green)" },
-                  { val: "nonfunctional", label: `🔴 ${tx.nonfunctional || "Non fonctionnel"}`, color: "#f07030" }
+                  { val: "out", label: "🔄 Transfert vers un employé", color: "var(--blue)" },
+                  { val: "in", label: "🏠 Retour au Store", color: "var(--green)" },
+                  { val: "nonfunctional", label: "🔴 Déclarer non fonctionnel", color: "#f07030" }
                 ].map(a => (
                   <button key={a.val} onClick={() => setAction(a.val)} style={{ padding: "12px 16px", borderRadius: 10, border: `2px solid ${action === a.val ? a.color : "var(--border)"}`, background: action === a.val ? a.color + "22" : "var(--surface)", color: action === a.val ? a.color : "var(--text)", fontWeight: 700, fontSize: 13, textAlign: "left", cursor: "pointer" }}>{a.label}</button>
                 ))}
@@ -2240,13 +2239,11 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
               {action === "out" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
                   <select className="form-input" value={viewerId} onChange={e => setViewerId(e.target.value)}>
-                    <option value="">— Confier à —</option>
-                    {(isAdminUser ? (users || []).filter(u => u.companyId === currentUser?.companyId && ["viewer","admin","director"].includes(u.role)) : (viewers || [])).map(u => (
-                      <option key={u.id} value={u.id}>{u.name}{String(u.id) === String(currentUser?.id) ? " (moi)" : ""} - {u.role === "viewer" ? "Employe" : u.role === "admin" ? "Admin" : "Directeur"}</option>
-                    ))}
+                    <option value="">— Choisir un employé —</option>
+                    {viewers.filter(v => v.id !== currentUser?.id).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                   </select>
                   <select className="form-input" value={chantier} onChange={e => setChantier(e.target.value)}>
-                    <option value="">{tx.chooseSite || "— Choisir —"}</option>
+                    <option value="">— Choisir un chantier —</option>
                     {chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
@@ -2254,17 +2251,17 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
 
               {/* Note */}
               <div className="form-group">
-                <label className="form-label">{tx.noteOptional || "Note"}</label>
-                <textarea className="form-input" rows={2} placeholder={tx.optNote || "Note..."} value={note} onChange={e => setNote(e.target.value)} />
+                <label className="form-label">Note {!isAdmin && "(recommandé)"}</label>
+                <textarea className="form-input" rows={2} placeholder="Raison du transfert..." value={note} onChange={e => setNote(e.target.value)} />
               </div>
             </>
           )}
         </div>
         {!done && (
           <div className="modal-footer">
-            <button className="btn btn-ghost" onClick={onClose}>{tx.cancel || "Annuler"}</button>
+            <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
             <button className="btn btn-primary" disabled={!action || (action === "out" && (!viewerId || !chantier)) || loading} onClick={handleMove}>
-              {loading ? "⏳..." : isAdmin ? `✅ ${tx.transferNow} (${selectedIds.length})` : `📨 ${tx.sendReq} (${selectedIds.length})`}
+              {loading ? "⏳ En cours..." : isAdmin ? `✅ Transférer (${selectedIds.length})` : `📨 Envoyer la demande (${selectedIds.length})`}
             </button>
           </div>
         )}
@@ -2274,6 +2271,7 @@ function MovePanelModal({ selectedIds, tools, viewers, users, chantiers, current
 }
 
 // ─── REQUEST ACTIONS ──────────────────────────────────────────────────────────
+
 function RequestActions({ request: r, tool, onApprove, onRefuse }) {
   const tx = getTx();
   const [note, setNote] = useState(""), [mode, setMode] = useState(null);
