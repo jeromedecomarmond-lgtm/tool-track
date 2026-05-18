@@ -1243,7 +1243,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
           })}
         </div>
       </div>
-      {showMovePanel && <MovePanelModal selectedIds={selectedTools} tools={filteredTools} viewers={viewers} users={filteredUsers} chantiers={filteredChantiers} currentUser={currentUser} db={db} onClose={() => { setShowMovePanel(false); setSelectedTools([]); }} assignTool={assignTool} showToast={showToast} sendRequest={sendRequest} isAdminUser={true} />}
+      {showMovePanel && <MovePanelModal selectedIds={selectedTools} tools={filteredTools} viewers={filteredUsers.filter(u => ["viewer","admin","director"].includes(u.role))} chantiers={filteredChantiers} currentUser={currentUser} db={db} onClose={() => { setShowMovePanel(false); setSelectedTools([]); }} assignTool={assignTool} showToast={showToast} sendRequest={sendRequest} isAdminUser={true} />}
     </>
   );
 }
