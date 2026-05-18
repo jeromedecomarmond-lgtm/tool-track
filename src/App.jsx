@@ -1207,7 +1207,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
         {displayedTools.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, padding: "8px 12px", background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border)" }}>
             <input type="checkbox" checked={selectedTools.length === displayedTools.length && displayedTools.length > 0} onChange={e => setSelectedTools(e.target.checked ? displayedTools.map(t => t.id) : [])} style={{ width: 18, height: 18, cursor: "pointer", accentColor: "var(--accent)" }} />
-            <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>{selectedTools.length === 0 ? tx.selectAll : `${selectedTools.length} {tx.selected2}${selectedTools.length > 1 ? "s" : ""}`}</span>
+            <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>{selectedTools.length === 0 ? tx.selectAll : `${selectedTools.length} ${tx.selected2 || "sélectionné"}${selectedTools.length > 1 ? "s" : ""}`}</span>
             {selectedTools.length > 0 && <button className="btn btn-ghost btn-sm" onClick={() => setSelectedTools([])}>{tx.deselect}</button>}
           </div>
         )}
@@ -1233,7 +1233,7 @@ function ToolsPage({ displayedTools, filteredTools, filteredChantiers, viewers, 
                   <div className="tool-card-top"><div className="tool-meta" style={{ width: "100%" }}><div className="tool-name">{tool.name}</div>{tool.ref && <div className="tool-ref">🏭 {tool.ref}</div>}</div></div>
                   <div className="tool-card-body"><div className="tool-desc">{tool.description}</div><div style={{ fontSize: 11, color: "var(--muted)", marginTop: 6 }}>📍 {tool.location}</div></div>
                   <div className="tool-card-footer">
-                    {{ store: <span className="status-badge status-store">{tx.store}</span>, assigned: <span className="status-badge status-assigned">🔵 {tx.assigned}</span>, nonfunctional: <span className="status-badge status-nonfunctional">🔴 Non fonctionnel</span>, obsolete: <span className="status-badge">⚫ Obsolète</span> }[tool.status]}
+                    {{ store: <span className="status-badge status-store">{tx.store}</span>, assigned: <span className="status-badge status-assigned">🔵 {tx.assigned}</span>, nonfunctional: <span className="status-badge status-nonfunctional">🔴 {tx.nonfunctional || "Non fonctionnel"}</span>, obsolete: <span className="status-badge">⚫ {tx.obsolete2 || "Obsolète"}</span> }[tool.status]}
                     {tool.price && <span className="price-tag">🇲🇺 Rs {tool.price.toLocaleString("fr-MU")}</span>}
                     {assignee && <span className="assignee-chip"><div style={{ width: 20, height: 20, fontSize: 9, borderRadius: 5, background: "var(--blue)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700 }}>{assignee.avatar}</div>{assignee.name.split(" ")[0]}</span>}
                   </div>
@@ -1300,7 +1300,7 @@ function MyToolsPage({ myTools, currentUser, users, viewers, chantiers, db, open
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, padding: "10px 14px", background: "var(--surface)", borderRadius: 10, border: "1px solid var(--border)" }}>
               <input type="checkbox" checked={allSelected} onChange={e => setSelected(e.target.checked ? myTools.map(t => t.id) : [])} style={{ width: 18, height: 18, cursor: "pointer", accentColor: "var(--accent)" }} />
               <span style={{ fontSize: 13, color: "var(--muted)", fontWeight: 600, flex: 1 }}>
-                {selected.length === 0 ? "Tout sélectionner" : `${selected.length} outil${selected.length > 1 ? "s" : ""} {tx.selected2}${selected.length > 1 ? "s" : ""}`}
+                {selected.length === 0 ? "Tout sélectionner" : `${selected.length} outil${selected.length > 1 ? "s" : ""} ${tx.selected2 || "sélectionné"}${selected.length > 1 ? "s" : ""}`}
               </span>
               {selected.length > 0 && (
                 <button className="btn btn-primary btn-sm" onClick={() => setShowGroupModal(true)}>
