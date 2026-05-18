@@ -1862,7 +1862,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
           <div className="detail-grid">
             <div className="detail-item"><div className="detail-key">Fournisseur</div><div className="detail-val">{tool.ref || "—"}</div></div>
             <div className="detail-item"><div className="detail-key">Achat</div><div className="detail-val">{tool.purchaseDate ? new Date(tool.purchaseDate).toLocaleDateString("fr-MU") : "—"}</div></div>
-            <div className="detail-item"><div className="detail-key">Statut</div><div className="detail-val">{{ store: "🟢 " + tx.inStore2, assigned: "🔵 " + tx.onSite2, nonfunctional: "🔴 " + tx.nonfunctional, obsolete: "⚫ " + tx.obsolete2 }[tool.status] || tool.status}</div></div>
+            <div className="detail-item"><div className="detail-key">{tx.status2}</div><div className="detail-val">{tool.location === "Transit" ? "🚗 Transit" : { store: "🟢 " + tx.inStore2, assigned: "🔵 " + tx.onSite2, nonfunctional: "🔴 " + tx.nonfunctional, obsolete: "⚫ " + tx.obsolete2 }[tool.status] || tool.status}</div></div>
             <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Localisation</div><div className="detail-val">📍 {tool.location}</div></div>
             {assignee && <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Responsable</div><div className="detail-val">👷 {assignee.name}</div></div>}
             {tool.price && (
