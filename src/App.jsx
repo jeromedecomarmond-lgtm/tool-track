@@ -602,6 +602,21 @@ export default function App() {
     };
     cleanOldRequests();
 
+    // S'assurer que le chantier Transit existe pour chaque compagnie
+    unsubs.push(onSnapshot(collection(db, "companies"), async snap => {
+      for (const compDoc of snap.docs) {
+        const company = compDoc.data();
+        const transitId = company.id + "_transit";
+        const transitRef = doc(db, "chantiers", transitId);
+        try {
+          const transitSnap = await getDoc(transitRef);
+          if (!transitSnap.exists()) {
+            await setDoc(transitRef, { id: transitId, name: "Transit", color: "#f5a623", companyId: company.id, createdAt: new Date().toISOString(), isTransit: true });
+          }
+        } catch(e) {}
+      }
+    }));
+
     unsubs.push(onSnapshot(collection(db, "users"), snap => {
       const loadedUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setUsers(loadedUsers);
@@ -804,6 +819,12 @@ export default function App() {
   };
 
   const deleteChantier = async (id) => {
+    // Bloquer la suppression du chantier Transit
+    const chantier = chantiers.find(c => String(c.id) === String(id));
+    if (chantier?.isTransit || chantier?.name === "Transit") {
+      showToast("❌ Le chantier Transit ne peut pas être supprimé");
+      return;
+    }
     const c = chantiers.find(c => c.id === id);
     const toolsOnSite = tools.filter(tool => tool.location === c?.name && tool.status === "assigned");
     if (toolsOnSite.length > 0) {
@@ -1018,7 +1039,7 @@ function DashboardPage({ isSuperAdmin, companies, tools, users, chantiers, reque
                     <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(232,82,10,.1)", borderRadius: 8, padding: "8px 12px" }}>
                       <div style={{ width: 10, height: 10, borderRadius: "50%", background: "var(--red)", flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 800, fontSize: 13 }}>{c.name}</div>
+                        <div style={{ fontWeight: 800, fontSize: 13 }}>{c.name}{(c.isTransit || c.name === "Transit") && <span style={{ fontSize: 9, background: "rgba(245,166,35,.2)", color: "var(--accent)", borderRadius: 4, padding: "1px 5px", marginLeft: 6, fontWeight: 700 }}>SYSTÈME</span>}</div>
                         {c.suspendedReason && <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{c.suspendedReason}</div>}
                       </div>
                       <div style={{ fontSize: 10, color: "var(--red)", fontWeight: 700 }}>⏸️ {tx.suspended2}</div>
@@ -2101,7 +2122,7 @@ function ChantierPage({ chantiers, tools, users, addChantier, deleteChantier, tx
                 <div style={{ padding: 16 }}>
                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 12 }}>
                     <div><div style={{ fontFamily: "var(--font-head)", fontSize: 18, fontWeight: 800 }}>{c.name}</div><span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 20, marginTop: 4, display: "inline-block", background: isActive ? "rgba(39,201,122,.15)" : "rgba(120,120,140,.12)", color: isActive ? "var(--green)" : "var(--muted)" }}>{isActive ? `🟢 ${tx.active2Label}` : `⚪ ${tx.inactive2Label}`}</span></div>
-                    <button onClick={() => deleteChantier(c.id)} style={{ background: isActive ? "rgba(120,120,140,.1)" : "rgba(232,82,10,.1)", border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: isActive ? "not-allowed" : "pointer", fontSize: 15, opacity: isActive ? .4 : 1 }}>🗑</button>
+{!c.isTransit && c.name !== "Transit" && <button onClick={() => deleteChantier(c.id)} style={{ background: isActive ? "rgba(120,120,140,.1)" : "rgba(232,82,10,.1)", border: "none", borderRadius: 8, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: isActive ? "not-allowed" : "pointer", fontSize: 15, opacity: isActive ? .4 : 1 }}>🗑</button>}
                   </div>
                   <div style={{ background: "var(--surface2)", borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: .5, marginBottom: 6 }}>{`🔧 ${tx.tools} (${toolsOnSite.length})`}</div>
