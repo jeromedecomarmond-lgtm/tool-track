@@ -1880,20 +1880,7 @@ function ToolDetailModal({ tool, onClose, users, viewers, chantiers, isAdmin, as
             <div className="detail-item" style={{ gridColumn: "1/-1" }}><div className="detail-key">Description</div><div className="detail-val" style={{ fontSize: 13, fontWeight: 400 }}>{tool.description}</div></div>
           </div>
 
-          {isAdmin && tool.status === "store" && (
-            <div className="assign-section"><h4>📤 Sortir du store → Chantier</h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {/* Bouton M'attribuer directement */}
-                <button className="btn btn-sm" style={{ background: "rgba(245,166,35,.15)", color: "var(--accent)", border: "1px solid rgba(245,166,35,.4)", fontWeight: 700 }}
-                  onClick={() => setAssignForm(p => ({ ...p, viewerId: String(currentUser.id) }))}>
-                  👤 M'attribuer
-                </button>
-                <select className="form-input" value={assignForm.viewerId} onChange={e => setAssignForm(p => ({ ...p, viewerId: e.target.value }))}><option value="">— Confier à —</option>{(users || []).filter(u => u.companyId === currentUser?.companyId && ["viewer","admin","director"].includes(u.role)).map(v => <option key={v.id} value={v.id}>{v.name}{String(v.id) === String(currentUser?.id) ? " (moi)" : ""} - {v.role === "viewer" ? "Employe" : v.role === "admin" ? "Admin" : "Directeur"}</option>)}</select>
-                <select className="form-input" value={assignForm.chantier} onChange={e => setAssignForm(p => ({ ...p, chantier: e.target.value }))}><option value="">{tx.chooseSite || "— Choisir —"}</option>{chantiers.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select>
-                <button className={`btn btn-primary btn-sm ${loadingAssign ? "loading" : ""}`} disabled={!assignForm.viewerId || !assignForm.chantier || loadingAssign} onClick={() => triggerAssign(() => assignTool(tool.id, assignForm.viewerId, assignForm.chantier, "out"))}>{loadingAssign ? "⏳..." : tx.outAndAssign}</button>
-              </div>
-            </div>
-          )}
+
 
 
 
@@ -2240,7 +2227,7 @@ function MovePanelModal({ selectedIds, tools, viewers, chantiers, currentUser, d
                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
                   <select className="form-input" value={viewerId} onChange={e => setViewerId(e.target.value)}>
                     <option value="">— Choisir un employé —</option>
-                    {viewers.filter(v => v.id !== currentUser?.id).map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    {(viewers || []).map(u => <option key={u.id} value={String(u.id)}>{u.name}{String(u.id) === String(currentUser?.id) ? " (moi)" : ""}</option>)}
                   </select>
                   <select className="form-input" value={chantier} onChange={e => setChantier(e.target.value)}>
                     <option value="">— Choisir un chantier —</option>
