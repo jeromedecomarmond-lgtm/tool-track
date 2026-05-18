@@ -1927,7 +1927,15 @@ function AddToolModal({ onClose, onSave }) {
   const [submitted, setSubmitted] = useState(false);
   const fileRef = useRef(), cameraRef = useRef();
   const handlePhoto = (e) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (ev) => setForm(p => ({ ...p, photoUrl: ev.target.result })); reader.readAsDataURL(file); };
-  const handleSave = () => { setSubmitted(true); if (!form.name.trim() || !form.ref.trim() || !form.purchaseDate || !form.price.toString().trim()) return; onSave(form); };
+  const [saving, setSaving] = useState(false);
+  const handleSave = async () => {
+    setSubmitted(true);
+    if (!form.name.trim() || !form.ref.trim() || !form.purchaseDate || !form.price.toString().trim()) return;
+    if (saving) return; // éviter les doublons
+    setSaving(true);
+    await onSave(form);
+    onClose(); // fermer le modal après sauvegarde
+  };
   const fieldStyle = (val) => ({ borderColor: submitted && !val?.trim() ? "var(--red)" : undefined, boxShadow: submitted && !val?.trim() ? "0 0 0 2px rgba(232,82,10,.2)" : undefined });
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -1955,7 +1963,7 @@ function AddToolModal({ onClose, onSave }) {
           <div className="form-group"><label className="form-label">🇲🇺 Prix d'achat (Rs) <span style={{ color: "var(--red)" }}>*</span></label><input className="form-input" style={{ borderColor: submitted && !form.price.toString().trim() ? "var(--red)" : undefined }} type="text" inputMode="numeric" placeholder="ex: 20 000" value={form.price} onChange={e => { const raw = e.target.value.replace(/\s/g,"").replace(/[^0-9]/g,""); setForm(p => ({ ...p, price: raw.replace(/\B(?=(\d{3})+(?!\d))/g," ") })); }} />{submitted && !form.price.toString().trim() && <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>⚠️ Prix obligatoire</div>}</div>
           <div className="form-group"><label className="form-label">Description</label><textarea className="form-input" rows={3} value={form.description} onChange={e => setForm(p => ({ ...p, description: e.target.value }))} /></div>
         </div>
-        <div className="modal-footer"><button className="btn btn-ghost" onClick={onClose}>{tx.cancel}</button><button className="btn btn-primary" disabled={!form.name.trim() || !form.ref.trim() || !form.purchaseDate || !form.price.toString().trim()} onClick={handleSave}>Ajouter</button></div>
+        <div className="modal-footer"><button className="btn btn-ghost" onClick={onClose}>{tx.cancel}</button><button className="btn btn-primary" disabled={saving || !form.name.trim() || !form.ref.trim() || !form.purchaseDate || !form.price.toString().trim()} onClick={handleSave}>{saving ? "⏳..." : "Ajouter"}</button></div>
       </div>
     </div>
   );
