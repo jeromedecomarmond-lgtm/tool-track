@@ -1412,10 +1412,10 @@ function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest,
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "var(--green)", marginBottom: 10 }}>🟢 Disponibles au store</div>
             {filteredTools.filter(t => t.status === "store").map(tool => (
-              <div key={tool.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                <span style={{ fontSize: 24 }}>{tool.photo}</span>
-                <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{tool.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>📍 Store{tool.price ? ` · Rs ${tool.price.toLocaleString("fr-MU")}` : ""}</div></div>
-                <span style={{ fontSize: 11, background: "rgba(39,201,122,.15)", color: "var(--green)", padding: "3px 8px", borderRadius: 20, fontWeight: 700 }}>Dispo</span>
+              <div key={tool.id} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden", marginBottom: 8, display: "flex", alignItems: "center", gap: 12 }}>
+                {tool.photoUrl ? <img src={tool.photoUrl} alt={tool.name} style={{ width: 60, height: 60, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 60, height: 60, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: "var(--surface2)", flexShrink: 0 }}>{tool.photo}</div>}
+                <div style={{ flex: 1, padding: "8px 0" }}><div style={{ fontWeight: 700, fontSize: 14 }}>{tool.name}</div><div style={{ fontSize: 11, color: "var(--muted)" }}>📍 Store{tool.price ? ` · Rs ${tool.price.toLocaleString("fr-MU")}` : ""}</div></div>
+                <span style={{ fontSize: 11, background: "rgba(39,201,122,.15)", color: "var(--green)", padding: "3px 8px", borderRadius: 20, fontWeight: 700, marginRight: 12 }}>Dispo</span>
               </div>
             ))}
           </div>
@@ -1434,10 +1434,10 @@ function ParcPage({ filteredTools, myTools, users, currentUser, db, sendRequest,
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontFamily: "var(--font-head)", fontSize: 16, fontWeight: 800, color: "#f07030", marginBottom: 10 }}>🔴 Non fonctionnels</div>
             {filteredTools.filter(t => t.status === "nonfunctional").map(tool => (
-              <div key={tool.id} style={{ background: "var(--surface)", border: "1px solid rgba(232,82,10,.3)", borderRadius: 10, padding: "12px 14px", display: "flex", alignItems: "center", gap: 12, marginBottom: 8, opacity: 0.75 }}>
-                <span style={{ fontSize: 24 }}>{tool.photo}</span>
-                <div style={{ flex: 1 }}><div style={{ fontWeight: 700, fontSize: 14 }}>{tool.name}</div><div style={{ fontSize: 11, color: "#f07030" }}>🔎 Suivi en cours · {tool.location}</div></div>
-                <span style={{ fontSize: 11, background: "rgba(232,82,10,.15)", color: "#f07030", padding: "3px 8px", borderRadius: 20, fontWeight: 700 }}>En répa.</span>
+              <div key={tool.id} style={{ background: "var(--surface)", border: "1px solid rgba(232,82,10,.3)", borderRadius: 10, overflow: "hidden", marginBottom: 8, display: "flex", alignItems: "center", gap: 12, opacity: 0.75 }}>
+                {tool.photoUrl ? <img src={tool.photoUrl} alt={tool.name} style={{ width: 60, height: 60, objectFit: "cover", flexShrink: 0 }} /> : <div style={{ width: 60, height: 60, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, background: "var(--surface2)", flexShrink: 0 }}>{tool.photo}</div>}
+                <div style={{ flex: 1, padding: "8px 0" }}><div style={{ fontWeight: 700, fontSize: 14 }}>{tool.name}</div><div style={{ fontSize: 11, color: "#f07030" }}>🔎 Suivi en cours · {tool.location}</div></div>
+                <span style={{ fontSize: 11, background: "rgba(232,82,10,.15)", color: "#f07030", padding: "3px 8px", borderRadius: 20, fontWeight: 700, marginRight: 12 }}>En répa.</span>
               </div>
             ))}
           </div>
