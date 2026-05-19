@@ -1712,8 +1712,8 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
     const roleLabel = admin.role === "director" ? "Directeur" : "Administrateur";
     const compName = admin.companyName || companies.find(c => c.id === admin.companyId)?.name || "votre compagnie";
     const loginInfo = admin.role === "director"
-      ? `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n📧 Votre email : *${admin.email}*\n🔐 Créez votre mot de passe à la première connexion`
-      : `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n👤 Votre profil : *${admin.name}*\n🔑 Votre code PIN : *${admin.pin}*`;
+      ? `\u25C6 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n\u25C6 Nom : *${admin.name}*\n\u25C6 Profil : *Directeur*\n\u25C6 Email : *${admin.email}*\n\u25C6 Créez votre mot de passe à la première connexion`
+      : `\u25C6 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n\u25C6 Nom : *${admin.name}*\n\u25C6 Profil : *Admin*\n\u25C6 PIN pour accéder : *${admin.pin}*`;
     const msg = encodeURIComponent(
       `Bonjour ${admin.name} 👋\n\n` +
       `Vous avez été nommé *${roleLabel}* de *${compName}* sur *Tool Track*.\n\n` +
