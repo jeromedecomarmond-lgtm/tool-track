@@ -1710,10 +1710,18 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
   if (modal.type === "whatsappInvite") {
     const admin = modal.data;
     const roleLabel = admin.role === "director" ? "Directeur" : "Administrateur";
+    const compName = admin.companyName || companies.find(c => c.id === admin.companyId)?.name || "votre compagnie";
     const loginInfo = admin.role === "director"
       ? `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n📧 Votre email : *${admin.email}*\n🔐 Créez votre mot de passe à la première connexion`
-      : `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n🔑 Votre code PIN : *${admin.pin}*`;
-    const msg = encodeURIComponent(`Bonjour ${admin.name} 👋\n\nVous avez été nommé *${roleLabel}* de *${admin.companyName}* sur *Tool Track*.\n\n📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n${loginInfo}\n\nOuvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n_Bonne gestion !_ 🚀`);
+      : `🏢 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n👤 Votre profil : *${admin.name}*\n🔑 Votre code PIN : *${admin.pin}*`;
+    const msg = encodeURIComponent(
+      `Bonjour ${admin.name} 👋\n\n` +
+      `Vous avez été nommé *${roleLabel}* de *${compName}* sur *Tool Track*.\n\n` +
+      `📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n` +
+      `${loginInfo}\n\n` +
+      `Ouvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n` +
+      `_Bonne gestion !_ 🚀`
+    );
     const phone = admin.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
     const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
     return (
