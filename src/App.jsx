@@ -1711,16 +1711,19 @@ function ModalRouter({ modal, setModal, users, tools, setTools, viewers, chantie
     const admin = modal.data;
     const roleLabel = admin.role === "director" ? "Directeur" : "Administrateur";
     const compName = admin.companyName || companies.find(c => c.id === admin.companyId)?.name || "votre compagnie";
-    const loginInfo = admin.role === "director"
-      ? `\u25C6 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n\u25C6 Nom : *${admin.name}*\n\u25C6 Profil : *Directeur*\n\u25C6 Email : *${admin.email}*\n\u25C6 Créez votre mot de passe à la première connexion`
-      : `\u25C6 Code de votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n\u25C6 Nom : *${admin.name}*\n\u25C6 Profil : *Admin*\n\u25C6 PIN pour accéder : *${admin.pin}*`;
+
     const msg = encodeURIComponent(
-      `Bonjour ${admin.name} 👋\n\n` +
-      `Vous avez été nommé *${roleLabel}* de *${compName}* sur *Tool Track*.\n\n` +
-      `📱 Accédez à l'app : https://tool-track-rosy.vercel.app\n` +
-      `${loginInfo}\n\n` +
-      `Ouvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d'accueil.\n\n` +
-      `_Bonne gestion !_ 🚀`
+      `Bonjour ${admin.name} \u25C6\n\n` +
+      `Vous avez été nommé *${roleLabel}* sur *Tool Track*.\n\n` +
+      `\u25C6 https://tool-track-rosy.vercel.app\n` +
+      `\u25C6 Compagnie : *${compName}*\n` +
+      `\u25C6 Code pour accéder à votre compagnie : *${admin.companyPin || "voir votre responsable"}*\n` +
+      `\u25C6 Profil : *${roleLabel}*\n` +
+      (admin.role === "director"
+        ? `\u25C6 Email : *${admin.email}*\n\u25C6 Créez votre mot de passe à la première connexion\n`
+        : `\u25C6 PIN pour accéder à l\'application : *${admin.pin}*\n`) +
+      `\nOuvrez le lien dans Safari (iPhone) ou Chrome (Android) et ajoutez-le à votre écran d\'accueil.\n\n` +
+      `_Bonne gestion !_ \u25C6`
     );
     const phone = admin.phone?.replace(/\s/g,"").replace(/^\+/,"") || "";
     const waUrl = phone ? `https://wa.me/${phone}?text=${msg}` : `https://wa.me/?text=${msg}`;
