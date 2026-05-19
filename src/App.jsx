@@ -975,7 +975,7 @@ export default function App() {
         {page === "requests" && <RequestsPage isSuperAdmin={isSuperAdmin} isAdmin={isAdmin} filteredRequests={filteredRequests} requests={requests} tools={tools} users={users} companies={companies} currentUser={currentUser} db={db} showToast={showToast} tx={tx} />}
         {/* FIX #10 — page messages rendue */}
         {page === "messages" && <MessagesPage currentUser={effectiveUser} users={users} tools={tools} myTools={myTools} db={db} showToast={showToast} tx={tx} />}
-        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} realUser={currentUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} tx={tx} deleteDirectorSelf={deleteDirectorSelf} isSupervising={isSupervising} />}
+        {page === "users" && isAdmin && <UsersPage isSuperAdmin={isSuperAdmin} filteredUsers={filteredUsers} filteredTools={filteredTools} tools={tools} users={users} companies={companies} currentUser={effectiveUser} realUser={currentUser} db={db} showToast={showToast} setModal={setModal} onSupervise={startSupervision} tx={tx} deleteDirectorSelf={deleteDirectorSelf} deleteUserCompletely={deleteUserCompletely} isSupervising={isSupervising} />}
       </main>
     </div>
 
@@ -1566,7 +1566,7 @@ function RequestsPage({ isSuperAdmin, isAdmin, filteredRequests, requests, tools
   );
 }
 
-function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, realUser, db, showToast, setModal, onSupervise, tx, deleteDirectorSelf, isSupervising }) {
+function UsersPage({ isSuperAdmin, filteredUsers, filteredTools, tools, users, companies, currentUser, realUser, db, showToast, setModal, onSupervise, tx, deleteDirectorSelf, deleteUserCompletely, isSupervising }) {
   return (
     <>
       <div className="topbar"><h2>{tx.team}</h2>{!isSuperAdmin && <button className="btn btn-primary" onClick={() => setModal({ type: "addUser" })}>+ {tx.addProfile}</button>}</div>
